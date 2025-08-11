@@ -15,13 +15,13 @@ class DraftState(BaseModel):
     @classmethod
     def load_from_file(cls, filepath: Path) -> "DraftState":
         """Load DraftState from JSON file"""
-        return cls.parse_file(filepath)
+        return cls.model_validate_json(filepath.read_text())
 
     def save_to_file(self, filepath: Path) -> None:
         """Save DraftState to JSON file using atomic operations"""
         # Write to temporary file first
         temp_filepath = filepath.with_suffix(".tmp")
-        temp_filepath.write_text(self.json(indent=2))
+        temp_filepath.write_text(self.model_dump_json(indent=2))
 
         # Validate the temporary file by trying to load it
         try:

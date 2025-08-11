@@ -13,4 +13,4 @@ class Configuration(BaseModel):
     @classmethod
     def load_from_file(cls, filepath: Path) -> "Configuration":
         """Load Configuration from JSON file"""
-        return cls.parse_file(filepath)
+        return cls.model_validate_json(filepath.read_text())

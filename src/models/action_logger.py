@@ -48,7 +48,7 @@ class ActionLogger:
 
         import json
 
-        logs_json = [log.dict() for log in logs]
+        logs_json = [log.model_dump() for log in logs]
         temp_filepath.write_text(json.dumps(logs_json, indent=2, default=str))
 
         # Atomically replace the original

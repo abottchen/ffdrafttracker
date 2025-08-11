@@ -23,13 +23,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         
-    - name: Lint with ruff
+    - name: Lint and format with ruff
       run: |
         python -m ruff check src/
-        
-    - name: Check formatting with black
-      run: |
-        python -m black --check src/
+        python -m ruff format --check src/
         
     - name: Run tests with pytest
       run: |
