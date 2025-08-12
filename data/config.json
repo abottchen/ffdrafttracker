@@ -1,0 +1,14 @@
+{
+  "initial_budget": 200,
+  "min_bid": 1,
+  "position_maximums": {
+    "QB": 2,
+    "RB": 4,
+    "WR": 5,
+    "TE": 2,
+    "K": 1,
+    "D/ST": 1
+  },
+  "total_rounds": 15,
+  "data_directory": "data"
+}

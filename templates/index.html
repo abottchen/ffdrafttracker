@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fantasy Football Draft Tracker</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            padding: 15px;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            width: 100vw;
+            box-sizing: border-box;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        .header {
+            background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+            color: #f7fafc;
+            padding: 5px 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .status-panel {
+            background: #2d2d2d;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            border: 1px solid #404040;
+            height: 80px;
+            display: flex;
+            align-items: center;
+        }
+        .nomination-panel {
+            background: #2d2d2d;
+            border: 1px solid #404040;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            height: 80px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .nomination-panel .button {
+            width: auto;
+            align-self: flex-start;
+        }
+        .button {
+            background: #8b7ba3;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 4px;
+            font-size: 0.9em;
+        }
+        .button:hover {
+            background: #6f5f82;
+        }
+        .button:disabled {
+            background: #5a5a5a;
+            cursor: not-allowed;
+        }
+        .players-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .teams-horizontal {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 3px;
+            margin-bottom: 15px;
+            width: 100%;
+        }
+        .nomination-inputs {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            width: 100%;
+        }
+        .player-search-container {
+            position: relative;
+            width: 300px;
+            flex-shrink: 0;
+        }
+        .player-search {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #4a4a4a;
+            border-radius: 5px;
+            font-size: 1em;
+            background: #2a2a2a;
+            color: #e0e0e0;
+        }
+        .bid-input {
+            width: 80px;
+            padding: 8px;
+            border: 1px solid #4a4a4a;
+            border-radius: 5px;
+            font-size: 1em;
+            text-align: center;
+            background: #2a2a2a;
+            color: #e0e0e0;
+        }
+        /* Make spinner arrows larger and more visible */
+        .bid-input::-webkit-outer-spin-button,
+        .bid-input::-webkit-inner-spin-button {
+            -webkit-appearance: inner-spin-button;
+            width: 20px;
+            height: 20px;
+            margin: 0;
+            opacity: 1;
+            cursor: pointer;
+        }
+        .player-search:focus, .bid-input:focus {
+            outline: none;
+            border-color: #4a90e2;
+            box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.3);
+        }
+        .player-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #2a2a2a;
+            border: 1px solid #4a4a4a;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+        .player-option {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #404040;
+            color: #e0e0e0;
+        }
+        .player-option:hover {
+            background-color: #3a3a3a;
+        }
+        .player-option.highlighted {
+            background-color: #2d5aa0;
+        }
+        .player-option:last-child {
+            border-bottom: none;
+        }
+        .team {
+            background: #2d2d2d;
+            padding: 8px;
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            height: 110px;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 1px solid #404040;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .team.next-to-nominate {
+            background: #1f3a2d;
+            border: 2px solid #4caf50;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+        .team.done {
+            background: #3a1f1f;
+            border: 2px solid #d32f2f;
+            box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
+            opacity: 0.7;
+        }
+        .team-name {
+            margin: 0 0 3px 0;
+            font-size: 1.1em;
+            font-weight: bold;
+            line-height: 1.1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .owner-name {
+            margin: 0 0 3px 0;
+            font-size: 0.9em;
+            color: #b0b0b0;
+            line-height: 1.1;
+        }
+        .team-stats {
+            margin: 0;
+            font-size: 0.9em;
+            color: #909090;
+            line-height: 1.1;
+        }
+        .team-bid-controls {
+            margin-top: 8px;
+            visibility: hidden;
+            align-self: stretch;
+        }
+        .team-bid-controls.visible {
+            visibility: visible;
+        }
+        .team-bid-input {
+            width: 60px;
+            padding: 4px;
+            border: 1px solid #4a4a4a;
+            border-radius: 3px;
+            font-size: 0.8em;
+            text-align: center;
+            background: #2a2a2a;
+            color: #e0e0e0;
+            margin-right: 4px;
+        }
+        .team-bid-button {
+            background: #8b7ba3;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.7em;
+        }
+        .team-bid-button:hover {
+            background: #6f5f82;
+        }
+        .team-bid-button:disabled {
+            background: #5a5a5a;
+            cursor: not-allowed;
+        }
+        .team-bid-button.current-bidder {
+            position: relative;
+        }
+        .team-bid-button.current-bidder::after {
+            content: "✓";
+            color: #4caf50;
+            font-weight: bold;
+            font-size: 1.8em;
+            position: absolute;
+            right: -25px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .drafted-players-panel {
+            background: #2d2d2d;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            border: 1px solid #404040;
+        }
+        .drafted-players-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 3px;
+            align-items: start;
+        }
+        .team-roster {
+            background: #1a1a1a;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #404040;
+            min-height: 800px;
+            max-height: 800px;
+            overflow-y: auto;
+        }
+        .team-roster h4 {
+            margin: 0 0 8px 0;
+            font-size: 0.9em;
+            color: #e0e0e0;
+            text-align: center;
+            border-bottom: 1px solid #404040;
+            padding-bottom: 4px;
+        }
+        .drafted-player {
+            background: #2a2a2a;
+            padding: 6px;
+            margin-bottom: 4px;
+            border-radius: 4px;
+            border: 1px solid #404040;
+            transition: background-color 2s ease, border-color 2s ease;
+        }
+        .drafted-player.newly-drafted {
+            background: #1f3a2d;
+            border: 1px solid #4caf50;
+        }
+        .drafted-player-name {
+            font-size: 0.8em;
+            font-weight: bold;
+            color: #e0e0e0;
+            margin-bottom: 2px;
+        }
+        .drafted-player-details {
+            font-size: 0.7em;
+            color: #b0b0b0;
+        }
+        .error {
+            background: #4a1f1f;
+            color: #ff6b6b;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border: 1px solid #ff6b6b;
+        }
+        .success {
+            background: #1f4a2d;
+            color: #51cf66;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border: 1px solid #51cf66;
+        }
+        .api-links {
+            background: #2d2d2d;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            border: 1px solid #404040;
+        }
+        .api-links a {
+            display: inline-block;
+            margin: 5px 10px 5px 0;
+            color: #4a90e2;
+            text-decoration: none;
+        }
+        .api-links a:hover {
+            text-decoration: underline;
+            color: #357abd;
+        }
+        .team-select {
+            padding: 8px 12px;
+            border: 1px solid #4a4a4a;
+            border-radius: 5px;
+            background: #2a2a2a;
+            color: #e0e0e0;
+            margin-right: 10px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Fantasy Football Draft Tracker</h1>
+    </div>
+
+
+    <div class="teams-horizontal" id="teams-list">
+        <!-- Teams will be populated by JavaScript -->
+    </div>
+
+    <div class="players-grid">
+        <div class="status-panel">
+            <div class="nomination-inputs">
+                <div class="player-search-container">
+                    <input type="text" id="player-search" class="player-search" 
+                           placeholder="Type player name..." autocomplete="off">
+                    <div id="player-dropdown" class="player-dropdown">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+                <input type="number" id="nomination-bid" class="bid-input" placeholder="Initial bid" min="1" value="1">
+                <button class="button" onclick="nominateSelected()">Nominate</button>
+                <div id="message" style="display: none;"></div>
+            </div>
+        </div>
+        
+        <div id="nomination-panel" class="nomination-panel">
+            <div id="nomination-details"></div>
+            <button class="button" onclick="completeDraft()">Draft Player</button>
+            <button class="button" onclick="cancelNomination()">Cancel Nomination</button>
+        </div>
+    </div>
+
+    <div class="drafted-players-panel">
+        <div class="drafted-players-grid" id="drafted-players-grid">
+            <!-- Team rosters will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <div class="api-links">
+        <h3>Admin Controls</h3>
+        <button class="button" onclick="refreshData()">🔄 Refresh</button>
+        <button class="button" onclick="resetDraft()">🔄 Reset Draft</button>
+        <br><br>
+        <select id="team-select" class="team-select">
+            <option value="">Select team to mark done...</option>
+        </select>
+        <button class="button" onclick="markTeamDone()">Mark Team Done</button>
+        <button class="button" onclick="clearDoneTeams()">Clear All Done</button>
+        <br><br>
+        <h3>API Documentation</h3>
+        <a href="/docs" target="_blank">📚 Interactive API Docs (Swagger)</a>
+        <a href="/redoc" target="_blank">📖 ReDoc Documentation</a>
+        <a href="/api/v1/draft-state" target="_blank">🔗 Draft State JSON</a>
+        <a href="/api/v1/players" target="_blank">🔗 Players JSON</a>
+        <a href="/api/v1/owners" target="_blank">🔗 Owners JSON</a>
+    </div>
+
+    <script>
+        let currentVersion = {{ draft_state.version }};
+        let selectedPlayerId = null;
+        let selectedPlayerName = null;
+        let players = [];
+        let owners = [];
+        let availablePlayerIds = [];
+        let highlightedIndex = -1;
+        let lastDraftedPlayerId = null;
+        let currentDraftState = null;
+        let doneTeams = new Set();
+
+        // Load initial data
+        async function loadData() {
+            try {
+                // Load players
+                const playersResponse = await fetch('/api/v1/players');
+                players = await playersResponse.json();
+                
+                // Load owners
+                const ownersResponse = await fetch('/api/v1/owners');
+                owners = await ownersResponse.json();
+                
+                // Load draft state
+                await refreshData();
+                
+                // Set up player search
+                setupPlayerSearch();
+                
+            } catch (error) {
+                showMessage('Error loading data: ' + error.message, 'error');
+            }
+        }
+
+        async function refreshData() {
+            try {
+                const response = await fetch('/api/v1/draft-state');
+                const draftState = await response.json();
+                
+                currentVersion = draftState.version;
+                currentDraftState = draftState;
+                
+                
+                // Update nomination panel
+                updateNominationPanel(draftState.nominated);
+                
+                // Update available players for search
+                availablePlayerIds = draftState.available_player_ids;
+                
+                // Update teams (use our custom next-to-nominate logic)
+                const effectiveNextToNominate = getNextToNominate(draftState.teams);
+                updateTeams(draftState.teams, effectiveNextToNominate, draftState.nominated);
+                
+                // Update drafted players
+                updateDraftedPlayers(draftState.teams, draftState);
+                
+                // Populate team select dropdown
+                populateTeamSelect(draftState.teams);
+                
+            } catch (error) {
+                showMessage('Error refreshing data: ' + error.message, 'error');
+            }
+        }
+
+        function updateNominationPanel(nominated) {
+            const draftButton = document.querySelector('button[onclick="completeDraft()"]');
+            const cancelButton = document.querySelector('button[onclick="cancelNomination()"]');
+            
+            if (nominated) {
+                const player = players.find(p => p.id === nominated.player_id);
+                document.getElementById('nomination-details').innerHTML = `
+                    <strong>${player ? player.first_name + ' ' + player.last_name : 'Unknown'}</strong> 
+                    (${player ? player.position + ' - ' + player.team : 'Unknown'}) - 
+                    <strong>$${nominated.current_bid}</strong>
+                `;
+                draftButton.style.display = 'inline-block';
+                cancelButton.style.display = 'inline-block';
+            } else {
+                document.getElementById('nomination-details').innerHTML = 'No player currently nominated';
+                draftButton.style.display = 'none';
+                cancelButton.style.display = 'none';
+            }
+        }
+
+        function setupPlayerSearch() {
+            const searchInput = document.getElementById('player-search');
+            const dropdown = document.getElementById('player-dropdown');
+            
+            searchInput.addEventListener('input', handlePlayerSearch);
+            searchInput.addEventListener('keydown', handleKeyDown);
+            
+            // Hide dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+                    hideDropdown();
+                }
+            });
+        }
+        
+        function handlePlayerSearch(e) {
+            const query = e.target.value.toLowerCase().trim();
+            const dropdown = document.getElementById('player-dropdown');
+            
+            if (query.length === 0) {
+                hideDropdown();
+                selectedPlayerId = null;
+                selectedPlayerName = null;
+                return;
+            }
+            
+            // Filter available players by name
+            const availablePlayers = players.filter(p => availablePlayerIds.includes(p.id));
+            const matchingPlayers = availablePlayers.filter(player => {
+                const fullName = `${player.first_name} ${player.last_name}`.toLowerCase();
+                return fullName.includes(query);
+            });
+            
+            if (matchingPlayers.length === 0) {
+                hideDropdown();
+                return;
+            }
+            
+            // Show dropdown with matches
+            dropdown.innerHTML = '';
+            matchingPlayers.forEach((player, index) => {
+                const option = document.createElement('div');
+                option.className = 'player-option';
+                option.dataset.playerId = player.id;
+                option.innerHTML = `<strong>${player.first_name} ${player.last_name}</strong> - ${player.position} (${player.team})`;
+                option.onclick = () => selectPlayerFromDropdown(player);
+                dropdown.appendChild(option);
+            });
+            
+            highlightedIndex = -1;
+            dropdown.style.display = 'block';
+        }
+        
+        function handleKeyDown(e) {
+            const dropdown = document.getElementById('player-dropdown');
+            const options = dropdown.querySelectorAll('.player-option');
+            
+            if (options.length === 0) return;
+            
+            switch(e.key) {
+                case 'ArrowDown':
+                    e.preventDefault();
+                    highlightedIndex = Math.min(highlightedIndex + 1, options.length - 1);
+                    updateHighlight(options);
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    highlightedIndex = Math.max(highlightedIndex - 1, -1);
+                    updateHighlight(options);
+                    break;
+                case 'Enter':
+                    e.preventDefault();
+                    if (highlightedIndex >= 0 && highlightedIndex < options.length) {
+                        const playerId = parseInt(options[highlightedIndex].dataset.playerId);
+                        const player = players.find(p => p.id === playerId);
+                        if (player) {
+                            selectPlayerFromDropdown(player);
+                        }
+                    }
+                    break;
+                case 'Escape':
+                    hideDropdown();
+                    e.target.blur();
+                    break;
+            }
+        }
+        
+        function updateHighlight(options) {
+            options.forEach((option, index) => {
+                option.classList.toggle('highlighted', index === highlightedIndex);
+            });
+        }
+        
+        function selectPlayerFromDropdown(player) {
+            selectedPlayerId = player.id;
+            selectedPlayerName = `${player.first_name} ${player.last_name}`;
+            document.getElementById('player-search').value = selectedPlayerName;
+            hideDropdown();
+        }
+        
+        function hideDropdown() {
+            document.getElementById('player-dropdown').style.display = 'none';
+            highlightedIndex = -1;
+        }
+
+        function adjustFontSize(element) {
+            const maxHeight = 20; // Maximum height for single line in pixels
+            const minFontSize = 0.7; // Minimum font size in em
+            const maxFontSize = 1.1; // Default font size in em
+            
+            // Reset to default size first
+            element.style.fontSize = maxFontSize + 'em';
+            
+            // Check if text is wrapping
+            if (element.scrollHeight > maxHeight) {
+                let fontSize = maxFontSize;
+                
+                // Gradually decrease font size until it fits
+                while (element.scrollHeight > maxHeight && fontSize > minFontSize) {
+                    fontSize -= 0.05;
+                    element.style.fontSize = fontSize + 'em';
+                }
+            }
+        }
+
+        function updateTeams(teams, nextToNominate, nominated = null) {
+            const list = document.getElementById('teams-list');
+            list.innerHTML = '';
+            
+            // Check if there's an active nomination to show bid controls
+            const hasNomination = nominated !== null;
+            
+            teams.forEach(team => {
+                const owner = owners.find(o => o.id === team.owner_id);
+                const teamDiv = document.createElement('div');
+                
+                let teamClass = 'team';
+                if (doneTeams.has(team.owner_id)) {
+                    teamClass += ' done';
+                } else if (team.owner_id === nextToNominate) {
+                    teamClass += ' next-to-nominate';
+                }
+                teamDiv.className = teamClass;
+                
+                // Get minimum bid amount
+                let minBid = 1;
+                if (hasNomination && nominated) {
+                    minBid = nominated.current_bid + 1;
+                }
+                
+                // Check if this team is the current bidder (only if there's an active nomination)
+                const isCurrentBidder = hasNomination && nominated && nominated.current_bidder_id === team.owner_id;
+                const bidButtonClass = isCurrentBidder ? 'team-bid-button current-bidder' : 'team-bid-button';
+                
+                teamDiv.innerHTML = `
+                    <div class="team-name" id="team-name-${team.owner_id}">${owner ? owner.team_name : 'Unknown Team'}</div>
+                    <div class="owner-name">${owner ? owner.owner_name : 'Unknown Owner'}</div>
+                    <div class="team-stats">$${team.budget_remaining} | ${team.picks.length} picks</div>
+                    <div class="team-bid-controls ${hasNomination ? 'visible' : ''}">
+                        <input type="number" class="team-bid-input" value="${minBid}" min="${minBid}" id="bid-input-${team.owner_id}">
+                        <button class="${bidButtonClass}" onclick="placeBidForOwner(${team.owner_id})" ${team.budget_remaining < minBid ? 'disabled' : ''}>Bid</button>
+                    </div>
+                `;
+                list.appendChild(teamDiv);
+                
+                // Auto-resize team name if it would wrap
+                setTimeout(() => {
+                    const nameElement = document.getElementById(`team-name-${team.owner_id}`);
+                    if (nameElement) {
+                        adjustFontSize(nameElement);
+                    }
+                }, 0);
+            });
+        }
+
+        function updateDraftedPlayers(teams, draftState) {
+            const grid = document.getElementById('drafted-players-grid');
+            grid.innerHTML = '';
+            
+            // Find the most recently drafted player
+            let mostRecentPlayerId = null;
+            let mostRecentPickId = -1;
+            
+            teams.forEach(team => {
+                team.picks.forEach(pick => {
+                    if (pick.pick_id > mostRecentPickId) {
+                        mostRecentPickId = pick.pick_id;
+                        mostRecentPlayerId = pick.player_id;
+                    }
+                });
+            });
+            
+            // Check if we have a new draft
+            const isNewDraft = lastDraftedPlayerId !== null && lastDraftedPlayerId !== mostRecentPlayerId;
+            lastDraftedPlayerId = mostRecentPlayerId;
+            
+            teams.forEach(team => {
+                const owner = owners.find(o => o.id === team.owner_id);
+                const teamDiv = document.createElement('div');
+                teamDiv.className = 'team-roster';
+                
+                teamDiv.innerHTML = `
+                    <h4>${owner ? owner.team_name : 'Unknown Team'}</h4>
+                    <div id="roster-${team.owner_id}"></div>
+                `;
+                
+                // Add drafted players
+                const rosterDiv = teamDiv.querySelector(`#roster-${team.owner_id}`);
+                team.picks.forEach(pick => {
+                    const player = players.find(p => p.id === pick.player_id);
+                    if (player) {
+                        const playerDiv = document.createElement('div');
+                        const isNewlyDrafted = isNewDraft && pick.player_id === mostRecentPlayerId;
+                        playerDiv.className = isNewlyDrafted ? 'drafted-player newly-drafted' : 'drafted-player';
+                        playerDiv.innerHTML = `
+                            <div class="drafted-player-name">${player.first_name} ${player.last_name}</div>
+                            <div class="drafted-player-details">${player.position} - ${player.team} ($${pick.price})</div>
+                        `;
+                        rosterDiv.appendChild(playerDiv);
+                        
+                        // Remove the highlight after a brief delay
+                        if (isNewlyDrafted) {
+                            setTimeout(() => {
+                                playerDiv.classList.remove('newly-drafted');
+                            }, 100);
+                        }
+                    }
+                });
+                
+                grid.appendChild(teamDiv);
+            });
+        }
+
+
+        async function nominateSelected() {
+            if (!selectedPlayerId) {
+                showMessage('Please select a player to nominate', 'error');
+                return;
+            }
+            
+            const bid = parseInt(document.getElementById('nomination-bid').value);
+            if (!bid || bid < 1) {
+                showMessage('Please enter a valid bid amount', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/v1/nominate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        owner_id: currentDraftState ? getNextToNominate(currentDraftState.teams) : 1,
+                        player_id: selectedPlayerId,
+                        initial_bid: bid,
+                        expected_version: currentVersion
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showMessage('Player nominated successfully!', 'success');
+                    currentVersion = result.new_version;
+                    await refreshData();
+                    document.getElementById('nomination-bid').value = '1';
+                    document.getElementById('player-search').value = '';
+                    selectedPlayerId = null;
+                    selectedPlayerName = null;
+                } else {
+                    const error = await response.json();
+                    showMessage('Nomination failed: ' + error.detail, 'error');
+                }
+            } catch (error) {
+                showMessage('Error nominating player: ' + error.message, 'error');
+            }
+        }
+
+        async function placeBidForOwner(ownerId) {
+            const bidInput = document.getElementById(`bid-input-${ownerId}`);
+            const bid = parseInt(bidInput.value);
+            if (!bid) {
+                showMessage('Please enter a bid amount', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/v1/bid', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        owner_id: ownerId,
+                        bid_amount: bid,
+                        expected_version: currentVersion
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showMessage('Bid placed successfully!', 'success');
+                    currentVersion = result.new_version;
+                    await refreshData();
+                } else {
+                    const error = await response.json();
+                    showMessage('Bid failed: ' + error.detail, 'error');
+                }
+            } catch (error) {
+                showMessage('Error placing bid: ' + error.message, 'error');
+            }
+        }
+
+        async function placeBid() {
+            const bid = parseInt(document.getElementById('bid-amount').value);
+            if (!bid) {
+                showMessage('Please enter a bid amount', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/v1/bid', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        owner_id: 2, // Default to Morty for now
+                        bid_amount: bid,
+                        expected_version: currentVersion
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showMessage('Bid placed successfully!', 'success');
+                    currentVersion = result.new_version;
+                    await refreshData();
+                    document.getElementById('bid-amount').value = '';
+                } else {
+                    const error = await response.json();
+                    showMessage('Bid failed: ' + error.detail, 'error');
+                }
+            } catch (error) {
+                showMessage('Error placing bid: ' + error.message, 'error');
+            }
+        }
+
+        async function completeDraft() {
+            try {
+                const draftState = await (await fetch('/api/v1/draft-state')).json();
+                if (!draftState.nominated) {
+                    showMessage('No player nominated', 'error');
+                    return;
+                }
+                
+                const response = await fetch('/api/v1/draft', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        owner_id: draftState.nominated.current_bidder_id,
+                        player_id: draftState.nominated.player_id,
+                        final_price: draftState.nominated.current_bid,
+                        expected_version: currentVersion
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showMessage('Player drafted successfully!', 'success');
+                    currentVersion = result.new_version;
+                    await refreshData();
+                } else {
+                    const error = await response.json();
+                    showMessage('Draft failed: ' + error.detail, 'error');
+                }
+            } catch (error) {
+                showMessage('Error completing draft: ' + error.message, 'error');
+            }
+        }
+
+        async function cancelNomination() {
+            try {
+                const response = await fetch('/api/v1/nominate', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        expected_version: currentVersion
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showMessage('Nomination cancelled', 'success');
+                    currentVersion = result.new_version;
+                    await refreshData();
+                } else {
+                    const error = await response.json();
+                    showMessage('Cancel failed: ' + error.detail, 'error');
+                }
+            } catch (error) {
+                showMessage('Error cancelling nomination: ' + error.message, 'error');
+            }
+        }
+
+        async function resetDraft() {
+            if (!confirm('Are you sure you want to reset the draft? This will clear all picks and nominations.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/v1/reset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        force: true
+                    })
+                });
+                
+                if (response.ok) {
+                    showMessage('Draft reset successfully!', 'success');
+                    await refreshData();
+                } else {
+                    const error = await response.json();
+                    showMessage('Reset failed: ' + error.detail, 'error');
+                }
+            } catch (error) {
+                showMessage('Error resetting draft: ' + error.message, 'error');
+            }
+        }
+
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = type;
+            messageDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function populateTeamSelect(teams) {
+            const select = document.getElementById('team-select');
+            select.innerHTML = '<option value="">Select team to mark done...</option>';
+            
+            teams.forEach(team => {
+                const owner = owners.find(o => o.id === team.owner_id);
+                if (owner && !doneTeams.has(team.owner_id)) {
+                    const option = document.createElement('option');
+                    option.value = team.owner_id;
+                    option.textContent = owner.team_name;
+                    select.appendChild(option);
+                }
+            });
+        }
+
+        function markTeamDone() {
+            const select = document.getElementById('team-select');
+            const ownerId = parseInt(select.value);
+            
+            if (ownerId) {
+                doneTeams.add(ownerId);
+                showMessage('Team marked as done', 'success');
+                
+                // Refresh display
+                if (currentDraftState) {
+                    updateTeams(currentDraftState.teams, getNextToNominate(currentDraftState.teams), currentDraftState.nominated);
+                    populateTeamSelect(currentDraftState.teams);
+                }
+            } else {
+                showMessage('Please select a team first', 'error');
+            }
+        }
+
+        function clearDoneTeams() {
+            doneTeams.clear();
+            showMessage('All done teams cleared', 'success');
+            
+            // Refresh display
+            if (currentDraftState) {
+                updateTeams(currentDraftState.teams, getNextToNominate(currentDraftState.teams), currentDraftState.nominated);
+                populateTeamSelect(currentDraftState.teams);
+            }
+        }
+
+        function getNextToNominate(teams) {
+            // Find teams that aren't done
+            const availableTeams = teams.filter(team => !doneTeams.has(team.owner_id));
+            
+            if (availableTeams.length === 0) {
+                return currentDraftState ? currentDraftState.next_to_nominate : 1;
+            }
+            
+            // Find the next team in order after the current next_to_nominate
+            const currentNext = currentDraftState ? currentDraftState.next_to_nominate : 1;
+            
+            // Get sorted list of available team IDs
+            const availableIds = availableTeams.map(t => t.owner_id).sort((a, b) => a - b);
+            
+            // Find next available team after current
+            let nextTeam = availableIds.find(id => id > currentNext);
+            
+            // If no team found after current, wrap around to first available
+            if (!nextTeam) {
+                nextTeam = availableIds[0];
+            }
+            
+            return nextTeam;
+        }
+
+        // Load data when page loads
+        loadData();
+        
+        // Auto-refresh every 30 seconds
+        setInterval(refreshData, 30000);
+    </script>
+</body>
+</html>

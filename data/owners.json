@@ -1,0 +1,52 @@
+[
+  {
+    "id": 1,
+    "owner_name": "Rick Sanchez",
+    "team_name": "Portal Gunners"
+  },
+  {
+    "id": 2,
+    "owner_name": "Morty Smith",
+    "team_name": "Aw Geez"
+  },
+  {
+    "id": 3,
+    "owner_name": "Summer Smith",
+    "team_name": "Giant Heads"
+  },
+  {
+    "id": 4,
+    "owner_name": "Jerry Smith",
+    "team_name": "Hungry for Apples"
+  },
+  {
+    "id": 5,
+    "owner_name": "Beth Smith",
+    "team_name": "Horse Surgeons"
+  },
+  {
+    "id": 6,
+    "owner_name": "Birdperson",
+    "team_name": "Phoenix Protocol"
+  },
+  {
+    "id": 7,
+    "owner_name": "Mr. Meeseeks",
+    "team_name": "Look at Me!"
+  },
+  {
+    "id": 8,
+    "owner_name": "Squanch",
+    "team_name": "Squanch Squad"
+  },
+  {
+    "id": 9,
+    "owner_name": "Unity",
+    "team_name": "Collective Consciousness"
+  },
+  {
+    "id": 10,
+    "owner_name": "Pickle Rick",
+    "team_name": "I'm Pickle Rick!"
+  }
+]

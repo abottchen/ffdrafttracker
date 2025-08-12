@@ -1,0 +1,107 @@
+[
+  {
+    "id": 1,
+    "first_name": "Josh",
+    "last_name": "Allen",
+    "team": "BUF",
+    "position": "QB"
+  },
+  {
+    "id": 2,
+    "first_name": "Patrick",
+    "last_name": "Mahomes",
+    "team": "KC",
+    "position": "QB"
+  },
+  {
+    "id": 3,
+    "first_name": "Lamar",
+    "last_name": "Jackson",
+    "team": "BAL",
+    "position": "QB"
+  },
+  {
+    "id": 4,
+    "first_name": "Christian",
+    "last_name": "McCaffrey",
+    "team": "SF",
+    "position": "RB"
+  },
+  {
+    "id": 5,
+    "first_name": "Austin",
+    "last_name": "Ekeler",
+    "team": "LAC",
+    "position": "RB"
+  },
+  {
+    "id": 6,
+    "first_name": "Derrick",
+    "last_name": "Henry",
+    "team": "TEN",
+    "position": "RB"
+  },
+  {
+    "id": 7,
+    "first_name": "Tyreek",
+    "last_name": "Hill",
+    "team": "MIA",
+    "position": "WR"
+  },
+  {
+    "id": 8,
+    "first_name": "Justin",
+    "last_name": "Jefferson",
+    "team": "MIN",
+    "position": "WR"
+  },
+  {
+    "id": 9,
+    "first_name": "Ja'Marr",
+    "last_name": "Chase",
+    "team": "CIN",
+    "position": "WR"
+  },
+  {
+    "id": 10,
+    "first_name": "Travis",
+    "last_name": "Kelce",
+    "team": "KC",
+    "position": "TE"
+  },
+  {
+    "id": 11,
+    "first_name": "Mark",
+    "last_name": "Andrews",
+    "team": "BAL",
+    "position": "TE"
+  },
+  {
+    "id": 12,
+    "first_name": "Justin",
+    "last_name": "Tucker",
+    "team": "BAL",
+    "position": "K"
+  },
+  {
+    "id": 13,
+    "first_name": "Buffalo",
+    "last_name": "Bills",
+    "team": "BUF",
+    "position": "D/ST"
+  },
+  {
+    "id": 14,
+    "first_name": "San Francisco",
+    "last_name": "49ers",
+    "team": "SF",
+    "position": "D/ST"
+  },
+  {
+    "id": 15,
+    "first_name": "Davante",
+    "last_name": "Adams",
+    "team": "LV",
+    "position": "WR"
+  }
+]
