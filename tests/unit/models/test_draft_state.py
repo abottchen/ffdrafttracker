@@ -116,3 +116,49 @@ class TestDraftState:
 
             # Should clean up temp file
             mock_unlink.assert_called_once_with(missing_ok=True)
+
+    @patch("pathlib.Path.replace")
+    @patch("pathlib.Path.write_text")
+    @patch.object(DraftState, "load_from_file")
+    def test_save_to_file_increments_version_by_default(
+        self, mock_load, mock_write_text, mock_replace
+    ):
+        """Test save_to_file increments version by default."""
+        draft_state = DraftState(next_to_nominate=1, version=5)
+        file_path = Path("version_test.json")
+
+        mock_load.return_value = draft_state
+
+        # Version should be 5 initially
+        assert draft_state.version == 5
+
+        draft_state.save_to_file(file_path)
+
+        # Version should be incremented to 6
+        assert draft_state.version == 6
+
+        # Verify the written JSON contains version 6
+        written_json = mock_write_text.call_args[0][0]
+        assert '"version": 6' in written_json
+
+    @patch("pathlib.Path.replace")
+    @patch("pathlib.Path.write_text")
+    @patch.object(DraftState, "load_from_file")
+    def test_save_to_file_skip_version_increment(
+        self, mock_load, mock_write_text, mock_replace
+    ):
+        """Test save_to_file can skip version increment for initial saves."""
+        draft_state = DraftState(next_to_nominate=1, version=1)
+        file_path = Path("initial_save_test.json")
+
+        mock_load.return_value = draft_state
+
+        # Save without incrementing version
+        draft_state.save_to_file(file_path, increment_version=False)
+
+        # Version should remain 1
+        assert draft_state.version == 1
+
+        # Verify the written JSON contains version 1
+        written_json = mock_write_text.call_args[0][0]
+        assert '"version": 1' in written_json
