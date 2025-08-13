@@ -471,6 +471,7 @@
         let lastDraftedPlayerId = null;
         let currentDraftState = null;
         let doneTeams = new Set();
+        let config = null;
 
         // Load initial data
         async function loadData() {
@@ -482,6 +483,10 @@
                 // Load owners
                 const ownersResponse = await fetch('/api/v1/owners');
                 owners = await ownersResponse.json();
+                
+                // Load configuration
+                const configResponse = await fetch('/api/v1/config');
+                config = await configResponse.json();
                 
                 // Load draft state
                 await refreshData();
@@ -685,6 +690,51 @@
             }
         }
 
+        function validateBidAmount(ownerId, bidAmount, teams) {
+            if (!config) return true; // If config not loaded yet, allow bid
+            
+            const team = teams.find(t => t.owner_id === ownerId);
+            if (!team) return false;
+            
+            const remainingBudgetAfterBid = team.budget_remaining - bidAmount;
+            const currentRosterSize = team.picks.length;
+            const remainingRosterSpots = config.total_rounds - currentRosterSize;
+            const minBudgetNeeded = remainingRosterSpots - 1; // -1 because current bid counts as one spot
+            
+            return remainingBudgetAfterBid >= minBudgetNeeded;
+        }
+        
+        function updateBidButtonState(ownerId, teams, nominated) {
+            const bidInput = document.getElementById(`bid-input-${ownerId}`);
+            const bidButton = document.querySelector(`button[onclick="placeBidForOwner(${ownerId})"]`);
+            
+            if (!bidInput || !bidButton) return;
+            
+            const bidAmount = parseInt(bidInput.value) || 0;
+            const minBid = nominated ? nominated.current_bid + 1 : 1;
+            
+            // Check basic constraints
+            const team = teams.find(t => t.owner_id === ownerId);
+            if (!team) return;
+            
+            const hasBasicBudget = bidAmount <= team.budget_remaining;
+            const meetsMinBid = bidAmount >= minBid;
+            const canCompleteRoster = validateBidAmount(ownerId, bidAmount, teams);
+            
+            const isValid = hasBasicBudget && meetsMinBid && canCompleteRoster;
+            
+            bidButton.disabled = !isValid;
+            
+            // Add visual feedback for invalid bids
+            if (!canCompleteRoster && hasBasicBudget && meetsMinBid) {
+                bidButton.title = "Bid would prevent completing roster";
+                bidInput.style.borderColor = "#ff6b6b";
+            } else {
+                bidButton.title = "";
+                bidInput.style.borderColor = "#4a4a4a";
+            }
+        }
+
         function updateTeams(teams, nextToNominate, nominated = null) {
             const list = document.getElementById('teams-list');
             list.innerHTML = '';
@@ -724,6 +774,18 @@
                     </div>
                 `;
                 list.appendChild(teamDiv);
+                
+                // Add event listener for bid input changes
+                if (hasNomination) {
+                    const bidInput = document.getElementById(`bid-input-${team.owner_id}`);
+                    if (bidInput) {
+                        bidInput.addEventListener('input', () => {
+                            updateBidButtonState(team.owner_id, teams, nominated);
+                        });
+                        // Initial validation
+                        updateBidButtonState(team.owner_id, teams, nominated);
+                    }
+                }
                 
                 // Auto-resize team name if it would wrap
                 setTimeout(() => {

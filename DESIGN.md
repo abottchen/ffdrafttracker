@@ -149,6 +149,17 @@ This allows frontend to handle errors appropriately:
 **Response:** JSON array of all Owner objects  
 **Behavior:** Returns complete owner database
 
+### GET /api/v1/owners/{owner_id}
+**Purpose:** Get specific owner information  
+**Response:** JSON with owner details or 404 if not found  
+**Behavior:** Returns individual owner by ID
+
+### GET /api/v1/config
+**Purpose:** Get draft configuration settings  
+**Response:** JSON of Configuration object  
+**Behavior:** Returns draft configuration including budgets, position limits, and total rounds  
+**Usage:** Used by frontend for client-side budget validation
+
 ### GET /api/v1/teams/{owner_id}
 **Purpose:** Get specific team roster with player details  
 **Response:** JSON with team info and full player/price data  

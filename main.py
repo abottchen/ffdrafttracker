@@ -241,6 +241,13 @@ async def get_all_owners():
     ]
 
 
+@app.get("/api/v1/config")
+async def get_config():
+    """Get draft configuration."""
+    config = load_configuration()
+    return config
+
+
 @app.get("/api/v1/owners/{owner_id}")
 async def get_owner(owner_id: int):
     """Get specific owner information."""
@@ -391,14 +398,22 @@ async def place_bid(request: BidRequest):
 
     # Find bidding team and validate budget
     team = next((t for t in draft_state.teams if t.owner_id == request.owner_id), None)
-    if team and request.bid_amount > team.budget_remaining:
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                f"Insufficient budget. Need ${request.bid_amount} but only have "
-                f"${team.budget_remaining}"
-            ),
-        )
+    if team:
+        # Calculate if owner can afford this bid AND still fill remaining roster spots
+        remaining_budget_after_bid = team.budget_remaining - request.bid_amount
+        current_roster_size = len(team.picks)
+        remaining_roster_spots = config.total_rounds - current_roster_size
+        min_budget_needed = remaining_roster_spots - 1  # -1 because current bid counts as one spot
+        
+        if remaining_budget_after_bid < min_budget_needed:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Insufficient budget. After ${request.bid_amount} bid, you would have "
+                    f"${remaining_budget_after_bid} left but need at least "
+                    f"${min_budget_needed} to fill remaining {remaining_roster_spots - 1} roster spots"
+                ),
+            )
 
     # Update bid
     previous_bid = draft_state.nominated.current_bid

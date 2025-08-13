@@ -1,9 +1,37 @@
 {
   "nominated": null,
   "available_player_ids": [
-    1,
-    2,
-    3
+    4429184,
+    4431196,
+    4241372,
+    4689988,
+    3055899,
+    4431053,
+    4240472,
+    4431142,
+    3059915,
+    4362087,
+    15847,
+    3139477,
+    4038524,
+    4241555,
+    4430191,
+    4044111,
+    4361529,
+    4372716,
+    4428331,
+    5082630,
+    4596602,
+    4607419,
+    3120348,
+    4362892,
+    4362921,
+    2975674,
+    4685784,
+    4430723,
+    4683062,
+    4433945,
+    4250360
   ],
   "teams": [
     {
@@ -15,8 +43,48 @@
       "owner_id": 2,
       "budget_remaining": 200,
       "picks": []
+    },
+    {
+      "owner_id": 3,
+      "budget_remaining": 200,
+      "picks": []
+    },
+    {
+      "owner_id": 4,
+      "budget_remaining": 200,
+      "picks": []
+    },
+    {
+      "owner_id": 5,
+      "budget_remaining": 200,
+      "picks": []
+    },
+    {
+      "owner_id": 6,
+      "budget_remaining": 200,
+      "picks": []
+    },
+    {
+      "owner_id": 7,
+      "budget_remaining": 200,
+      "picks": []
+    },
+    {
+      "owner_id": 8,
+      "budget_remaining": 200,
+      "picks": []
+    },
+    {
+      "owner_id": 9,
+      "budget_remaining": 200,
+      "picks": []
+    },
+    {
+      "owner_id": 10,
+      "budget_remaining": 200,
+      "picks": []
     }
   ],
   "next_to_nominate": 1,
-  "version": 6
+  "version": 1
 }

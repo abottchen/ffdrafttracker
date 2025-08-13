@@ -299,19 +299,35 @@ class TestMainApiIntegration:
         state = self.client.get("/api/v1/draft-state").json()
         version_after_second_nominate = state["version"]
 
-        # Try to bid more than remaining budget - this should fail
+        # Try to bid amount that would prevent roster completion - this should fail
+        # Owner 1 has $20 left and 1 player drafted, needs 18 more players
+        # If they bid $19, they'd have $1 left but need $17 more for remaining spots
         bid_response = self.client.post(
             "/api/v1/bid",
             json={
-                "owner_id": 1,  # This owner has only $20 left
-                "bid_amount": 25,  # More than remaining budget
+                "owner_id": 1,  # This owner has only $20 left, 1 player drafted
+                "bid_amount": 19,  # Would leave $1, need $17 for remaining spots
                 "expected_version": version_after_second_nominate,
             },
         )
 
-        # Should fail due to insufficient budget
+        # Should fail due to insufficient budget for roster completion
         assert bid_response.status_code == 422
         assert "Insufficient budget" in bid_response.json()["detail"]
+        assert "roster spots" in bid_response.json()["detail"]
+
+        # Try a valid bid from owner 2 who has sufficient budget
+        valid_bid_response = self.client.post(
+            "/api/v1/bid",
+            json={
+                "owner_id": 2,  # This owner has $200 left, 0 players drafted
+                "bid_amount": 16,  # Exceeds current bid, allows roster completion
+                "expected_version": version_after_second_nominate,
+            },
+        )
+
+        # Should succeed because owner 2 has plenty of budget for roster completion
+        assert valid_bid_response.status_code == 200
 
     def test_player_availability_consistency(self):
         """Test that player availability is maintained correctly."""

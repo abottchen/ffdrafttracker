@@ -201,6 +201,22 @@ class TestGetEndpoints(TestMainApp):
         assert response.status_code == 404
         assert "Team not found for owner 999" in response.json()["detail"]
 
+    @patch("main.load_configuration")
+    def test_get_config(self, mock_config):
+        """Test GET /api/v1/config."""
+        mock_config.return_value = Configuration(
+            initial_budget=200, min_bid=1, position_maximums={}, total_rounds=15
+        )
+
+        response = self.client.get("/api/v1/config")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["initial_budget"] == 200
+        assert data["min_bid"] == 1
+        assert data["total_rounds"] == 15
+        assert "position_maximums" in data
+
 
 class TestPostEndpoints(TestMainApp):
     """Test POST endpoints."""
@@ -476,23 +492,31 @@ class TestPostEndpoints(TestMainApp):
     @patch("main.load_draft_state")
     @patch("main.load_configuration")
     def test_bid_422_insufficient_budget(self, mock_config, mock_draft_state):
-        """Test POST /api/v1/bid returns 422 for insufficient budget."""
-        # DESIGN.md: Validates owner has sufficient budget remaining for bid_amount
+        """Test POST /api/v1/bid returns 422 for insufficient budget to complete
+        roster."""
+        # DESIGN.md: Validates owner has sufficient budget to complete full roster
         mock_config.return_value = Configuration(
             initial_budget=200, min_bid=1, position_maximums={}, total_rounds=19
         )
 
-        # Team with only $5 remaining budget
+        # Team with 16 players already drafted and $20 remaining budget
+        # With 19 total rounds, they need 3 more players
+        existing_picks = [
+            DraftPick(pick_id=i, player_id=i + 10, owner_id=2, price=10)
+            for i in range(16)
+        ]
         low_budget_teams = [
             Team(owner_id=1, budget_remaining=200, picks=[]),
-            Team(owner_id=2, budget_remaining=5, picks=[]),  # Only $5 left
+            Team(
+                owner_id=2, budget_remaining=20, picks=existing_picks
+            ),  # 16 players, $20 left
         ]
 
         draft_state_with_nomination = DraftState(
             nominated=Nominated(
                 player_id=1, current_bidder_id=1, nominating_owner_id=1, current_bid=3
             ),
-            available_player_ids=[3],
+            available_player_ids=[1, 3],
             teams=low_budget_teams,
             next_to_nominate=1,
             version=5,
@@ -503,13 +527,162 @@ class TestPostEndpoints(TestMainApp):
             "/api/v1/bid",
             json={
                 "owner_id": 2,
-                "bid_amount": 10,  # More than $5 budget
+                "bid_amount": 19,  # Would leave only $1, but need $2 for 2 more players
                 "expected_version": 5,
             },
         )
 
         assert response.status_code == 422
         assert "Insufficient budget" in response.json()["detail"]
+        assert "roster spots" in response.json()["detail"]
+
+    @patch("main.load_draft_state")
+    @patch("main.load_configuration")
+    def test_bid_422_sufficient_budget_for_roster_completion(
+        self, mock_config, mock_draft_state
+    ):
+        """Test POST /api/v1/bid allows bid when budget can complete roster."""
+        # DESIGN.md: Budget validation should allow bids that leave enough for
+        # roster completion
+        mock_config.return_value = Configuration(
+            initial_budget=200, min_bid=1, position_maximums={}, total_rounds=19
+        )
+
+        # Team with 16 players already drafted and $20 remaining budget
+        # With 19 total rounds, they need 3 more players
+        existing_picks = [
+            DraftPick(pick_id=i, player_id=i + 10, owner_id=2, price=10)
+            for i in range(16)
+        ]
+        sufficient_budget_teams = [
+            Team(owner_id=1, budget_remaining=200, picks=[]),
+            Team(
+                owner_id=2, budget_remaining=20, picks=existing_picks
+            ),  # 16 players, $20 left
+        ]
+
+        draft_state_with_nomination = DraftState(
+            nominated=Nominated(
+                player_id=1, current_bidder_id=1, nominating_owner_id=1, current_bid=3
+            ),
+            available_player_ids=[1, 3],
+            teams=sufficient_budget_teams,
+            next_to_nominate=1,
+            version=5,
+        )
+        mock_draft_state.return_value = draft_state_with_nomination
+
+        response = self.client.post(
+            "/api/v1/bid",
+            json={
+                "owner_id": 2,
+                "bid_amount": 18,  # Would leave $2, exactly enough for 2 more players
+                "expected_version": 5,
+            },
+        )
+
+        # Should succeed because $2 remaining is enough for 2 more $1 players
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+
+    @patch("main.load_draft_state")
+    @patch("main.load_configuration")
+    def test_bid_edge_case_one_dollar_for_one_player(
+        self, mock_config, mock_draft_state
+    ):
+        """Test POST /api/v1/bid allows bid leaving exactly $1 for 1 remaining
+        player."""
+        mock_config.return_value = Configuration(
+            initial_budget=200, min_bid=1, position_maximums={}, total_rounds=19
+        )
+
+        # Team with 18 players already drafted and $10 remaining budget
+        # With 19 total rounds, they need 1 more player
+        existing_picks = [
+            DraftPick(pick_id=i, player_id=i + 10, owner_id=2, price=10)
+            for i in range(18)
+        ]
+        teams_with_one_spot_left = [
+            Team(owner_id=1, budget_remaining=200, picks=[]),
+            Team(
+                owner_id=2, budget_remaining=10, picks=existing_picks
+            ),  # 18 players, $10 left
+        ]
+
+        draft_state_with_nomination = DraftState(
+            nominated=Nominated(
+                player_id=1, current_bidder_id=1, nominating_owner_id=1, current_bid=3
+            ),
+            available_player_ids=[1, 3],
+            teams=teams_with_one_spot_left,
+            next_to_nominate=1,
+            version=5,
+        )
+        mock_draft_state.return_value = draft_state_with_nomination
+
+        response = self.client.post(
+            "/api/v1/bid",
+            json={
+                "owner_id": 2,
+                "bid_amount": 9,  # Would leave exactly $1 for exactly 1 more player
+                "expected_version": 5,
+            },
+        )
+
+        # Should succeed because $1 remaining is exactly enough for 1 more player
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+
+    @patch("main.load_draft_state")
+    @patch("main.load_configuration")
+    def test_bid_edge_case_zero_dollars_roster_complete(
+        self, mock_config, mock_draft_state
+    ):
+        """Test POST /api/v1/bid allows bid using all money if it completes the
+        roster."""
+        mock_config.return_value = Configuration(
+            initial_budget=200, min_bid=1, position_maximums={}, total_rounds=19
+        )
+
+        # Team with 18 players already drafted and $15 remaining budget
+        # With 19 total rounds, they need 1 more player - this bid would complete roster
+        existing_picks = [
+            DraftPick(pick_id=i, player_id=i + 10, owner_id=2, price=10)
+            for i in range(18)
+        ]
+        teams_ready_to_complete = [
+            Team(owner_id=1, budget_remaining=200, picks=[]),
+            Team(
+                owner_id=2, budget_remaining=15, picks=existing_picks
+            ),  # 18 players, $15 left
+        ]
+
+        draft_state_with_nomination = DraftState(
+            nominated=Nominated(
+                player_id=1, current_bidder_id=1, nominating_owner_id=1, current_bid=3
+            ),
+            available_player_ids=[1, 3],
+            teams=teams_ready_to_complete,
+            next_to_nominate=1,
+            version=5,
+        )
+        mock_draft_state.return_value = draft_state_with_nomination
+
+        response = self.client.post(
+            "/api/v1/bid",
+            json={
+                "owner_id": 2,
+                "bid_amount": 15,  # Uses all money but completes roster
+                "expected_version": 5,
+            },
+        )
+
+        # Should succeed because winning completes the roster (0 remaining spots)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
 
     @patch("main.load_draft_state")
     def test_draft_success(self, mock_draft_state):
