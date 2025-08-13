@@ -192,7 +192,7 @@ This allows frontend to handle errors appropriately:
 - `200` - Success confirmation
 - `404` - Not found (pick_id doesn't exist)
 - `409` - Conflict (version mismatch)
-- `422` - Unprocessable (cannot undo - subsequent picks depend on this)
+- `422` - Unprocessable (data integrity error - player is both drafted and available)
 **Response:** Success confirmation  
 **Behavior:** 
   - Removes DraftPick from team

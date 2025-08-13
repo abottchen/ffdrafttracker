@@ -576,6 +576,67 @@ async def cancel_nomination(request: DeleteNominateRequest):
     }
 
 
+@app.delete("/api/v1/draft/{pick_id}")
+async def remove_draft_pick(pick_id: int, request: UndoDraftRequest):
+    """Remove a draft pick and restore player to available pool."""
+    # Load current state
+    draft_state = load_draft_state()
+    
+    # Check version for optimistic locking
+    check_version(draft_state.version, request.expected_version)
+    
+    # Find the pick and team
+    pick_found = False
+    target_team = None
+    target_pick = None
+    
+    for team in draft_state.teams:
+        for pick in team.picks:
+            if pick.pick_id == pick_id:
+                # Found the pick to remove
+                target_team = team
+                target_pick = pick
+                pick_found = True
+                break
+        if pick_found:
+            break
+    
+    if not pick_found:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Pick with ID {pick_id} not found"
+        )
+    
+    # Critical integrity check: drafted player should NOT be in available pool
+    if target_pick.player_id in draft_state.available_player_ids:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Data integrity error: Player {target_pick.player_id} is drafted but also in available pool. Manual intervention required."
+        )
+    
+    # Remove pick from team
+    target_team.picks.remove(target_pick)
+    
+    # Restore budget
+    target_team.budget_remaining += target_pick.price
+    
+    # Add player back to available pool
+    draft_state.available_player_ids.append(target_pick.player_id)
+    draft_state.available_player_ids.sort()
+    
+    # Save state with version increment
+    draft_state.save_to_file(DRAFT_STATE_FILE)
+    
+    logger.info(f"Removed pick {pick_id}, returned player {target_pick.player_id} to available pool")
+    
+    return {
+        "success": True,
+        "removed_pick_id": pick_id,
+        "restored_player_id": target_pick.player_id,
+        "new_version": draft_state.version
+    }
+
+
 @app.post("/api/v1/reset")
 async def reset_draft(request: ResetRequest):
     """Reset draft to initial state (admin action)."""

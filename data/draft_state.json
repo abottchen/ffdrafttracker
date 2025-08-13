@@ -1,119 +1,22 @@
 {
   "nominated": null,
   "available_player_ids": [
-    9,
-    10,
-    11,
-    12,
-    13,
-    14,
-    15
+    1,
+    2,
+    3
   ],
   "teams": [
     {
       "owner_id": 1,
-      "budget_remaining": 193,
-      "picks": [
-        {
-          "pick_id": 1,
-          "player_id": 1,
-          "owner_id": 1,
-          "price": 1
-        },
-        {
-          "pick_id": 2,
-          "player_id": 2,
-          "owner_id": 1,
-          "price": 2
-        },
-        {
-          "pick_id": 3,
-          "player_id": 3,
-          "owner_id": 1,
-          "price": 2
-        },
-        {
-          "pick_id": 4,
-          "player_id": 4,
-          "owner_id": 1,
-          "price": 2
-        }
-      ]
+      "budget_remaining": 200,
+      "picks": []
     },
     {
       "owner_id": 2,
       "budget_remaining": 200,
       "picks": []
-    },
-    {
-      "owner_id": 3,
-      "budget_remaining": 200,
-      "picks": []
-    },
-    {
-      "owner_id": 4,
-      "budget_remaining": 197,
-      "picks": [
-        {
-          "pick_id": 6,
-          "player_id": 5,
-          "owner_id": 4,
-          "price": 3
-        }
-      ]
-    },
-    {
-      "owner_id": 5,
-      "budget_remaining": 200,
-      "picks": []
-    },
-    {
-      "owner_id": 6,
-      "budget_remaining": 199,
-      "picks": [
-        {
-          "pick_id": 5,
-          "player_id": 7,
-          "owner_id": 6,
-          "price": 1
-        }
-      ]
-    },
-    {
-      "owner_id": 7,
-      "budget_remaining": 200,
-      "picks": []
-    },
-    {
-      "owner_id": 8,
-      "budget_remaining": 200,
-      "picks": []
-    },
-    {
-      "owner_id": 9,
-      "budget_remaining": 198,
-      "picks": [
-        {
-          "pick_id": 7,
-          "player_id": 6,
-          "owner_id": 9,
-          "price": 2
-        }
-      ]
-    },
-    {
-      "owner_id": 10,
-      "budget_remaining": 198,
-      "picks": [
-        {
-          "pick_id": 8,
-          "player_id": 8,
-          "owner_id": 10,
-          "price": 2
-        }
-      ]
     }
   ],
-  "next_to_nominate": 9,
-  "version": 24
+  "next_to_nominate": 1,
+  "version": 6
 }
