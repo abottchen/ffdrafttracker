@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fantasy Football Draft Tracker</title>
-    <style>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Fantasy Football Draft Tracker</title>
+        <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             margin: 0;
@@ -468,79 +468,92 @@
             margin-right: 10px;
             font-size: 0.9em;
         }
-    </style>
-</head>
-<body>
-    <div class="draft-progress-container">
-        <div class="draft-progress-bar-container">
-            <div class="draft-progress-bar" id="draft-progress-bar" style="width: 0%">
-                <span class="draft-progress-percentage" id="draft-percentage">0%</span>
-            </div>
-            <div class="draft-progress-markers" id="draft-markers">
-                <!-- Round markers will be added dynamically -->
-            </div>
-        </div>
-    </div>
-    
-    <div class="players-grid">
-        <div id="nomination-panel" class="nomination-panel">
-            <div id="nomination-details" style="display: flex; align-items: center; gap: 20px; width: 100%;"></div>
-        </div>
-        
-        <div class="status-panel">
-            <div class="nomination-inputs">
-                <div class="player-search-container">
-                    <input type="text" id="player-search" class="player-search" 
-                           placeholder="Type player name..." autocomplete="off">
-                    <div id="player-dropdown" class="player-dropdown">
-                        <!-- Populated by JavaScript -->
-                    </div>
+        </style>
+    </head>
+    <body>
+        <div class="draft-progress-container">
+            <div class="draft-progress-bar-container">
+                <div class="draft-progress-bar" id="draft-progress-bar" style="width: 0%">
+                    <span class="draft-progress-percentage" id="draft-percentage">0%</span>
                 </div>
-                <input type="number" id="nomination-bid" class="bid-input" placeholder="Initial bid" min="1" value="1">
-                <button class="button" onclick="nominateSelected()">Nominate</button>
-                <div id="message" style="display: none;"></div>
-                <div id="nomination-timer" class="nomination-timer" style="display: none;">00:00</div>
+                <div class="draft-progress-markers" id="draft-markers">
+                    <!-- Round markers will be added dynamically -->
+                </div>
             </div>
         </div>
-    </div>
-
-    <div class="teams-horizontal" id="teams-list">
-        <!-- Teams will be populated by JavaScript -->
-    </div>
-
-    <div class="drafted-players-panel">
-        <div class="drafted-players-grid" id="drafted-players-grid">
-            <!-- Team rosters will be populated by JavaScript -->
+        <div class="players-grid">
+            <div id="nomination-panel" class="nomination-panel">
+                <div id="nomination-details"
+                     style="display: flex;
+                            align-items: center;
+                            gap: 20px;
+                            width: 100%"></div>
+            </div>
+            <div class="status-panel">
+                <div class="nomination-inputs">
+                    <div class="player-search-container">
+                        <input type="text"
+                               id="player-search"
+                               class="player-search"
+                               placeholder="Type player name..."
+                               autocomplete="off">
+                        <div id="player-dropdown" class="player-dropdown">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+                    <input type="number"
+                           id="nomination-bid"
+                           class="bid-input"
+                           placeholder="Initial bid"
+                           min="1"
+                           value="1">
+                    <button class="button" onclick="nominateSelected()">Nominate</button>
+                    <div id="message" style="display: none;"></div>
+                    <div id="nomination-timer" class="nomination-timer" style="display: none;">00:00</div>
+                </div>
+            </div>
         </div>
-    </div>
-
-    <div class="api-links">
-        <h3>Admin Controls</h3>
-        <button class="button" onclick="refreshData()">🔄 Refresh</button>
-        <button class="button" onclick="resetDraft()">🔄 Reset Draft</button>
-        <br><br>
-        <select id="team-select" class="team-select">
-            <option value="">Select team to mark done...</option>
-        </select>
-        <button class="button" onclick="markTeamDone()">Mark Team Done</button>
-        <button class="button" onclick="clearDoneTeams()">Clear All Done</button>
-        <br><br>
-        <button class="button" onclick="cancelNomination()" id="admin-cancel-nomination" style="display: none;">Cancel Nomination</button>
-        <br><br>
-        <select id="drafted-player-select" class="team-select">
-            <option value="">Select drafted player to remove...</option>
-        </select>
-        <button class="button" onclick="removeDraftedPlayer()">Remove</button>
-        <br><br>
-        <h3>API Documentation</h3>
-        <a href="/docs" target="_blank">📚 Interactive API Docs (Swagger)</a>
-        <a href="/redoc" target="_blank">📖 ReDoc Documentation</a>
-        <a href="/api/v1/draft-state" target="_blank">🔗 Draft State JSON</a>
-        <a href="/api/v1/players" target="_blank">🔗 Players JSON</a>
-        <a href="/api/v1/owners" target="_blank">🔗 Owners JSON</a>
-    </div>
-
-    <script>
+        <div class="teams-horizontal" id="teams-list">
+            <!-- Teams will be populated by JavaScript -->
+        </div>
+        <div class="drafted-players-panel">
+            <div class="drafted-players-grid" id="drafted-players-grid">
+                <!-- Team rosters will be populated by JavaScript -->
+            </div>
+        </div>
+        <div class="api-links">
+            <h3>Admin Controls</h3>
+            <button class="button" onclick="refreshData()">🔄 Refresh</button>
+            <button class="button" onclick="resetDraft()">🔄 Reset Draft</button>
+            <br>
+            <br>
+            <select id="team-select" class="team-select">
+                <option value="">Select team to mark done...</option>
+            </select>
+            <button class="button" onclick="markTeamDone()">Mark Team Done</button>
+            <button class="button" onclick="clearDoneTeams()">Clear All Done</button>
+            <br>
+            <br>
+            <button class="button"
+                    onclick="cancelNomination()"
+                    id="admin-cancel-nomination"
+                    style="display: none">Cancel Nomination</button>
+            <br>
+            <br>
+            <select id="drafted-player-select" class="team-select">
+                <option value="">Select drafted player to remove...</option>
+            </select>
+            <button class="button" onclick="removeDraftedPlayer()">Remove</button>
+            <br>
+            <br>
+            <h3>API Documentation</h3>
+            <a href="/docs" target="_blank">📚 Interactive API Docs (Swagger)</a>
+            <a href="/redoc" target="_blank">📖 ReDoc Documentation</a>
+            <a href="/api/v1/draft-state" target="_blank">🔗 Draft State JSON</a>
+            <a href="/api/v1/players" target="_blank">🔗 Players JSON</a>
+            <a href="/api/v1/owners" target="_blank">🔗 Owners JSON</a>
+        </div>
+        <script>
         let currentVersion = {{ draft_state.version }};
         let selectedPlayerId = null;
         let selectedPlayerName = null;
@@ -1387,6 +1400,6 @@
         
         // Auto-refresh every 30 seconds
         setInterval(refreshData, 30000);
-    </script>
-</body>
+        </script>
+    </body>
 </html>
