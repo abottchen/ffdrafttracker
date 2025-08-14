@@ -103,12 +103,24 @@ class AdminDraftRequest(BaseModel):
 def load_draft_state() -> DraftState:
     """Load current draft state from file."""
     if not DRAFT_STATE_FILE.exists():
-        # Initialize with empty state
+        # Initialize with proper state from owners and players
+        config = load_configuration()
+        players = load_players()
+        owners = load_owners()
+        owner_ids = sorted(owners.keys()) if owners else []
+
         initial_state = DraftState(
             nominated=None,
-            available_player_ids=[],
-            teams=[],
-            next_to_nominate=1,
+            available_player_ids=[p.id for p in players],
+            teams=[
+                Team(
+                    owner_id=owner_id,
+                    budget_remaining=config.initial_budget,
+                    picks=[]
+                )
+                for owner_id in owner_ids
+            ],
+            next_to_nominate=owner_ids[0] if owner_ids else 1,
             version=1,
         )
         initial_state.save_to_file(DRAFT_STATE_FILE, increment_version=False)
@@ -409,25 +421,30 @@ async def place_bid(request: BidRequest):
 
     # Find bidding team and validate budget
     team = next((t for t in draft_state.teams if t.owner_id == request.owner_id), None)
-    if team:
-        # Calculate if owner can afford this bid AND still fill remaining roster spots
-        remaining_budget_after_bid = team.budget_remaining - request.bid_amount
-        current_roster_size = len(team.picks)
-        remaining_roster_spots = config.total_rounds - current_roster_size
-        min_budget_needed = (
-            remaining_roster_spots - 1
-        )  # -1 because current bid counts as one spot
+    if not team:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Team not found for owner {request.owner_id} in draft state",
+        )
 
-        if remaining_budget_after_bid < min_budget_needed:
-            raise HTTPException(
-                status_code=422,
-                detail=(
-                    f"Insufficient budget. After ${request.bid_amount} bid, "
-                    f"you would have ${remaining_budget_after_bid} left but need "
-                    f"at least ${min_budget_needed} to fill remaining "
-                    f"{remaining_roster_spots - 1} roster spots"
-                ),
-            )
+    # Calculate if owner can afford this bid AND still fill remaining roster spots
+    remaining_budget_after_bid = team.budget_remaining - request.bid_amount
+    current_roster_size = len(team.picks)
+    remaining_roster_spots = config.total_rounds - current_roster_size
+    min_budget_needed = (
+        remaining_roster_spots - 1
+    )  # -1 because current bid counts as one spot
+
+    if remaining_budget_after_bid < min_budget_needed:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Insufficient budget. After ${request.bid_amount} bid, "
+                f"you would have ${remaining_budget_after_bid} left but need "
+                f"at least ${min_budget_needed} to fill remaining "
+                f"{remaining_roster_spots - 1} roster spots"
+            ),
+        )
 
     # Update bid
     previous_bid = draft_state.nominated.current_bid
@@ -505,18 +522,13 @@ async def complete_draft(request: DraftRequest):
             detail=f"Owner {request.owner_id} is not the current high bidder",
         )
 
-    # TODO: This should not happen
-    # Find or create team
+    # Find team (must exist - teams are immutable from owners.json)
     team = next((t for t in draft_state.teams if t.owner_id == request.owner_id), None)
     if not team:
-        # Create new team with initial budget
-        config = load_configuration()
-        team = Team(
-            owner_id=request.owner_id,
-            budget_remaining=config.initial_budget,
-            picks=[],
+        raise HTTPException(
+            status_code=422,
+            detail=f"Team not found for owner {request.owner_id} in draft state",
         )
-        draft_state.teams.append(team)
 
     # Validate budget
     if request.final_price > team.budget_remaining:
