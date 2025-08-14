@@ -7,21 +7,50 @@ A local fantasy football auction draft tracking tool with a web-based interface 
 
 ### Application Structure
 **Technology Stack:** FastAPI (Python) serving both API and frontend  
-**Port:** 8175  
-**Architecture:** Monolithic application with stateless API design  
-**Deployment:** Single Python process via command-line execution  
+**Architecture:** Dual-port application with stateless API design  
+**Deployment:** Single Python process via command-line execution serving both applications  
 
-### Frontend
-**Technology Stack:** HTML/CSS/JavaScript with Alpine.js for reactivity  
+**Main Draft Application:**
+- **Port:** 8175 (localhost only)
+- **Purpose:** Interactive draft management with full admin capabilities
+- **Access:** Draft administrator interface
+
+**Team Viewer Application:**
+- **Port:** 8176 (all network interfaces - 0.0.0.0)
+- **Purpose:** Read-only team viewing for network participants
+- **Access:** External network viewing interface
+
+### Frontend Applications
+
+#### Main Draft Interface (Port 8175)
+**Technology Stack:** HTML/CSS/JavaScript with vanilla JS  
 **Served By:** FastAPI using Jinja2 templates and static files  
 **Access:** Browser-based interface at localhost:8175  
-**Status:** Layout and design in progress  
+**Security:** Localhost only for admin control  
 
 **Key Features:**
-- Reactive UI components using Alpine.js for automatic DOM updates
-- Nominate button that POSTs to `/api/v1/nominate` 
-- Real-time updates to nomination panel, player stats, and timer
-- No build step required - Alpine.js loaded via CDN
+- Interactive nomination and bidding controls
+- Real-time draft progress bar with color-coded completion status
+- Nomination timer (MM:SS format) for tracking auction duration
+- Admin controls for draft management (reset, undo picks, cancel nominations)
+- Player search with autocomplete dropdown
+- Team bidding interfaces with budget validation
+- Live roster updates with player images from ESPN
+
+#### Team Viewer Interface (Port 8176)
+**Technology Stack:** HTML/CSS/JavaScript with vanilla JS  
+**Served By:** Separate FastAPI application instance  
+**Access:** Browser-based interface at [network-ip]:8176  
+**Security:** Read-only, no modification capabilities  
+
+**Key Features:**
+- Team selection dropdown (defaults to owner ID 1)
+- Complete roster display with player images, positions, teams, and prices
+- Team summary statistics (budget remaining, position counts vs maximums)
+- Dark theme with color differentiation for easy reading
+- Auto-refresh every 5 seconds for real-time updates
+- Responsive design optimized for 17-player rosters
+- Fetches all data from main application API (port 8175)
 
 ### Backend
 **Framework:** FastAPI with Pydantic models  
@@ -222,7 +251,7 @@ This allows frontend to handle errors appropriately:
 ## File Structure
 ```
 ffdrafttracker/
-├── main.py                # FastAPI application entry point
+├── main.py                # Main FastAPI application (ports 8175 & 8176)
 ├── src/
 │   ├── __init__.py
 │   ├── enums/
@@ -232,21 +261,34 @@ ffdrafttracker/
 │   └── models/
 │       ├── __init__.py
 │       ├── player.py      # Player model
-│       └── ...            # Future models (Owner, DraftState, etc.)
-├── static/
-│   ├── css/
-│   │   └── styles.css     # Application styles
-│   └── js/
-│       └── app.js         # Alpine.js components and logic
+│       ├── owner.py       # Owner model
+│       ├── nominated.py   # Nominated model
+│       ├── draft_pick.py  # DraftPick model
+│       ├── team.py        # Team model
+│       ├── draft_state.py # DraftState model
+│       ├── action_log.py  # ActionLog model
+│       ├── action_logger.py # ActionLogger utility
+│       └── configuration.py # Configuration model
+├── static/                # Static assets (if needed)
 ├── templates/
-│   └── index.html         # Main application template
+│   ├── index.html         # Main draft application template
+│   └── team_viewer.html   # Team viewer application template
 ├── data/
 │   ├── draft_state.json   # Current draft state
 │   ├── players.json       # Player database
 │   ├── owners.json        # Owner information
 │   ├── action_log.json    # Complete action history
 │   └── config.json        # Application configuration
-└── requirements.txt       # Python dependencies
+├── tests/                 # Test suite
+│   ├── unit/              # Unit tests for models
+│   └── integration/       # Integration tests for file persistence
+├── utils/
+│   └── fetch_espn_players.py # Utility for player data import
+├── requirements.txt       # Python dependencies
+├── pyproject.toml        # Project configuration
+├── DESIGN.md             # This architecture document
+├── CLAUDE.md             # Development guidance
+└── README.md             # Project overview
 ```
 
 ## FastAPI Benefits

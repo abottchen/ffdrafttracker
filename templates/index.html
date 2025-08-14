@@ -25,6 +25,57 @@
             padding: 5px 20px;
             border-radius: 8px;
             margin-bottom: 15px;
+            display: none;
+        }
+        .draft-progress-container {
+            background: #2d2d2d;
+            padding: 5px 10px;
+            border-radius: 6px;
+            margin-bottom: 0;
+            border: 1px solid #404040;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        .draft-progress-bar-container {
+            width: 100%;
+            height: 20px;
+            background: #1a1a1a;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid #404040;
+        }
+        .draft-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4a90e2 0%, #51cf66 100%);
+            border-radius: 10px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 8px;
+            position: relative;
+        }
+        .draft-progress-percentage {
+            color: white;
+            font-weight: bold;
+            font-size: 0.85em;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            margin-right: 3px;
+        }
+        .draft-progress-markers {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+        }
+        .draft-progress-marker {
+            flex: 1;
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+        .draft-progress-marker:last-child {
+            border-right: none;
         }
         .status-panel {
             background: #2d2d2d;
@@ -124,15 +175,15 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 15px;
-            height: 10vh;
-            padding: 15px 15px 0 15px;
+            height: 8vh;
+            padding: 5px 15px 0 15px;
         }
         .teams-horizontal {
             display: grid;
             grid-template-columns: repeat(10, 1fr);
             gap: 3px;
             width: 100%;
-            height: 15vh;
+            height: 12vh;
             padding: 15px;
         }
         .nomination-inputs {
@@ -140,6 +191,23 @@
             gap: 10px;
             align-items: center;
             width: 100%;
+            position: relative;
+        }
+        .nomination-timer {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #4a90e2;
+            background: #1a1a1a;
+            padding: 8px 20px;
+            border-radius: 8px;
+            border: 2px solid #4a90e2;
+            min-width: 140px;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
         }
         .player-search-container {
             position: relative;
@@ -308,7 +376,7 @@
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.3);
             border: 1px solid #404040;
-            height: calc(75vh - 15px);
+            height: calc(80vh - 15px - 42px);
             margin: 0 15px;
             overflow-y: auto;
         }
@@ -403,6 +471,17 @@
     </style>
 </head>
 <body>
+    <div class="draft-progress-container">
+        <div class="draft-progress-bar-container">
+            <div class="draft-progress-bar" id="draft-progress-bar" style="width: 0%">
+                <span class="draft-progress-percentage" id="draft-percentage">0%</span>
+            </div>
+            <div class="draft-progress-markers" id="draft-markers">
+                <!-- Round markers will be added dynamically -->
+            </div>
+        </div>
+    </div>
+    
     <div class="players-grid">
         <div id="nomination-panel" class="nomination-panel">
             <div id="nomination-details" style="display: flex; align-items: center; gap: 20px; width: 100%;"></div>
@@ -420,6 +499,7 @@
                 <input type="number" id="nomination-bid" class="bid-input" placeholder="Initial bid" min="1" value="1">
                 <button class="button" onclick="nominateSelected()">Nominate</button>
                 <div id="message" style="display: none;"></div>
+                <div id="nomination-timer" class="nomination-timer" style="display: none;">00:00</div>
             </div>
         </div>
     </div>
@@ -472,6 +552,8 @@
         let currentDraftState = null;
         let doneTeams = new Set();
         let config = null;
+        let nominationTimerInterval = null;
+        let nominationStartTime = null;
 
         // Load initial data
         async function loadData() {
@@ -524,16 +606,106 @@
                 // Populate team select dropdown
                 populateTeamSelect(draftState.teams);
                 
+                // Update draft progress
+                updateDraftProgress(draftState.teams);
+                
             } catch (error) {
                 showMessage('Error refreshing data: ' + error.message, 'error');
             }
         }
 
+        function startNominationTimer() {
+            nominationStartTime = Date.now();
+            const timerElement = document.getElementById('nomination-timer');
+            timerElement.style.display = 'block';
+            
+            // Clear any existing timer
+            if (nominationTimerInterval) {
+                clearInterval(nominationTimerInterval);
+            }
+            
+            // Update timer every second
+            nominationTimerInterval = setInterval(() => {
+                const elapsed = Date.now() - nominationStartTime;
+                const seconds = Math.floor(elapsed / 1000);
+                const minutes = Math.floor(seconds / 60);
+                const displaySeconds = seconds % 60;
+                
+                timerElement.textContent = 
+                    `${String(minutes).padStart(2, '0')}:${String(displaySeconds).padStart(2, '0')}`;
+            }, 1000);
+        }
+        
+        function stopNominationTimer() {
+            if (nominationTimerInterval) {
+                clearInterval(nominationTimerInterval);
+                nominationTimerInterval = null;
+            }
+            const timerElement = document.getElementById('nomination-timer');
+            timerElement.style.display = 'none';
+            timerElement.textContent = '00:00';
+        }
+        
+        function updateDraftProgress(teams) {
+            if (!config) return;
+            
+            // Calculate total players drafted
+            let totalPlayersDrafted = 0;
+            teams.forEach(team => {
+                totalPlayersDrafted += team.picks.length;
+            });
+            
+            // Calculate total possible players
+            const totalPossiblePlayers = config.total_rounds * teams.length;
+            
+            // Calculate percentage
+            const percentage = totalPossiblePlayers > 0 
+                ? Math.round((totalPlayersDrafted / totalPossiblePlayers) * 100) 
+                : 0;
+            
+            // Calculate current round (1-based)
+            const currentRound = totalPlayersDrafted > 0 
+                ? Math.ceil((totalPlayersDrafted) / teams.length)
+                : 0;
+            
+            // Stats elements removed - no longer needed
+            
+            // Update progress bar
+            const progressBar = document.getElementById('draft-progress-bar');
+            progressBar.style.width = percentage + '%';
+            document.getElementById('draft-percentage').textContent = percentage + '%';
+            
+            // Add round markers if not already added
+            const markersContainer = document.getElementById('draft-markers');
+            if (markersContainer.children.length === 0 && config.total_rounds > 0) {
+                for (let i = 0; i < config.total_rounds; i++) {
+                    const marker = document.createElement('div');
+                    marker.className = 'draft-progress-marker';
+                    markersContainer.appendChild(marker);
+                }
+            }
+            
+            // Change bar color based on progress
+            if (percentage >= 90) {
+                progressBar.style.background = 'linear-gradient(90deg, #d32f2f 0%, #ff6b6b 100%)';
+            } else if (percentage >= 75) {
+                progressBar.style.background = 'linear-gradient(90deg, #ff9800 0%, #ffc107 100%)';
+            } else if (percentage >= 50) {
+                progressBar.style.background = 'linear-gradient(90deg, #4caf50 0%, #8bc34a 100%)';
+            } else {
+                progressBar.style.background = 'linear-gradient(90deg, #4a90e2 0%, #51cf66 100%)';
+            }
+        }
+        
         function updateNominationPanel(nominated) {
             const cancelButton = document.getElementById('admin-cancel-nomination');
             const nominationDetails = document.getElementById('nomination-details');
             
             if (nominated) {
+                // Start the timer for new nomination
+                if (!nominationTimerInterval) {
+                    startNominationTimer();
+                }
                 const player = players.find(p => p.id === nominated.player_id);
                 const bidder = owners.find(o => o.id === nominated.current_bidder_id);
                 
@@ -560,6 +732,8 @@
             } else {
                 nominationDetails.innerHTML = '<div style="width: 100%; text-align: center; color: #909090;">No player currently nominated</div>';
                 cancelButton.style.display = 'none';
+                // Stop the timer when no player is nominated
+                stopNominationTimer();
             }
         }
 

@@ -133,7 +133,7 @@ def load_owners() -> dict[int, dict[str, str]]:
     for owner_data in owners_data:
         owners[owner_data["id"]] = {
             "owner_name": owner_data["owner_name"],
-            "team_name": owner_data["team_name"]
+            "team_name": owner_data["team_name"],
         }
 
     return owners
@@ -236,8 +236,7 @@ async def get_all_owners():
     owners_dict = load_owners()
     # Convert dict back to list format for API compatibility
     return [
-        {"id": owner_id, **owner_data}
-        for owner_id, owner_data in owners_dict.items()
+        {"id": owner_id, **owner_data} for owner_id, owner_data in owners_dict.items()
     ]
 
 
@@ -253,9 +252,7 @@ async def get_owner(owner_id: int):
     """Get specific owner information."""
     owners = load_owners()
     if owner_id not in owners:
-        raise HTTPException(
-            status_code=404, detail=f"Owner {owner_id} not found"
-        )
+        raise HTTPException(status_code=404, detail=f"Owner {owner_id} not found")
     return {"id": owner_id, **owners[owner_id]}
 
 
@@ -280,10 +277,12 @@ async def get_team(owner_id: int):
     for pick in team.picks:
         player = player_dict.get(pick.player_id)
         if player:
-            picks_with_details.append({
-                "pick": pick.model_dump(),
-                "player": player.model_dump(),
-            })
+            picks_with_details.append(
+                {
+                    "pick": pick.model_dump(),
+                    "player": player.model_dump(),
+                }
+            )
 
     return {
         "owner_id": team.owner_id,
@@ -345,15 +344,17 @@ async def nominate_player(request: NominateRequest):
     # Save state with version increment
     draft_state.save_to_file(DRAFT_STATE_FILE)
 
-    # Log action (simplified for now - full ActionLogger integration later)
-    logger.info(
-        f"Player {request.player_id} nominated by owner {request.owner_id} "
-        f"for ${request.initial_bid}"
-    )
-
     # Return success with player details
     players = load_players()
     player = next((p for p in players if p.id == request.player_id), None)
+    owner = owners.get(request.owner_id, {})
+    
+    # Log action with names
+    player_name = f"{player.first_name} {player.last_name}" if player else f"ID:{request.player_id}"
+    owner_name = owner.get("owner_name", f"ID:{request.owner_id}")
+    logger.info(
+        f"Player {player_name} nominated by {owner_name} for ${request.initial_bid}"
+    )
 
     return {
         "success": True,
@@ -403,8 +404,10 @@ async def place_bid(request: BidRequest):
         remaining_budget_after_bid = team.budget_remaining - request.bid_amount
         current_roster_size = len(team.picks)
         remaining_roster_spots = config.total_rounds - current_roster_size
-        min_budget_needed = remaining_roster_spots - 1  # -1 because current bid counts as one spot
-        
+        min_budget_needed = (
+            remaining_roster_spots - 1
+        )  # -1 because current bid counts as one spot
+
         if remaining_budget_after_bid < min_budget_needed:
             raise HTTPException(
                 status_code=422,
@@ -423,10 +426,18 @@ async def place_bid(request: BidRequest):
     # Save state with version increment
     draft_state.save_to_file(DRAFT_STATE_FILE)
 
+    # Get names for logging
+    players = load_players()
+    owners = load_owners()
+    player = next((p for p in players if p.id == draft_state.nominated.player_id), None)
+    owner = owners.get(request.owner_id, {})
+    
+    player_name = f"{player.first_name} {player.last_name}" if player else f"ID:{draft_state.nominated.player_id}"
+    owner_name = owner.get("owner_name", f"ID:{request.owner_id}")
+    
     # Log action
     logger.info(
-        f"Owner {request.owner_id} bid ${request.bid_amount} on player "
-        f"{draft_state.nominated.player_id}"
+        f"{owner_name} bid ${request.bid_amount} on {player_name}"
     )
 
     return {
@@ -543,10 +554,18 @@ async def complete_draft(request: DraftRequest):
     # Save state with version increment
     draft_state.save_to_file(DRAFT_STATE_FILE)
 
+    # Get names for logging
+    players = load_players()
+    owners = load_owners()
+    player = next((p for p in players if p.id == request.player_id), None)
+    owner = owners.get(request.owner_id, {})
+    
+    player_name = f"{player.first_name} {player.last_name}" if player else f"ID:{request.player_id}"
+    owner_name = owner.get("owner_name", f"ID:{request.owner_id}")
+    
     # Log action
     logger.info(
-        f"Player {request.player_id} drafted by owner {request.owner_id} "
-        f"for ${request.final_price}"
+        f"{player_name} drafted by {owner_name} for ${request.final_price}"
     )
 
     return {
@@ -582,7 +601,12 @@ async def cancel_nomination(request: DeleteNominateRequest):
     # Save state with version increment
     draft_state.save_to_file(DRAFT_STATE_FILE)
 
-    logger.info(f"Nomination for player {cancelled_player} cancelled")
+    # Get player name for logging
+    players = load_players()
+    player = next((p for p in players if p.id == cancelled_player), None)
+    player_name = f"{player.first_name} {player.last_name}" if player else f"ID:{cancelled_player}"
+    
+    logger.info(f"Nomination for {player_name} cancelled")
 
     return {
         "success": True,
@@ -596,15 +620,15 @@ async def remove_draft_pick(pick_id: int, request: UndoDraftRequest):
     """Remove a draft pick and restore player to available pool."""
     # Load current state
     draft_state = load_draft_state()
-    
+
     # Check version for optimistic locking
     check_version(draft_state.version, request.expected_version)
-    
+
     # Find the pick and team
     pick_found = False
     target_team = None
     target_pick = None
-    
+
     for team in draft_state.teams:
         for pick in team.picks:
             if pick.pick_id == pick_id:
@@ -615,40 +639,44 @@ async def remove_draft_pick(pick_id: int, request: UndoDraftRequest):
                 break
         if pick_found:
             break
-    
+
     if not pick_found:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Pick with ID {pick_id} not found"
-        )
-    
+        raise HTTPException(status_code=404, detail=f"Pick with ID {pick_id} not found")
+
     # Critical integrity check: drafted player should NOT be in available pool
     if target_pick.player_id in draft_state.available_player_ids:
         raise HTTPException(
             status_code=422,
-            detail=f"Data integrity error: Player {target_pick.player_id} is drafted but also in available pool. Manual intervention required."
+            detail=f"Data integrity error: Player {target_pick.player_id} is drafted but also in available pool. Manual intervention required.",
         )
-    
+
     # Remove pick from team
     target_team.picks.remove(target_pick)
-    
+
     # Restore budget
     target_team.budget_remaining += target_pick.price
-    
+
     # Add player back to available pool
     draft_state.available_player_ids.append(target_pick.player_id)
     draft_state.available_player_ids.sort()
-    
+
     # Save state with version increment
     draft_state.save_to_file(DRAFT_STATE_FILE)
+
+    # Get player name for logging
+    players = load_players()
+    player = next((p for p in players if p.id == target_pick.player_id), None)
+    player_name = f"{player.first_name} {player.last_name}" if player else f"ID:{target_pick.player_id}"
     
-    logger.info(f"Removed pick {pick_id}, returned player {target_pick.player_id} to available pool")
-    
+    logger.info(
+        f"Removed pick {pick_id}, returned {player_name} to available pool"
+    )
+
     return {
         "success": True,
         "removed_pick_id": pick_id,
         "restored_player_id": target_pick.player_id,
-        "new_version": draft_state.version
+        "new_version": draft_state.version,
     }
 
 
@@ -690,10 +718,94 @@ async def reset_draft(request: ResetRequest):
     }
 
 
+# Create a separate app instance for the team viewer
+viewer_app = FastAPI(
+    title="Fantasy Football Team Viewer",
+    description="Read-only team viewing interface",
+    version="1.0.0",
+)
+
+# Add CORS for viewer app
+viewer_app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# Team Viewer Routes
+@viewer_app.get("/", response_class=HTMLResponse)
+async def team_viewer(request: Request, team_id: int = 1):
+    """Serve the team viewer interface."""
+    # Check if template exists
+    template_path = TEMPLATES_DIR / "team_viewer.html"
+    if not template_path.exists():
+        return HTMLResponse(
+            content="""
+            <html>
+                <head><title>Team Viewer - Template Missing</title></head>
+                <body style="background: #1a1a1a; color: #e0e0e0; font-family: Arial, sans-serif; padding: 20px;">
+                    <h1>Team Viewer</h1>
+                    <p>Template not yet created.</p>
+                    <p>This page will fetch data from the main application API at port 8175.</p>
+                </body>
+            </html>
+            """,
+            status_code=200,
+        )
+
+    return templates.TemplateResponse(
+        "team_viewer.html",
+        {
+            "request": request,
+            "selected_team_id": team_id,
+            "main_api_url": "http://localhost:8175",
+        },
+    )
+
+
 # Run the application
 if __name__ == "__main__":
     import uvicorn
+    from threading import Thread
+    import signal
+    import sys
 
-    logger.info("Starting Fantasy Football Draft Tracker on http://localhost:8175")
-    uvicorn.run(app, host="0.0.0.0", port=8175)
+    # Function to run the main app
+    def run_main():
+        logger.info("Starting Fantasy Football Draft Tracker on http://0.0.0.0:8175")
+        uvicorn.run(app, host="0.0.0.0", port=8175)
 
+    # Function to run the viewer app
+    def run_viewer():
+        logger.info("Starting Fantasy Football Team Viewer on http://0.0.0.0:8176")
+        uvicorn.run(viewer_app, host="0.0.0.0", port=8176)
+
+    # Signal handler for graceful shutdown
+    def signal_handler(sig, frame):
+        logger.info("Shutting down servers...")
+        sys.exit(0)
+
+    # Set up signal handling
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
+    # Start both servers in separate threads (daemon threads exit when main exits)
+    main_thread = Thread(target=run_main, daemon=True)
+    viewer_thread = Thread(target=run_viewer, daemon=True)
+
+    main_thread.start()
+    viewer_thread.start()
+
+    try:
+        # Keep the main thread alive
+        while True:
+            main_thread.join(timeout=1)
+            viewer_thread.join(timeout=1)
+            if not main_thread.is_alive() or not viewer_thread.is_alive():
+                break
+    except KeyboardInterrupt:
+        logger.info("Received KeyboardInterrupt, shutting down...")
+        sys.exit(0)
