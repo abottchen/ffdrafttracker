@@ -209,3 +209,16 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Fantasy Football Draft Tracker specific
+# Action logs may contain draft history you want to keep private
+action_log.json
+data/action_log.json
+
+# Draft state files if they contain real league data
+data/owners.json
+data/draft_state.json
+
+# Temporary files from atomic operations
+*.tmp
+data/*.tmp

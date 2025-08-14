@@ -36,6 +36,7 @@ class TestFilePersistence:
                 "available_player_ids",
                 "teams",
                 "next_to_nominate",
+                "version",
             }
 
             # Ensure the model hasn't changed unexpectedly
@@ -72,11 +73,13 @@ class TestFilePersistence:
                 available_player_ids=[101, 102, 103, 104, 105],
                 teams=teams,
                 next_to_nominate=2,
+                version=7,
             )
 
             # The serialization will naturally fail here if any field type
             # can't be serialized
-            original_draft_state.save_to_file(file_path)
+            # Use increment_version=False to test exact version persistence
+            original_draft_state.save_to_file(file_path, increment_version=False)
 
             # Load from file - this will fail if deserialization breaks
             loaded_draft_state = DraftState.load_from_file(file_path)
@@ -86,6 +89,7 @@ class TestFilePersistence:
             assert loaded_draft_state.nominated.player_id == 101
             assert len(loaded_draft_state.teams) == 3
             assert loaded_draft_state.teams[0].picks[0].price == 45
+            assert loaded_draft_state.version == 7  # Version persisted correctly
 
     def test_draft_state_atomic_write_prevents_corruption(self):
         """Test DraftState atomic write prevents corruption on validation failure."""

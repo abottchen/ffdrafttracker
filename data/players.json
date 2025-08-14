@@ -1,0 +1,219 @@
+[
+  {
+    "id": 4429184,
+    "first_name": "Elijhah",
+    "last_name": "Badger",
+    "team": "KC",
+    "position": "WR"
+  },
+  {
+    "id": 4431196,
+    "first_name": "Jake",
+    "last_name": "Briningstool",
+    "team": "KC",
+    "position": "TE"
+  },
+  {
+    "id": 4241372,
+    "first_name": "Hollywood",
+    "last_name": "Brown",
+    "team": "KC",
+    "position": "WR"
+  },
+  {
+    "id": 4689988,
+    "first_name": "Jason",
+    "last_name": "Brownlee",
+    "team": "KC",
+    "position": "WR"
+  },
+  {
+    "id": 3055899,
+    "first_name": "Harrison",
+    "last_name": "Butker",
+    "team": "KC",
+    "position": "K"
+  },
+  {
+    "id": 4431053,
+    "first_name": "Mac",
+    "last_name": "Dalena",
+    "team": "KC",
+    "position": "WR"
+  },
+  {
+    "id": 4240472,
+    "first_name": "Noah",
+    "last_name": "Gray",
+    "team": "KC",
+    "position": "TE"
+  },
+  {
+    "id": 4431142,
+    "first_name": "Jimmy",
+    "last_name": "Holiday",
+    "team": "KC",
+    "position": "WR"
+  },
+  {
+    "id": 3059915,
+    "first_name": "Kareem",
+    "last_name": "Hunt",
+    "team": "KC",
+    "position": "RB"
+  },
+  {
+    "id": 4362087,
+    "first_name": "Keaontay",
+    "last_name": "Ingram",
+    "team": "KC",
+    "position": "RB"
+  },
+  {
+    "id": 15847,
+    "first_name": "Travis",
+    "last_name": "Kelce",
+    "team": "KC",
+    "position": "TE"
+  },
+  {
+    "id": 3139477,
+    "first_name": "Patrick",
+    "last_name": "Mahomes",
+    "team": "KC",
+    "position": "QB"
+  },
+  {
+    "id": 4038524,
+    "first_name": "Gardner",
+    "last_name": "Minshew",
+    "team": "KC",
+    "position": "QB"
+  },
+  {
+    "id": 4241555,
+    "first_name": "Elijah",
+    "last_name": "Mitchell",
+    "team": "KC",
+    "position": "RB"
+  },
+  {
+    "id": 4430191,
+    "first_name": "Skyy",
+    "last_name": "Moore",
+    "team": "KC",
+    "position": "WR"
+  },
+  {
+    "id": 4044111,
+    "first_name": "Chris",
+    "last_name": "Oladokun",
+    "team": "KC",
+    "position": "QB"
+  },
+  {
+    "id": 4361529,
+    "first_name": "Isiah",
+    "last_name": "Pacheco",
+    "team": "KC",
+    "position": "RB"
+  },
+  {
+    "id": 4372716,
+    "first_name": "Nikko",
+    "last_name": "Remigio",
+    "team": "KC",
+    "position": "WR"
+  },
+  {
+    "id": 4428331,
+    "first_name": "Rashee",
+    "last_name": "Rice",
+    "team": "KC",
+    "position": "WR"
+  },
+  {
+    "id": 5082630,
+    "first_name": "Jalen",
+    "last_name": "Royals",
+    "team": "KC",
+    "position": "WR"
+  },
+  {
+    "id": 4596602,
+    "first_name": "Brashard",
+    "last_name": "Smith",
+    "team": "KC",
+    "position": "RB"
+  },
+  {
+    "id": 4607419,
+    "first_name": "Key'Shawn",
+    "last_name": "Smith",
+    "team": "KC",
+    "position": "WR"
+  },
+  {
+    "id": 3120348,
+    "first_name": "JuJu",
+    "last_name": "Smith-Schuster",
+    "team": "KC",
+    "position": "WR"
+  },
+  {
+    "id": 4362892,
+    "first_name": "Geor'Quarius",
+    "last_name": "Spivey",
+    "team": "KC",
+    "position": "TE"
+  },
+  {
+    "id": 4362921,
+    "first_name": "Tyquan",
+    "last_name": "Thornton",
+    "team": "KC",
+    "position": "WR"
+  },
+  {
+    "id": 2975674,
+    "first_name": "Robert",
+    "last_name": "Tonyan",
+    "team": "KC",
+    "position": "TE"
+  },
+  {
+    "id": 4685784,
+    "first_name": "Tre",
+    "last_name": "Watson",
+    "team": "KC",
+    "position": "TE"
+  },
+  {
+    "id": 4430723,
+    "first_name": "Jared",
+    "last_name": "Wiley",
+    "team": "KC",
+    "position": "TE"
+  },
+  {
+    "id": 4683062,
+    "first_name": "Xavier",
+    "last_name": "Worthy",
+    "team": "KC",
+    "position": "WR"
+  },
+  {
+    "id": 4433945,
+    "first_name": "Elijah",
+    "last_name": "Young",
+    "team": "KC",
+    "position": "RB"
+  },
+  {
+    "id": 4250360,
+    "first_name": "Bailey",
+    "last_name": "Zappe",
+    "team": "KC",
+    "position": "QB"
+  }
+]

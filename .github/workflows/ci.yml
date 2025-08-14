@@ -28,6 +28,10 @@ jobs:
         python -m ruff check src/
         python -m ruff format --check src/
         
+    - name: Lint HTML templates with djLint
+      run: |
+        python -m djlint templates/ --check
+        
     - name: Run tests with pytest
       run: |
         python -m pytest -v --tb=short

@@ -7,21 +7,50 @@ A local fantasy football auction draft tracking tool with a web-based interface 
 
 ### Application Structure
 **Technology Stack:** FastAPI (Python) serving both API and frontend  
-**Port:** 8175  
-**Architecture:** Monolithic application with stateless API design  
-**Deployment:** Single Python process via command-line execution  
+**Architecture:** Dual-port application with stateless API design  
+**Deployment:** Single Python process via command-line execution serving both applications  
 
-### Frontend
-**Technology Stack:** HTML/CSS/JavaScript with Alpine.js for reactivity  
+**Main Draft Application:**
+- **Port:** 8175 (localhost only)
+- **Purpose:** Interactive draft management with full admin capabilities
+- **Access:** Draft administrator interface
+
+**Team Viewer Application:**
+- **Port:** 8176 (all network interfaces - 0.0.0.0)
+- **Purpose:** Read-only team viewing for network participants
+- **Access:** External network viewing interface
+
+### Frontend Applications
+
+#### Main Draft Interface (Port 8175)
+**Technology Stack:** HTML/CSS/JavaScript with vanilla JS  
 **Served By:** FastAPI using Jinja2 templates and static files  
 **Access:** Browser-based interface at localhost:8175  
-**Status:** Layout and design in progress  
+**Security:** Localhost only for admin control  
 
 **Key Features:**
-- Reactive UI components using Alpine.js for automatic DOM updates
-- Nominate button that POSTs to `/api/v1/nominate` 
-- Real-time updates to nomination panel, player stats, and timer
-- No build step required - Alpine.js loaded via CDN
+- Interactive nomination and bidding controls
+- Real-time draft progress bar with color-coded completion status
+- Nomination timer (MM:SS format) for tracking auction duration
+- Admin controls for draft management (reset, undo picks, cancel nominations)
+- Player search with autocomplete dropdown
+- Team bidding interfaces with budget validation
+- Live roster updates with player images from ESPN
+
+#### Team Viewer Interface (Port 8176)
+**Technology Stack:** HTML/CSS/JavaScript with vanilla JS  
+**Served By:** Separate FastAPI application instance  
+**Access:** Browser-based interface at [network-ip]:8176  
+**Security:** Read-only, no modification capabilities  
+
+**Key Features:**
+- Team selection dropdown (defaults to owner ID 1)
+- Complete roster display with player images, positions, teams, and prices
+- Team summary statistics (budget remaining, position counts vs maximums)
+- Dark theme with color differentiation for easy reading
+- Auto-refresh every 5 seconds for real-time updates
+- Responsive design optimized for 17-player rosters
+- Fetches all data from main application API (port 8175)
 
 ### Backend
 **Framework:** FastAPI with Pydantic models  
@@ -46,16 +75,56 @@ A local fantasy football auction draft tracking tool with a web-based interface 
 
 All API endpoints are served from the same FastAPI application at `/api/v1/*`
 
+### Optimistic Locking for Concurrency Control
+
+To prevent double-submissions and race conditions, all state-modifying endpoints use optimistic locking:
+
+- **Version Field:** DraftState includes a `version: int` field that increments on each modification
+- **Request Pattern:** All POST/DELETE requests that modify state must include `expected_version: int`
+- **Conflict Detection:** If `draft_state.version != expected_version`, returns HTTP 409 Conflict
+- **Client Recovery:** On 409, client should refresh state and retry with new version
+- **Benefits:** Prevents both accidental double-clicks and legitimate concurrent modifications
+
+### Error Response Standards
+
+The API uses semantic HTTP status codes to distinguish different error scenarios:
+
+- **400 Bad Request:** Invalid input data (missing required fields, malformed JSON, invalid IDs)
+- **409 Conflict:** Version mismatch due to concurrent modification
+- **422 Unprocessable Entity:** Business rule violations (insufficient budget, position limits, etc.)
+
+This allows frontend to handle errors appropriately:
+- 400 → Log error (shouldn't happen with proper frontend validation)
+- 409 → Automatically refresh state and retry
+- 422 → Display specific error message to user
+
+**Example 409 Response (Version Mismatch):**
+```json
+{
+  "detail": "Draft state has changed (version 43 != 42). Please refresh and try again.",
+  "current_version": 43
+}
+```
+
+**Example 422 Response (Business Rule Violation):**
+```json
+{
+  "detail": "Insufficient budget. Owner needs $50 but only has $45 remaining."
+}
+```
+
 ### POST /api/v1/nominate
 **Purpose:** Nominates a player for auction  
 **Request Body:**
 - `owner_id: int` - ID of owner making the nomination
 - `player_id: int` - ID of player being nominated
 - `initial_bid: int` - Opening bid amount (minimum $1)
+- `expected_version: int` - Expected draft state version for optimistic locking
 **Response Codes:**
 - `200` - Success with nomination confirmation and player details
-- `400` - Bad request (bid below minimum, invalid player/owner)
-- `409` - Conflict (nomination already active)
+- `400` - Bad request (invalid player/owner ID, missing fields)
+- `409` - Conflict (version mismatch - state modified by another operation)
+- `422` - Unprocessable (nomination already active, bid below minimum)
 **Behavior:** 
   - Validates no current nomination exists (nominated field is None)
   - Validates initial_bid >= min_bid from config
@@ -69,10 +138,12 @@ All API endpoints are served from the same FastAPI application at `/api/v1/*`
 - `owner_id: int` - ID of owner who won the auction
 - `player_id: int` - ID of player being drafted
 - `final_price: int` - Final auction price
+- `expected_version: int` - Expected draft state version for optimistic locking
 **Response Codes:**
 - `200` - Success with draft confirmation and updated team roster
-- `400` - Bad request (no active nomination, price mismatch)
-- `409` - Conflict (insufficient budget)
+- `400` - Bad request (invalid IDs, missing fields)
+- `409` - Conflict (version mismatch - state modified by another operation)
+- `422` - Unprocessable (no active nomination, price mismatch, insufficient budget)
 **Behavior:** 
   - Validates nomination exists and matches player_id
   - Validates owner has sufficient budget for final_price
@@ -107,6 +178,17 @@ All API endpoints are served from the same FastAPI application at `/api/v1/*`
 **Response:** JSON array of all Owner objects  
 **Behavior:** Returns complete owner database
 
+### GET /api/v1/owners/{owner_id}
+**Purpose:** Get specific owner information  
+**Response:** JSON with owner details or 404 if not found  
+**Behavior:** Returns individual owner by ID
+
+### GET /api/v1/config
+**Purpose:** Get draft configuration settings  
+**Response:** JSON of Configuration object  
+**Behavior:** Returns draft configuration including budgets, position limits, and total rounds  
+**Usage:** Used by frontend for client-side budget validation
+
 ### GET /api/v1/teams/{owner_id}
 **Purpose:** Get specific team roster with player details  
 **Response:** JSON with team info and full player/price data  
@@ -117,10 +199,12 @@ All API endpoints are served from the same FastAPI application at `/api/v1/*`
 **Request Body:**
 - `owner_id: int` - ID of owner placing bid
 - `bid_amount: int` - New bid amount (must exceed current)
+- `expected_version: int` - Expected draft state version for optimistic locking
 **Response Codes:**
 - `200` - Success with updated nomination info
-- `400` - Bad request (no active nomination, insufficient bid amount)
-- `409` - Conflict (insufficient budget, owner at position maximum)
+- `400` - Bad request (invalid owner ID, missing fields)
+- `409` - Conflict (version mismatch - state modified by another operation)
+- `422` - Unprocessable (no active nomination, insufficient bid amount, insufficient budget, position limit reached)
 **Behavior:** 
   - Validates nomination exists
   - Validates bid amount exceeds current bid and >= min_bid
@@ -132,13 +216,23 @@ All API endpoints are served from the same FastAPI application at `/api/v1/*`
 
 ### DELETE /api/v1/nominate
 **Purpose:** Cancel current nomination (admin action)  
-**Response:** Success confirmation  
-**Behavior:** Clears nominated field in draft state
+**Request Body:**
+- `expected_version: int` - Expected draft state version for optimistic locking
+**Response Codes:**
+- `200` - Success confirmation
+- `409` - Conflict (version mismatch)
+- `422` - Unprocessable (no active nomination to cancel)
+**Behavior:** Clears nominated field in draft state, increments version
 
 ### DELETE /api/v1/draft/{pick_id}
 **Purpose:** Undo a draft pick (admin action)  
 **Request Body:**
-- `pick_id: int` - Unique identifier for the pick to undo
+- `expected_version: int` - Expected draft state version for optimistic locking
+**Response Codes:**
+- `200` - Success confirmation
+- `404` - Not found (pick_id doesn't exist)
+- `409` - Conflict (version mismatch)
+- `422` - Unprocessable (data integrity error - player is both drafted and available)
 **Response:** Success confirmation  
 **Behavior:** 
   - Removes DraftPick from team
@@ -146,13 +240,18 @@ All API endpoints are served from the same FastAPI application at `/api/v1/*`
 
 ### POST /api/v1/reset
 **Purpose:** Reset draft to initial state (admin action)  
-**Response:** Success confirmation  
-**Behavior:** Resets draft_state.json to initial configuration
+**Request Body:**
+- `expected_version: int` - Expected draft state version (optional, ignored if force=true)
+- `force: bool` - Skip version check if true (default false)
+**Response Codes:**
+- `200` - Success confirmation
+- `409` - Conflict (version mismatch, unless force=true)
+**Behavior:** Resets draft_state.json to initial configuration, sets version to 1
 
 ## File Structure
 ```
 ffdrafttracker/
-├── main.py                # FastAPI application entry point
+├── main.py                # Main FastAPI application (ports 8175 & 8176)
 ├── src/
 │   ├── __init__.py
 │   ├── enums/
@@ -162,21 +261,34 @@ ffdrafttracker/
 │   └── models/
 │       ├── __init__.py
 │       ├── player.py      # Player model
-│       └── ...            # Future models (Owner, DraftState, etc.)
-├── static/
-│   ├── css/
-│   │   └── styles.css     # Application styles
-│   └── js/
-│       └── app.js         # Alpine.js components and logic
+│       ├── owner.py       # Owner model
+│       ├── nominated.py   # Nominated model
+│       ├── draft_pick.py  # DraftPick model
+│       ├── team.py        # Team model
+│       ├── draft_state.py # DraftState model
+│       ├── action_log.py  # ActionLog model
+│       ├── action_logger.py # ActionLogger utility
+│       └── configuration.py # Configuration model
+├── static/                # Static assets (if needed)
 ├── templates/
-│   └── index.html         # Main application template
+│   ├── index.html         # Main draft application template
+│   └── team_viewer.html   # Team viewer application template
 ├── data/
 │   ├── draft_state.json   # Current draft state
 │   ├── players.json       # Player database
 │   ├── owners.json        # Owner information
 │   ├── action_log.json    # Complete action history
 │   └── config.json        # Application configuration
-└── requirements.txt       # Python dependencies
+├── tests/                 # Test suite
+│   ├── unit/              # Unit tests for models
+│   └── integration/       # Integration tests for file persistence
+├── utils/
+│   └── fetch_espn_players.py # Utility for player data import
+├── requirements.txt       # Python dependencies
+├── pyproject.toml        # Project configuration
+├── DESIGN.md             # This architecture document
+├── CLAUDE.md             # Development guidance
+└── README.md             # Project overview
 ```
 
 ## FastAPI Benefits
