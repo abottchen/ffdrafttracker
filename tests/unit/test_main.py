@@ -743,6 +743,289 @@ class TestPostEndpoints(TestMainApp):
             assert data["new_version"] == 1
             mock_initial_state.save_to_file.assert_called_once()
 
+    @patch("main.load_draft_state")
+    @patch("main.load_configuration")
+    @patch("main.load_owners")
+    @patch("main.load_players")
+    def test_admin_draft_success_200(
+        self, mock_players, mock_owners, mock_config, mock_draft_state
+    ):
+        """Test POST /api/v1/admin/draft returns 200 with valid admin draft."""
+        mock_config.return_value = Configuration(
+            initial_budget=200, min_bid=1, position_maximums={}, total_rounds=17
+        )
+        mock_owners.return_value = self.sample_owners
+        mock_players.return_value = self.sample_players
+        mock_draft_state.return_value = self.create_mock_draft_state()
+
+        response = self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 1,
+                "player_id": 1,
+                "price": 25,
+                "expected_version": 5,
+            },
+        )
+
+        # Validate response structure
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert "pick" in data
+        assert data["pick"]["player_id"] == 1
+        assert data["pick"]["price"] == 25
+        assert data["pick"]["owner_id"] == 1
+        assert "team" in data
+        assert "new_version" in data
+
+        # Validate business logic - uses atomic file operations
+        mock_draft_state.return_value.save_to_file.assert_called_once()
+
+    @patch("main.load_draft_state")
+    def test_admin_draft_409_version_mismatch(self, mock_draft_state):
+        """Test POST /api/v1/admin/draft returns 409 for version mismatch."""
+        mock_draft_state.return_value = self.create_mock_draft_state()
+
+        response = self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 1,
+                "player_id": 1,
+                "price": 25,
+                "expected_version": 3,  # Wrong version
+            },
+        )
+
+        assert response.status_code == 409
+        assert "Draft state has changed" in response.json()["detail"]
+
+    @patch("main.load_draft_state")
+    @patch("main.load_players")
+    def test_admin_draft_422_player_not_available(self, mock_players, mock_draft_state):
+        """Test POST /api/v1/admin/draft returns 422 for unavailable player."""
+        # Player 2 exists but is not in available_player_ids
+        mock_players.return_value = self.sample_players
+        mock_draft_state.return_value = self.create_mock_draft_state(
+            available_player_ids=[1, 3]  # Player 2 not available
+        )
+
+        response = self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 1,
+                "player_id": 2,  # Player 2 not available
+                "price": 25,
+                "expected_version": 5,
+            },
+        )
+
+        assert response.status_code == 422
+        assert "Player 2 is not available for draft" in response.json()["detail"]
+
+    @patch("main.load_draft_state")
+    @patch("main.load_players")
+    def test_admin_draft_400_player_not_found(self, mock_players, mock_draft_state):
+        """Test POST /api/v1/admin/draft returns 400 for player not in database."""
+        mock_players.return_value = self.sample_players  # Only players 1, 2, 3
+        mock_draft_state.return_value = self.create_mock_draft_state(
+            available_player_ids=[
+                1,
+                3,
+                999,
+            ]  # Player 999 in available but not in database
+        )
+
+        response = self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 1,
+                "player_id": 999,  # Player not in database
+                "price": 25,
+                "expected_version": 5,
+            },
+        )
+
+        assert response.status_code == 400
+        assert "Player 999 not found in players database" in response.json()["detail"]
+
+    @patch("main.load_draft_state")
+    @patch("main.load_players")
+    @patch("main.load_owners")
+    def test_admin_draft_400_owner_not_found(
+        self, mock_owners, mock_players, mock_draft_state
+    ):
+        """Test POST /api/v1/admin/draft returns 400 for invalid owner."""
+        mock_players.return_value = self.sample_players
+        mock_owners.return_value = self.sample_owners
+        mock_draft_state.return_value = self.create_mock_draft_state()
+
+        response = self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 999,  # Invalid owner
+                "player_id": 1,
+                "price": 25,
+                "expected_version": 5,
+            },
+        )
+
+        assert response.status_code == 400
+        assert "Owner 999 not found" in response.json()["detail"]
+
+    @patch("main.load_draft_state")
+    @patch("main.load_configuration")
+    @patch("main.load_players")
+    @patch("main.load_owners")
+    def test_admin_draft_400_invalid_price(
+        self, mock_owners, mock_players, mock_config, mock_draft_state
+    ):
+        """Test POST /api/v1/admin/draft returns 400 for invalid price."""
+        mock_players.return_value = self.sample_players
+        mock_config.return_value = Configuration(
+            initial_budget=200, min_bid=1, position_maximums={}, total_rounds=17
+        )
+        mock_owners.return_value = self.sample_owners
+        mock_draft_state.return_value = self.create_mock_draft_state()
+
+        response = self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 1,
+                "player_id": 1,
+                "price": 0,  # Invalid price
+                "expected_version": 5,
+            },
+        )
+
+        assert response.status_code == 400
+        assert "Price must be greater than 0" in response.json()["detail"]
+
+    @patch("main.load_draft_state")
+    @patch("main.load_configuration")
+    @patch("main.load_owners")
+    @patch("main.load_players")
+    def test_admin_draft_skips_budget_validation(
+        self, mock_players, mock_owners, mock_config, mock_draft_state
+    ):
+        """Test POST /api/v1/admin/draft allows draft even with insufficient budget."""
+        mock_config.return_value = Configuration(
+            initial_budget=200, min_bid=1, position_maximums={}, total_rounds=17
+        )
+        mock_owners.return_value = self.sample_owners
+        mock_players.return_value = self.sample_players
+
+        # Create team with very low budget
+        low_budget_team = Team(owner_id=1, budget_remaining=5, picks=[])
+        mock_draft_state.return_value = self.create_mock_draft_state(
+            teams=[low_budget_team, self.sample_teams[1]]
+        )
+
+        response = self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 1,
+                "player_id": 1,
+                "price": 100,  # Way more than budget allows
+                "expected_version": 5,
+            },
+        )
+
+        # Should succeed despite insufficient budget
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["pick"]["price"] == 100
+
+    @patch("main.load_draft_state")
+    @patch("main.load_configuration")
+    @patch("main.load_players")
+    @patch("main.load_owners")
+    def test_admin_draft_422_team_not_found(
+        self, mock_owners, mock_players, mock_config, mock_draft_state
+    ):
+        """Test POST /api/v1/admin/draft returns 422 when team not found."""
+        mock_players.return_value = self.sample_players
+        mock_config.return_value = Configuration(
+            initial_budget=200, min_bid=1, position_maximums={}, total_rounds=17
+        )
+        mock_owners.return_value = self.sample_owners
+
+        # Draft state with no team for owner 1
+        mock_draft_state.return_value = self.create_mock_draft_state(
+            teams=[self.sample_teams[1]]  # Only team for owner 2
+        )
+
+        response = self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 1,  # Valid owner but no team in draft state
+                "player_id": 1,
+                "price": 25,
+                "expected_version": 5,
+            },
+        )
+
+        assert response.status_code == 422
+        assert "Team not found for owner 1 in draft state" in response.json()["detail"]
+
+    @patch("main.load_draft_state")
+    @patch("main.load_configuration")
+    @patch("main.load_owners")
+    @patch("main.load_players")
+    def test_admin_draft_generates_pick_id(
+        self, mock_players, mock_owners, mock_config, mock_draft_state
+    ):
+        """Test POST /api/v1/admin/draft generates correct pick_id."""
+        mock_config.return_value = Configuration(
+            initial_budget=200, min_bid=1, position_maximums={}, total_rounds=17
+        )
+        mock_owners.return_value = self.sample_owners
+        mock_players.return_value = self.sample_players
+
+        # Create teams with existing picks to test pick_id generation
+        existing_picks = [
+            DraftPick(pick_id=1, player_id=2, owner_id=2, price=20),
+            DraftPick(pick_id=3, player_id=4, owner_id=1, price=15),
+        ]
+        teams_with_picks = [
+            Team(owner_id=1, budget_remaining=185, picks=[existing_picks[1]]),
+            Team(owner_id=2, budget_remaining=180, picks=[existing_picks[0]]),
+        ]
+        mock_draft_state.return_value = self.create_mock_draft_state(
+            teams=teams_with_picks
+        )
+
+        response = self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 1,
+                "player_id": 1,
+                "price": 25,
+                "expected_version": 5,
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        # Should generate pick_id = max(existing) + 1 = 3 + 1 = 4
+        assert data["pick"]["pick_id"] == 4
+
+    def test_admin_draft_422_missing_fields(self):
+        """Test POST /api/v1/admin/draft returns 422 for missing required fields."""
+        response = self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 1,
+                # Missing player_id, price, expected_version
+            },
+        )
+
+        assert (
+            response.status_code == 422
+        )  # FastAPI validation returns 422 for missing fields
+
 
 class TestDeleteEndpoints(TestMainApp):
     """Test DELETE endpoints."""

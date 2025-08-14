@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
-from src.models import Configuration, DraftState, Nominated, Player, Team
+from src.models import Configuration, DraftPick, DraftState, Nominated, Player, Team
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -90,6 +90,13 @@ class UndoDraftRequest(BaseModel):
 class ResetRequest(BaseModel):
     expected_version: int | None = None
     force: bool = False
+
+
+class AdminDraftRequest(BaseModel):
+    owner_id: int
+    player_id: int
+    price: int
+    expected_version: int
 
 
 # Helper functions
@@ -348,9 +355,12 @@ async def nominate_player(request: NominateRequest):
     players = load_players()
     player = next((p for p in players if p.id == request.player_id), None)
     owner = owners.get(request.owner_id, {})
-    
+
     # Log action with names
-    player_name = f"{player.first_name} {player.last_name}" if player else f"ID:{request.player_id}"
+    player_name = (
+        f"{player.first_name} {player.last_name}" if player
+        else f"ID:{request.player_id}"
+    )
     owner_name = owner.get("owner_name", f"ID:{request.owner_id}")
     logger.info(
         f"Player {player_name} nominated by {owner_name} for ${request.initial_bid}"
@@ -412,9 +422,10 @@ async def place_bid(request: BidRequest):
             raise HTTPException(
                 status_code=422,
                 detail=(
-                    f"Insufficient budget. After ${request.bid_amount} bid, you would have "
-                    f"${remaining_budget_after_bid} left but need at least "
-                    f"${min_budget_needed} to fill remaining {remaining_roster_spots - 1} roster spots"
+                    f"Insufficient budget. After ${request.bid_amount} bid, "
+                    f"you would have ${remaining_budget_after_bid} left but need "
+                    f"at least ${min_budget_needed} to fill remaining "
+                    f"{remaining_roster_spots - 1} roster spots"
                 ),
             )
 
@@ -431,10 +442,13 @@ async def place_bid(request: BidRequest):
     owners = load_owners()
     player = next((p for p in players if p.id == draft_state.nominated.player_id), None)
     owner = owners.get(request.owner_id, {})
-    
-    player_name = f"{player.first_name} {player.last_name}" if player else f"ID:{draft_state.nominated.player_id}"
+
+    player_name = (
+        f"{player.first_name} {player.last_name}" if player
+        else f"ID:{draft_state.nominated.player_id}"
+    )
     owner_name = owner.get("owner_name", f"ID:{request.owner_id}")
-    
+
     # Log action
     logger.info(
         f"{owner_name} bid ${request.bid_amount} on {player_name}"
@@ -491,6 +505,7 @@ async def complete_draft(request: DraftRequest):
             detail=f"Owner {request.owner_id} is not the current high bidder",
         )
 
+    # TODO: This should not happen
     # Find or create team
     team = next((t for t in draft_state.teams if t.owner_id == request.owner_id), None)
     if not team:
@@ -559,10 +574,13 @@ async def complete_draft(request: DraftRequest):
     owners = load_owners()
     player = next((p for p in players if p.id == request.player_id), None)
     owner = owners.get(request.owner_id, {})
-    
-    player_name = f"{player.first_name} {player.last_name}" if player else f"ID:{request.player_id}"
+
+    player_name = (
+        f"{player.first_name} {player.last_name}" if player
+        else f"ID:{request.player_id}"
+    )
     owner_name = owner.get("owner_name", f"ID:{request.owner_id}")
-    
+
     # Log action
     logger.info(
         f"{player_name} drafted by {owner_name} for ${request.final_price}"
@@ -573,6 +591,96 @@ async def complete_draft(request: DraftRequest):
         "pick": pick.model_dump(),
         "team": team.model_dump(),
         "next_to_nominate": draft_state.next_to_nominate,
+        "new_version": draft_state.version,
+    }
+
+
+@app.post("/api/v1/admin/draft")
+async def admin_draft_player(request: AdminDraftRequest):
+    """Admin-only endpoint to draft a player directly without auction."""
+    # Load current state
+    draft_state = load_draft_state()
+
+    # Check version
+    check_version(draft_state.version, request.expected_version)
+
+    # Validate player exists in players database
+    players = load_players()
+    player = next((p for p in players if p.id == request.player_id), None)
+    if not player:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Player {request.player_id} not found in players database",
+        )
+
+    # Validate player is available for draft
+    if request.player_id not in draft_state.available_player_ids:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Player {request.player_id} is not available for draft",
+        )
+
+    # Validate owner exists
+    owners = load_owners()
+    if request.owner_id not in owners:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Owner {request.owner_id} not found",
+        )
+
+    # Validate price is positive
+    if request.price <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Price must be greater than 0",
+        )
+
+    # Find team (must exist for valid owner)
+    team = next((t for t in draft_state.teams if t.owner_id == request.owner_id), None)
+    if not team:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Team not found for owner {request.owner_id} in draft state",
+        )
+
+    # Create draft pick
+
+    # Generate pick_id (max existing + 1)
+    all_picks = [pick for team in draft_state.teams for pick in team.picks]
+    pick_id = max([pick.pick_id for pick in all_picks], default=0) + 1
+
+    pick = DraftPick(
+        pick_id=pick_id,
+        player_id=request.player_id,
+        owner_id=request.owner_id,
+        price=request.price,
+    )
+
+    # Add pick to team and adjust budget
+    team.picks.append(pick)
+    team.budget_remaining -= request.price
+
+    # Remove player from available list
+    draft_state.available_player_ids.remove(request.player_id)
+
+    # Save state with version increment
+    draft_state.save_to_file(DRAFT_STATE_FILE)
+
+    # Get names for logging (player already loaded above)
+    owner = owners.get(request.owner_id, {})
+
+    player_name = f"{player.first_name} {player.last_name}"
+    owner_name = owner.get("owner_name", f"ID:{request.owner_id}")
+
+    # Log action
+    logger.info(
+        f"ADMIN DRAFT: {owner_name} drafted {player_name} for ${request.price}"
+    )
+
+    return {
+        "success": True,
+        "pick": pick.model_dump(),
+        "team": team.model_dump(),
         "new_version": draft_state.version,
     }
 
@@ -604,8 +712,11 @@ async def cancel_nomination(request: DeleteNominateRequest):
     # Get player name for logging
     players = load_players()
     player = next((p for p in players if p.id == cancelled_player), None)
-    player_name = f"{player.first_name} {player.last_name}" if player else f"ID:{cancelled_player}"
-    
+    player_name = (
+        f"{player.first_name} {player.last_name}" if player
+        else f"ID:{cancelled_player}"
+    )
+
     logger.info(f"Nomination for {player_name} cancelled")
 
     return {
@@ -647,7 +758,10 @@ async def remove_draft_pick(pick_id: int, request: UndoDraftRequest):
     if target_pick.player_id in draft_state.available_player_ids:
         raise HTTPException(
             status_code=422,
-            detail=f"Data integrity error: Player {target_pick.player_id} is drafted but also in available pool. Manual intervention required.",
+            detail=(
+                f"Data integrity error: Player {target_pick.player_id} is "
+                f"drafted but also in available pool. Manual intervention required."
+            ),
         )
 
     # Remove pick from team
@@ -666,8 +780,11 @@ async def remove_draft_pick(pick_id: int, request: UndoDraftRequest):
     # Get player name for logging
     players = load_players()
     player = next((p for p in players if p.id == target_pick.player_id), None)
-    player_name = f"{player.first_name} {player.last_name}" if player else f"ID:{target_pick.player_id}"
-    
+    player_name = (
+        f"{player.first_name} {player.last_name}" if player
+        else f"ID:{target_pick.player_id}"
+    )
+
     logger.info(
         f"Removed pick {pick_id}, returned {player_name} to available pool"
     )
@@ -746,10 +863,12 @@ async def team_viewer(request: Request, team_id: int = 1):
             content="""
             <html>
                 <head><title>Team Viewer - Template Missing</title></head>
-                <body style="background: #1a1a1a; color: #e0e0e0; font-family: Arial, sans-serif; padding: 20px;">
+                <body style="background: #1a1a1a; color: #e0e0e0; \
+font-family: Arial, sans-serif; padding: 20px;">
                     <h1>Team Viewer</h1>
                     <p>Template not yet created.</p>
-                    <p>This page will fetch data from the main application API at port 8175.</p>
+                    <p>This page will fetch data from the main application \
+API at port 8175.</p>
                 </body>
             </html>
             """,
@@ -768,10 +887,11 @@ async def team_viewer(request: Request, team_id: int = 1):
 
 # Run the application
 if __name__ == "__main__":
-    import uvicorn
-    from threading import Thread
     import signal
     import sys
+    from threading import Thread
+
+    import uvicorn
 
     # Function to run the main app
     def run_main():

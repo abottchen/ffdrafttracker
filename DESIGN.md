@@ -32,7 +32,11 @@ A local fantasy football auction draft tracking tool with a web-based interface 
 - Interactive nomination and bidding controls
 - Real-time draft progress bar with color-coded completion status
 - Nomination timer (MM:SS format) for tracking auction duration
-- Admin controls for draft management (reset, undo picks, cancel nominations)
+- Admin controls for draft management:
+  - Reset draft to initial state
+  - Undo individual draft picks
+  - Cancel active nominations
+  - Admin draft: Direct player assignment bypassing auction process (for keepers)
 - Player search with autocomplete dropdown
 - Team bidding interfaces with budget validation
 - Live roster updates with player images from ESPN
@@ -247,6 +251,28 @@ This allows frontend to handle errors appropriately:
 - `200` - Success confirmation
 - `409` - Conflict (version mismatch, unless force=true)
 **Behavior:** Resets draft_state.json to initial configuration, sets version to 1
+
+### POST /api/v1/admin/draft
+**Purpose:** Admin-only endpoint to draft a player directly without nomination/bidding process  
+**Request Body:**
+- `owner_id: int` - ID of owner drafting the player
+- `player_id: int` - ID of player being drafted
+- `price: int` - Draft price (must be positive)
+- `expected_version: int` - Expected draft state version for optimistic locking
+**Response Codes:**
+- `200` - Success with draft confirmation and updated team roster
+- `400` - Bad request (invalid owner/player ID, invalid price)
+- `409` - Conflict (version mismatch - state modified by another operation)
+- `422` - Unprocessable (player not available, team not found in draft state)
+**Behavior:**
+- Skips all normal validation (budget limits, position limits, nomination requirements)
+- Only validates basic data integrity (player exists and available, owner exists, positive price)
+- Creates DraftPick and adds to owner's Team
+- Removes player_id from available_player_ids
+- Updates team budget (can go negative)
+- Uses atomic file operations
+- Logs action with "ADMIN DRAFT:" prefix for audit trail
+- Designed for quickly importing keeper players or handling admin scenarios
 
 ## File Structure
 ```
