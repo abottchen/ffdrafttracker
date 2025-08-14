@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Fantasy Football Draft Tracker</title>
-        <style>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fantasy Football Draft Tracker</title>
+    <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             margin: 0;
@@ -468,92 +468,153 @@
             margin-right: 10px;
             font-size: 0.9em;
         }
-        </style>
-    </head>
-    <body>
-        <div class="draft-progress-container">
-            <div class="draft-progress-bar-container">
-                <div class="draft-progress-bar" id="draft-progress-bar" style="width: 0%">
-                    <span class="draft-progress-percentage" id="draft-percentage">0%</span>
-                </div>
-                <div class="draft-progress-markers" id="draft-markers">
-                    <!-- Round markers will be added dynamically -->
-                </div>
+        .admin-draft-section {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #404040;
+            margin: 10px 0;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #e0e0e0;
+        }
+        .price-input {
+            padding: 8px 12px;
+            border: 1px solid #4a4a4a;
+            border-radius: 5px;
+            background: #2a2a2a;
+            color: #e0e0e0;
+            font-size: 0.9em;
+            width: 100px;
+        }
+        .price-input:focus {
+            outline: none;
+            border-color: #4a90e2;
+            box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.3);
+        }
+    </style>
+  </head>
+  <body>
+    <div class="draft-progress-container">
+      <div class="draft-progress-bar-container">
+        <div class="draft-progress-bar" id="draft-progress-bar" style="width: 0%">
+          <span class="draft-progress-percentage" id="draft-percentage">0%</span>
+        </div>
+        <div class="draft-progress-markers" id="draft-markers">
+          <!-- Round markers will be added dynamically -->
+        </div>
+      </div>
+    </div>
+    <div class="players-grid">
+      <div id="nomination-panel" class="nomination-panel">
+        <div id="nomination-details"
+             style="display: flex;
+                    align-items: center;
+                    gap: 20px;
+                    width: 100%"></div>
+      </div>
+      <div class="status-panel">
+        <div class="nomination-inputs">
+          <div class="player-search-container">
+            <input type="text"
+                   id="player-search"
+                   class="player-search"
+                   placeholder="Type player name..."
+                   autocomplete="off">
+            <div id="player-dropdown" class="player-dropdown">
+              <!-- Populated by JavaScript -->
             </div>
+          </div>
+          <input type="number"
+                 id="nomination-bid"
+                 class="bid-input"
+                 placeholder="Initial bid"
+                 min="1"
+                 value="1">
+          <button class="button" onclick="nominateSelected()">Nominate</button>
+          <div id="message" style="display: none;"></div>
+          <div id="nomination-timer" class="nomination-timer" style="display: none;">00:00</div>
         </div>
-        <div class="players-grid">
-            <div id="nomination-panel" class="nomination-panel">
-                <div id="nomination-details"
-                     style="display: flex;
-                            align-items: center;
-                            gap: 20px;
-                            width: 100%"></div>
-            </div>
-            <div class="status-panel">
-                <div class="nomination-inputs">
-                    <div class="player-search-container">
-                        <input type="text"
-                               id="player-search"
-                               class="player-search"
-                               placeholder="Type player name..."
-                               autocomplete="off">
-                        <div id="player-dropdown" class="player-dropdown">
-                            <!-- Populated by JavaScript -->
-                        </div>
-                    </div>
-                    <input type="number"
-                           id="nomination-bid"
-                           class="bid-input"
-                           placeholder="Initial bid"
-                           min="1"
-                           value="1">
-                    <button class="button" onclick="nominateSelected()">Nominate</button>
-                    <div id="message" style="display: none;"></div>
-                    <div id="nomination-timer" class="nomination-timer" style="display: none;">00:00</div>
-                </div>
-            </div>
+      </div>
+    </div>
+    <div class="teams-horizontal" id="teams-list">
+      <!-- Teams will be populated by JavaScript -->
+    </div>
+    <div class="drafted-players-panel">
+      <div class="drafted-players-grid" id="drafted-players-grid">
+        <!-- Team rosters will be populated by JavaScript -->
+      </div>
+    </div>
+    <div class="api-links">
+      <h3>Admin Controls</h3>
+      <button class="button" onclick="refreshData()">🔄 Refresh</button>
+      <button class="button" onclick="resetDraft()">🔄 Reset Draft</button>
+      <br>
+      <br>
+      <select id="team-select" class="team-select">
+        <option value="">Select team to mark done...</option>
+      </select>
+      <button class="button" onclick="markTeamDone()">Mark Team Done</button>
+      <button class="button" onclick="clearDoneTeams()">Clear All Done</button>
+      <br>
+      <br>
+      <button class="button"
+              onclick="cancelNomination()"
+              id="admin-cancel-nomination"
+              style="display: none">Cancel Nomination</button>
+      <br>
+      <br>
+      <select id="drafted-player-select" class="team-select">
+        <option value="">Select drafted player to remove...</option>
+      </select>
+      <button class="button" onclick="removeDraftedPlayer()">Remove</button>
+      <br>
+      <br>
+      <h3>Admin Draft</h3>
+      <div class="admin-draft-section">
+        <div class="form-group">
+          <label for="admin-player-search">Player:</label>
+          <div class="player-search-container">
+            <input type="text"
+                   id="admin-player-search"
+                   class="player-search"
+                   placeholder="Search for player..."
+                   autocomplete="off">
+            <div id="admin-player-dropdown" class="player-dropdown"></div>
+          </div>
         </div>
-        <div class="teams-horizontal" id="teams-list">
-            <!-- Teams will be populated by JavaScript -->
+        <div class="form-group">
+          <label for="admin-owner-select">Owner:</label>
+          <select id="admin-owner-select" class="team-select">
+            <option value="">Select owner...</option>
+          </select>
         </div>
-        <div class="drafted-players-panel">
-            <div class="drafted-players-grid" id="drafted-players-grid">
-                <!-- Team rosters will be populated by JavaScript -->
-            </div>
+        <div class="form-group">
+          <label for="admin-price-input">Price:</label>
+          <input type="number"
+                 id="admin-price-input"
+                 class="price-input"
+                 placeholder="Enter price..."
+                 min="1">
         </div>
-        <div class="api-links">
-            <h3>Admin Controls</h3>
-            <button class="button" onclick="refreshData()">🔄 Refresh</button>
-            <button class="button" onclick="resetDraft()">🔄 Reset Draft</button>
-            <br>
-            <br>
-            <select id="team-select" class="team-select">
-                <option value="">Select team to mark done...</option>
-            </select>
-            <button class="button" onclick="markTeamDone()">Mark Team Done</button>
-            <button class="button" onclick="clearDoneTeams()">Clear All Done</button>
-            <br>
-            <br>
-            <button class="button"
-                    onclick="cancelNomination()"
-                    id="admin-cancel-nomination"
-                    style="display: none">Cancel Nomination</button>
-            <br>
-            <br>
-            <select id="drafted-player-select" class="team-select">
-                <option value="">Select drafted player to remove...</option>
-            </select>
-            <button class="button" onclick="removeDraftedPlayer()">Remove</button>
-            <br>
-            <br>
-            <h3>API Documentation</h3>
-            <a href="/docs" target="_blank">📚 Interactive API Docs (Swagger)</a>
-            <a href="/redoc" target="_blank">📖 ReDoc Documentation</a>
-            <a href="/api/v1/draft-state" target="_blank">🔗 Draft State JSON</a>
-            <a href="/api/v1/players" target="_blank">🔗 Players JSON</a>
-            <a href="/api/v1/owners" target="_blank">🔗 Owners JSON</a>
-        </div>
-        <script>
+        <button class="button" onclick="adminDraftPlayer()">Insert Player</button>
+      </div>
+      <br>
+      <br>
+      <h3>API Documentation</h3>
+      <a href="/docs" target="_blank">📚 Interactive API Docs (Swagger)</a>
+      <a href="/redoc" target="_blank">📖 ReDoc Documentation</a>
+      <a href="/api/v1/draft-state" target="_blank">🔗 Draft State JSON</a>
+      <a href="/api/v1/players" target="_blank">🔗 Players JSON</a>
+      <a href="/api/v1/owners" target="_blank">🔗 Owners JSON</a>
+    </div>
+    <script>
         let currentVersion = {{ draft_state.version }};
         let selectedPlayerId = null;
         let selectedPlayerName = null;
@@ -567,6 +628,9 @@
         let config = null;
         let nominationTimerInterval = null;
         let nominationStartTime = null;
+        let adminSelectedPlayerId = null;
+        let adminSelectedPlayerName = null;
+        let adminHighlightedIndex = -1;
 
         // Load initial data
         async function loadData() {
@@ -588,6 +652,10 @@
                 
                 // Set up player search
                 setupPlayerSearch();
+                
+                // Set up admin draft functionality
+                setupAdminPlayerSearch();
+                populateAdminOwnerSelect();
                 
             } catch (error) {
                 showMessage('Error loading data: ' + error.message, 'error');
@@ -614,6 +682,7 @@
                 updateTeams(draftState.teams, effectiveNextToNominate, draftState.nominated);
                 
                 // Update drafted players
+                console.log('Updating drafted players, teams:', draftState.teams);
                 updateDraftedPlayers(draftState.teams, draftState);
                 
                 // Populate team select dropdown
@@ -1395,11 +1464,175 @@
             return nextTeam;
         }
 
+        // Admin draft functionality
+        function setupAdminPlayerSearch() {
+            const searchInput = document.getElementById('admin-player-search');
+            const dropdown = document.getElementById('admin-player-dropdown');
+            
+            searchInput.addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase();
+                if (searchTerm.length === 0) {
+                    dropdown.style.display = 'none';
+                    return;
+                }
+                
+                const availablePlayers = players.filter(player => 
+                    availablePlayerIds.includes(player.id)
+                );
+                
+                const filteredPlayers = availablePlayers.filter(player =>
+                    `${player.first_name} ${player.last_name}`.toLowerCase().includes(searchTerm) ||
+                    player.team.toLowerCase().includes(searchTerm) ||
+                    player.position.toLowerCase().includes(searchTerm)
+                ).slice(0, 10);
+                
+                if (filteredPlayers.length === 0) {
+                    dropdown.style.display = 'none';
+                    return;
+                }
+                
+                dropdown.innerHTML = filteredPlayers.map((player, index) => `
+                    <div class="player-option ${index === adminHighlightedIndex ? 'highlighted' : ''}" onclick="selectAdminPlayer(${player.id}, '${player.first_name} ${player.last_name}')" data-index="${index}">
+                        <div class="player-name">${player.first_name} ${player.last_name}</div>
+                        <div class="player-meta">${player.position} - ${player.team}</div>
+                    </div>
+                `).join('');
+                dropdown.style.display = 'block';
+            });
+            
+            // Handle keyboard navigation
+            searchInput.addEventListener('keydown', function(e) {
+                const options = dropdown.querySelectorAll('.player-option');
+                if (options.length === 0) return;
+                
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    adminHighlightedIndex = Math.min(adminHighlightedIndex + 1, options.length - 1);
+                    updateAdminHighlight();
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    adminHighlightedIndex = Math.max(adminHighlightedIndex - 1, -1);
+                    updateAdminHighlight();
+                } else if (e.key === 'Enter' && adminHighlightedIndex >= 0) {
+                    e.preventDefault();
+                    const selectedOption = options[adminHighlightedIndex];
+                    selectedOption.click();
+                } else if (e.key === 'Escape') {
+                    dropdown.style.display = 'none';
+                    adminHighlightedIndex = -1;
+                }
+            });
+            
+            // Hide dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.style.display = 'none';
+                    adminHighlightedIndex = -1;
+                }
+            });
+        }
+        
+        function updateAdminHighlight() {
+            const options = document.querySelectorAll('#admin-player-dropdown .player-option');
+            options.forEach((option, index) => {
+                option.classList.toggle('highlighted', index === adminHighlightedIndex);
+            });
+        }
+        
+        function selectAdminPlayer(playerId, playerName) {
+            adminSelectedPlayerId = playerId;
+            adminSelectedPlayerName = playerName;
+            document.getElementById('admin-player-search').value = playerName;
+            document.getElementById('admin-player-dropdown').style.display = 'none';
+            adminHighlightedIndex = -1;
+        }
+        
+        function populateAdminOwnerSelect() {
+            const select = document.getElementById('admin-owner-select');
+            select.innerHTML = '<option value="">Select owner...</option>';
+            
+            Object.values(owners).forEach(owner => {
+                const option = document.createElement('option');
+                option.value = owner.id;
+                option.textContent = owner.team_name;
+                select.appendChild(option);
+            });
+        }
+        
+        async function adminDraftPlayer() {
+            const ownerId = parseInt(document.getElementById('admin-owner-select').value);
+            const price = parseInt(document.getElementById('admin-price-input').value);
+            
+            if (!adminSelectedPlayerId) {
+                showMessage('Please select a player', 'error');
+                return;
+            }
+            
+            if (!ownerId) {
+                showMessage('Please select an owner', 'error');
+                return;
+            }
+            
+            if (!price || price <= 0) {
+                showMessage('Please enter a valid price', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/v1/admin/draft', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        owner_id: ownerId,
+                        player_id: adminSelectedPlayerId,
+                        price: price,
+                        expected_version: currentVersion
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    currentVersion = data.new_version;
+                    
+                    // Save player name for success message before clearing
+                    const draftedPlayerName = adminSelectedPlayerName;
+                    
+                    // Clear the form
+                    document.getElementById('admin-player-search').value = '';
+                    document.getElementById('admin-owner-select').value = '';
+                    document.getElementById('admin-price-input').value = '';
+                    adminSelectedPlayerId = null;
+                    adminSelectedPlayerName = null;
+                    
+                    showMessage(`Successfully drafted ${draftedPlayerName} for $${price}`, 'success');
+                    
+                    // Refresh data - this updates all UI components
+                    console.log('Admin draft successful, refreshing data...');
+                    await refreshData();
+                    console.log('Data refresh complete');
+                } else {
+                    const errorData = await response.json();
+                    if (response.status === 409) {
+                        // Version mismatch, refresh and retry
+                        await refreshData();
+                        showMessage('Draft state changed, please try again', 'error');
+                    } else {
+                        showMessage(`Failed to draft player: ${errorData.detail}`, 'error');
+                    }
+                }
+            } catch (error) {
+                console.error('Error drafting player:', error);
+                showMessage('Failed to draft player', 'error');
+            }
+        }
+
         // Load data when page loads
         loadData();
         
         // Auto-refresh every 30 seconds
         setInterval(refreshData, 30000);
-        </script>
-    </body>
+    </script>
+  </body>
 </html>

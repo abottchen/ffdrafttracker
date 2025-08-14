@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Fantasy Football Team Viewer</title>
-        <style>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fantasy Football Team Viewer</title>
+    <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             margin: 0;
@@ -291,42 +291,42 @@
                 height: 40px;
             }
         }
-        </style>
-    </head>
-    <body>
-        <div class="header">
-            <h1>Fantasy Football Team Viewer</h1>
-            <p>Read-only team roster and statistics</p>
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>Fantasy Football Team Viewer</h1>
+      <p>Read-only team roster and statistics</p>
+    </div>
+    <div class="team-selector">
+      <label for="team-select" style="margin-right: 15px; font-weight: bold;">Select Team:</label>
+      <select id="team-select" class="team-select">
+        <option value="">Loading teams...</option>
+      </select>
+    </div>
+    <div id="main-content" class="main-content" style="display: none;">
+      <div class="roster-section">
+        <h2 id="team-name">Team Roster</h2>
+        <div id="player-list" class="player-list">
+          <!-- Players will be populated here -->
         </div>
-        <div class="team-selector">
-            <label for="team-select" style="margin-right: 15px; font-weight: bold;">Select Team:</label>
-            <select id="team-select" class="team-select">
-                <option value="">Loading teams...</option>
-            </select>
+      </div>
+      <div class="team-summary">
+        <h2>Team Summary</h2>
+        <div id="team-stats">
+          <!-- Team stats will be populated here -->
         </div>
-        <div id="main-content" class="main-content" style="display: none;">
-            <div class="roster-section">
-                <h2 id="team-name">Team Roster</h2>
-                <div id="player-list" class="player-list">
-                    <!-- Players will be populated here -->
-                </div>
-            </div>
-            <div class="team-summary">
-                <h2>Team Summary</h2>
-                <div id="team-stats">
-                    <!-- Team stats will be populated here -->
-                </div>
-                <h3 style="margin: 25px 0 15px 0; color: #4a90e2;">Position Breakdown</h3>
-                <div id="position-breakdown" class="position-grid">
-                    <!-- Position counts will be populated here -->
-                </div>
-            </div>
+        <h3 style="margin: 25px 0 15px 0; color: #4a90e2;">Position Breakdown</h3>
+        <div id="position-breakdown" class="position-grid">
+          <!-- Position counts will be populated here -->
         </div>
-        <div id="loading" class="loading" style="display: none;">Loading team data...</div>
-        <div id="error" class="error" style="display: none;">
-            <!-- Error messages will appear here -->
-        </div>
-        <script>
+      </div>
+    </div>
+    <div id="loading" class="loading" style="display: none;">Loading team data...</div>
+    <div id="error" class="error" style="display: none;">
+      <!-- Error messages will appear here -->
+    </div>
+    <script>
         const API_BASE = 'http://localhost:8175/api/v1';
         let currentTeamId = {{ selected_team_id }};
         let owners = [];
@@ -560,6 +560,6 @@
 
         // Start the application
         init();
-        </script>
-    </body>
+    </script>
+  </body>
 </html>

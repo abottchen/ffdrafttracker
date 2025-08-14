@@ -74,3 +74,6 @@ exclude_lines = [
     "raise AssertionError",
     "raise NotImplementedError",
 ]
+
+[tool.djlint]
+indent = 2
