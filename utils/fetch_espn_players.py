@@ -130,10 +130,6 @@ def fetch_team_roster(team_abbr: str, url: str) -> List[Dict]:
             # Get all text content from this row
             row_text = row.get_text()
             
-            # Debug specific players to understand the issue
-            if "Bryan Cook" in full_name or "Harrison Butker" in full_name:
-                print(f"  DEBUG {full_name}: Row text = '{row_text}'")
-            
             # Look for position patterns in the text using regex
             # Look for positions that are clearly separated from names by numbers (jersey numbers)
             # Pattern: number + position + number (jersey# + position + age)
@@ -142,8 +138,6 @@ def fetch_team_roster(team_abbr: str, url: str) -> List[Dict]:
                 pattern = f'\\d{pos_key}\\d'
                 if re.search(pattern, row_text.upper()):
                     position = POSITION_MAP[pos_key].value
-                    if "Bryan Cook" in full_name or "Harrison Butker" in full_name:
-                        print(f"  DEBUG {full_name}: Matched pattern '{pattern}' -> position '{position}'")
                     break
             
             # Special case for single-letter position "K" - need to be extra careful
