@@ -1491,12 +1491,18 @@
                     return;
                 }
                 
-                dropdown.innerHTML = filteredPlayers.map((player, index) => `
-                    <div class="player-option ${index === adminHighlightedIndex ? 'highlighted' : ''}" onclick="selectAdminPlayer(${player.id}, '${player.first_name} ${player.last_name}')" data-index="${index}">
+                dropdown.innerHTML = '';
+                filteredPlayers.forEach((player, index) => {
+                    const option = document.createElement('div');
+                    option.className = `player-option ${index === adminHighlightedIndex ? 'highlighted' : ''}`;
+                    option.dataset.index = index;
+                    option.innerHTML = `
                         <div class="player-name">${player.first_name} ${player.last_name}</div>
                         <div class="player-meta">${player.position} - ${player.team}</div>
-                    </div>
-                `).join('');
+                    `;
+                    option.onclick = () => selectAdminPlayer(player.id, `${player.first_name} ${player.last_name}`);
+                    dropdown.appendChild(option);
+                });
                 dropdown.style.display = 'block';
             });
             
