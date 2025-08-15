@@ -1,11 +1,12 @@
 """Fantasy Football Draft Tracker - FastAPI Application"""
 
+import io
 import logging
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
@@ -114,9 +115,7 @@ def load_draft_state() -> DraftState:
             available_player_ids=[p.id for p in players],
             teams=[
                 Team(
-                    owner_id=owner_id,
-                    budget_remaining=config.initial_budget,
-                    picks=[]
+                    owner_id=owner_id, budget_remaining=config.initial_budget, picks=[]
                 )
                 for owner_id in owner_ids
             ],
@@ -189,6 +188,68 @@ def check_version(current_version: int, expected_version: int) -> None:
                 f"{expected_version}). Please refresh and try again."
             ),
         )
+
+
+def generate_draft_csv() -> str:
+    """Generate CSV content based on current draft state."""
+    draft_state = load_draft_state()
+    owners = load_owners()
+    players = load_players()
+
+    # Create player lookup dictionary
+    player_dict = {p.id: p for p in players}
+
+    # Sort owners by ID for consistent column ordering
+    sorted_owner_ids = sorted(owners.keys())
+
+    # Create CSV content
+    csv_output = io.StringIO()
+
+    # First row: Owner names followed by empty cells
+    first_row = []
+    for owner_id in sorted_owner_ids:
+        owner_name = owners[owner_id]["owner_name"]
+        first_row.extend([f'"{owner_name}"', '""'])
+    csv_output.write(",".join(first_row) + "\n")
+
+    # Second row: Alternating "Player" and "$"
+    second_row = []
+    for _ in sorted_owner_ids:
+        second_row.extend(['"Player"', '"$"'])
+    csv_output.write(",".join(second_row) + "\n")
+
+    # Find teams for each owner and get their picks
+    owner_picks = {}
+    for team in draft_state.teams:
+        if team.owner_id in sorted_owner_ids:
+            owner_picks[team.owner_id] = team.picks
+
+    # Determine maximum number of picks by any owner
+    max_picks = max(len(picks) for picks in owner_picks.values()) if owner_picks else 0
+
+    # Generate data rows
+    for pick_index in range(max_picks):
+        row = []
+        for owner_id in sorted_owner_ids:
+            picks = owner_picks.get(owner_id, [])
+            if pick_index < len(picks):
+                pick = picks[pick_index]
+                player = player_dict.get(pick.player_id)
+                if player:
+                    player_name = f"{player.last_name}, {player.first_name}"
+                    row.extend([f'"{player_name}"', str(pick.price)])
+                else:
+                    row.extend(
+                        [f'"Unknown Player (ID: {pick.player_id})"', str(pick.price)]
+                    )
+            else:
+                # Empty cells for owners with fewer picks
+                row.extend(['""', '""'])
+        csv_output.write(",".join(row) + "\n")
+
+    csv_content = csv_output.getvalue()
+    csv_output.close()
+    return csv_content
 
 
 # Routes
@@ -264,6 +325,24 @@ async def get_config():
     """Get draft configuration."""
     config = load_configuration()
     return config
+
+
+@app.get("/api/v1/export/csv")
+async def export_draft_csv():
+    """Export current draft state as CSV file."""
+    try:
+        csv_content = generate_draft_csv()
+
+        # Return as streaming response with appropriate headers
+        return StreamingResponse(
+            io.BytesIO(csv_content.encode("utf-8")),
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=draft_export.csv"},
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to generate CSV export: {str(e)}"
+        )
 
 
 @app.get("/api/v1/owners/{owner_id}")
@@ -370,7 +449,8 @@ async def nominate_player(request: NominateRequest):
 
     # Log action with names
     player_name = (
-        f"{player.first_name} {player.last_name}" if player
+        f"{player.first_name} {player.last_name}"
+        if player
         else f"ID:{request.player_id}"
     )
     owner_name = owner.get("owner_name", f"ID:{request.owner_id}")
@@ -461,15 +541,14 @@ async def place_bid(request: BidRequest):
     owner = owners.get(request.owner_id, {})
 
     player_name = (
-        f"{player.first_name} {player.last_name}" if player
+        f"{player.first_name} {player.last_name}"
+        if player
         else f"ID:{draft_state.nominated.player_id}"
     )
     owner_name = owner.get("owner_name", f"ID:{request.owner_id}")
 
     # Log action
-    logger.info(
-        f"{owner_name} bid ${request.bid_amount} on {player_name}"
-    )
+    logger.info(f"{owner_name} bid ${request.bid_amount} on {player_name}")
 
     return {
         "success": True,
@@ -588,15 +667,14 @@ async def complete_draft(request: DraftRequest):
     owner = owners.get(request.owner_id, {})
 
     player_name = (
-        f"{player.first_name} {player.last_name}" if player
+        f"{player.first_name} {player.last_name}"
+        if player
         else f"ID:{request.player_id}"
     )
     owner_name = owner.get("owner_name", f"ID:{request.owner_id}")
 
     # Log action
-    logger.info(
-        f"{player_name} drafted by {owner_name} for ${request.final_price}"
-    )
+    logger.info(f"{player_name} drafted by {owner_name} for ${request.final_price}")
 
     return {
         "success": True,
@@ -685,9 +763,7 @@ async def admin_draft_player(request: AdminDraftRequest):
     owner_name = owner.get("owner_name", f"ID:{request.owner_id}")
 
     # Log action
-    logger.info(
-        f"ADMIN DRAFT: {owner_name} drafted {player_name} for ${request.price}"
-    )
+    logger.info(f"ADMIN DRAFT: {owner_name} drafted {player_name} for ${request.price}")
 
     return {
         "success": True,
@@ -725,7 +801,8 @@ async def cancel_nomination(request: DeleteNominateRequest):
     players = load_players()
     player = next((p for p in players if p.id == cancelled_player), None)
     player_name = (
-        f"{player.first_name} {player.last_name}" if player
+        f"{player.first_name} {player.last_name}"
+        if player
         else f"ID:{cancelled_player}"
     )
 
@@ -793,13 +870,12 @@ async def remove_draft_pick(pick_id: int, request: UndoDraftRequest):
     players = load_players()
     player = next((p for p in players if p.id == target_pick.player_id), None)
     player_name = (
-        f"{player.first_name} {player.last_name}" if player
+        f"{player.first_name} {player.last_name}"
+        if player
         else f"ID:{target_pick.player_id}"
     )
 
-    logger.info(
-        f"Removed pick {pick_id}, returned {player_name} to available pool"
-    )
+    logger.info(f"Removed pick {pick_id}, returned {player_name} to available pool")
 
     return {
         "success": True,
