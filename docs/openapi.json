@@ -233,14 +233,14 @@
         "description": "Nominate a player for auction.",
         "operationId": "nominate_player_api_v1_nominate_post",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/NominateRequest"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -267,16 +267,19 @@
         "summary": "Cancel Nomination",
         "description": "Cancel current nomination (admin action).",
         "operationId": "cancel_nomination_api_v1_nominate_delete",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DeleteNominateRequest"
-              }
-            }
-          },
-          "required": true
-        },
+        "parameters": [
+          {
+            "name": "if-match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "ETag for optimistic locking (expected version)",
+              "title": "If-Match"
+            },
+            "description": "ETag for optimistic locking (expected version)"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -424,18 +427,19 @@
               "type": "integer",
               "title": "Pick Id"
             }
+          },
+          {
+            "name": "if-match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "ETag for optimistic locking (expected version)",
+              "title": "If-Match"
+            },
+            "description": "ETag for optimistic locking (expected version)"
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UndoDraftRequest"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -584,19 +588,6 @@
           "total_rounds"
         ],
         "title": "Configuration"
-      },
-      "DeleteNominateRequest": {
-        "properties": {
-          "expected_version": {
-            "type": "integer",
-            "title": "Expected Version"
-          }
-        },
-        "type": "object",
-        "required": [
-          "expected_version"
-        ],
-        "title": "DeleteNominateRequest"
       },
       "DraftPick": {
         "properties": {
@@ -915,19 +906,6 @@
           "budget_remaining"
         ],
         "title": "Team"
-      },
-      "UndoDraftRequest": {
-        "properties": {
-          "expected_version": {
-            "type": "integer",
-            "title": "Expected Version"
-          }
-        },
-        "type": "object",
-        "required": [
-          "expected_version"
-        ],
-        "title": "UndoDraftRequest"
       },
       "ValidationError": {
         "properties": {

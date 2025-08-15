@@ -84,7 +84,7 @@ All API endpoints are served from the same FastAPI application at `/api/v1/*`. F
 To prevent double-submissions and race conditions, all state-modifying endpoints use optimistic locking:
 
 - **Version Field:** DraftState includes a `version: int` field that increments on each modification
-- **Request Pattern:** All POST/DELETE requests that modify state must include `expected_version: int`
+- **Request Pattern:** POST requests include `expected_version: int` in body; DELETE requests use `If-Match` header with ETag
 - **Conflict Detection:** If `draft_state.version != expected_version`, returns HTTP 409 Conflict
 - **Client Recovery:** On 409, client should refresh state and retry with new version
 - **Benefits:** Prevents both accidental double-clicks and legitimate concurrent modifications

@@ -208,10 +208,3 @@ netsh advfirewall firewall add rule name="FFDraftTracker" dir=in action=allow pr
 3. Make your changes with tests
 4. Run the test suite: `python -m pytest tests/ -v`
 5. Submit a pull request
-
-## TODO
-
-- DELETE requests are currently taking a json payload, which is not correct
-  - It's because we send the expected version number
-  - perhaps we need to pass the version number as part of the url?
-- need to add a parser to ffdrafttool to pull in the draft-state from this tracker
