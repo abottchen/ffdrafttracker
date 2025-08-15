@@ -1,0 +1,967 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Fantasy Football Draft Tracker",
+    "description": "Auction draft tracking tool with optimistic locking",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Root",
+        "description": "Serve the main application interface.",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/draft-state": {
+      "get": {
+        "summary": "Get Draft State",
+        "description": "Get complete current draft state.",
+        "operationId": "get_draft_state_api_v1_draft_state_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DraftState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/players": {
+      "get": {
+        "summary": "Get All Players",
+        "description": "Get all player information.",
+        "operationId": "get_all_players_api_v1_players_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Player"
+                  },
+                  "type": "array",
+                  "title": "Response Get All Players Api V1 Players Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/players/available": {
+      "get": {
+        "summary": "Get Available Players",
+        "description": "Get available players with details.",
+        "operationId": "get_available_players_api_v1_players_available_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Player"
+                  },
+                  "type": "array",
+                  "title": "Response Get Available Players Api V1 Players Available Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/owners": {
+      "get": {
+        "summary": "Get All Owners",
+        "description": "Get all owner information.",
+        "operationId": "get_all_owners_api_v1_owners_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Owner"
+                  },
+                  "type": "array",
+                  "title": "Response Get All Owners Api V1 Owners Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/config": {
+      "get": {
+        "summary": "Get Config",
+        "description": "Get draft configuration.",
+        "operationId": "get_config_api_v1_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Configuration"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/export/csv": {
+      "get": {
+        "summary": "Export Draft Csv",
+        "description": "Export current draft state as CSV file.",
+        "operationId": "export_draft_csv_api_v1_export_csv_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/owners/{owner_id}": {
+      "get": {
+        "summary": "Get Owner",
+        "description": "Get specific owner information.",
+        "operationId": "get_owner_api_v1_owners__owner_id__get",
+        "parameters": [
+          {
+            "name": "owner_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Owner Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Owner"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/teams/{owner_id}": {
+      "get": {
+        "summary": "Get Team",
+        "description": "Get specific team roster with player details.",
+        "operationId": "get_team_api_v1_teams__owner_id__get",
+        "parameters": [
+          {
+            "name": "owner_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Owner Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/nominate": {
+      "post": {
+        "summary": "Nominate Player",
+        "description": "Nominate a player for auction.",
+        "operationId": "nominate_player_api_v1_nominate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NominateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Cancel Nomination",
+        "description": "Cancel current nomination (admin action).",
+        "operationId": "cancel_nomination_api_v1_nominate_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteNominateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bid": {
+      "post": {
+        "summary": "Place Bid",
+        "description": "Place a bid on the currently nominated player.",
+        "operationId": "place_bid_api_v1_bid_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BidRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/draft": {
+      "post": {
+        "summary": "Complete Draft",
+        "description": "Complete the auction and draft the player.",
+        "operationId": "complete_draft_api_v1_draft_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/draft": {
+      "post": {
+        "summary": "Admin Draft Player",
+        "description": "Admin-only endpoint to draft a player directly without auction.",
+        "operationId": "admin_draft_player_api_v1_admin_draft_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminDraftRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/draft/{pick_id}": {
+      "delete": {
+        "summary": "Remove Draft Pick",
+        "description": "Remove a draft pick and restore player to available pool.",
+        "operationId": "remove_draft_pick_api_v1_draft__pick_id__delete",
+        "parameters": [
+          {
+            "name": "pick_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Pick Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UndoDraftRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reset": {
+      "post": {
+        "summary": "Reset Draft",
+        "description": "Reset draft to initial state (admin action).",
+        "operationId": "reset_draft_api_v1_reset_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AdminDraftRequest": {
+        "properties": {
+          "owner_id": {
+            "type": "integer",
+            "title": "Owner Id"
+          },
+          "player_id": {
+            "type": "integer",
+            "title": "Player Id"
+          },
+          "price": {
+            "type": "integer",
+            "title": "Price"
+          },
+          "expected_version": {
+            "type": "integer",
+            "title": "Expected Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "owner_id",
+          "player_id",
+          "price",
+          "expected_version"
+        ],
+        "title": "AdminDraftRequest"
+      },
+      "BidRequest": {
+        "properties": {
+          "owner_id": {
+            "type": "integer",
+            "title": "Owner Id"
+          },
+          "bid_amount": {
+            "type": "integer",
+            "title": "Bid Amount"
+          },
+          "expected_version": {
+            "type": "integer",
+            "title": "Expected Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "owner_id",
+          "bid_amount",
+          "expected_version"
+        ],
+        "title": "BidRequest"
+      },
+      "Configuration": {
+        "properties": {
+          "initial_budget": {
+            "type": "integer",
+            "title": "Initial Budget"
+          },
+          "min_bid": {
+            "type": "integer",
+            "title": "Min Bid"
+          },
+          "position_maximums": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Position Maximums"
+          },
+          "total_rounds": {
+            "type": "integer",
+            "title": "Total Rounds"
+          },
+          "data_directory": {
+            "type": "string",
+            "title": "Data Directory",
+            "default": "data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "initial_budget",
+          "min_bid",
+          "position_maximums",
+          "total_rounds"
+        ],
+        "title": "Configuration"
+      },
+      "DeleteNominateRequest": {
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "title": "Expected Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "expected_version"
+        ],
+        "title": "DeleteNominateRequest"
+      },
+      "DraftPick": {
+        "properties": {
+          "pick_id": {
+            "type": "integer",
+            "title": "Pick Id"
+          },
+          "player_id": {
+            "type": "integer",
+            "title": "Player Id"
+          },
+          "owner_id": {
+            "type": "integer",
+            "title": "Owner Id"
+          },
+          "price": {
+            "type": "integer",
+            "title": "Price"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pick_id",
+          "player_id",
+          "owner_id",
+          "price"
+        ],
+        "title": "DraftPick"
+      },
+      "DraftRequest": {
+        "properties": {
+          "owner_id": {
+            "type": "integer",
+            "title": "Owner Id"
+          },
+          "player_id": {
+            "type": "integer",
+            "title": "Player Id"
+          },
+          "final_price": {
+            "type": "integer",
+            "title": "Final Price"
+          },
+          "expected_version": {
+            "type": "integer",
+            "title": "Expected Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "owner_id",
+          "player_id",
+          "final_price",
+          "expected_version"
+        ],
+        "title": "DraftRequest"
+      },
+      "DraftState": {
+        "properties": {
+          "nominated": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Nominated"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "available_player_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Available Player Ids"
+          },
+          "teams": {
+            "items": {
+              "$ref": "#/components/schemas/Team"
+            },
+            "type": "array",
+            "title": "Teams"
+          },
+          "next_to_nominate": {
+            "type": "integer",
+            "title": "Next To Nominate"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "next_to_nominate"
+        ],
+        "title": "DraftState"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "NFLTeam": {
+        "type": "string",
+        "enum": [
+          "ARI",
+          "ATL",
+          "BAL",
+          "BUF",
+          "CAR",
+          "CHI",
+          "CIN",
+          "CLE",
+          "DAL",
+          "DEN",
+          "DET",
+          "GB",
+          "HOU",
+          "IND",
+          "JAX",
+          "KC",
+          "LAC",
+          "LAR",
+          "LV",
+          "MIA",
+          "MIN",
+          "NE",
+          "NO",
+          "NYG",
+          "NYJ",
+          "PHI",
+          "PIT",
+          "SEA",
+          "SF",
+          "TB",
+          "TEN",
+          "WAS"
+        ],
+        "title": "NFLTeam"
+      },
+      "NominateRequest": {
+        "properties": {
+          "owner_id": {
+            "type": "integer",
+            "title": "Owner Id"
+          },
+          "player_id": {
+            "type": "integer",
+            "title": "Player Id"
+          },
+          "initial_bid": {
+            "type": "integer",
+            "title": "Initial Bid"
+          },
+          "expected_version": {
+            "type": "integer",
+            "title": "Expected Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "owner_id",
+          "player_id",
+          "initial_bid",
+          "expected_version"
+        ],
+        "title": "NominateRequest"
+      },
+      "Nominated": {
+        "properties": {
+          "player_id": {
+            "type": "integer",
+            "title": "Player Id"
+          },
+          "current_bid": {
+            "type": "integer",
+            "title": "Current Bid"
+          },
+          "current_bidder_id": {
+            "type": "integer",
+            "title": "Current Bidder Id"
+          },
+          "nominating_owner_id": {
+            "type": "integer",
+            "title": "Nominating Owner Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "current_bid",
+          "current_bidder_id",
+          "nominating_owner_id"
+        ],
+        "title": "Nominated"
+      },
+      "Owner": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "owner_name": {
+            "type": "string",
+            "title": "Owner Name"
+          },
+          "team_name": {
+            "type": "string",
+            "title": "Team Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "owner_name",
+          "team_name"
+        ],
+        "title": "Owner"
+      },
+      "Player": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "first_name": {
+            "type": "string",
+            "title": "First Name"
+          },
+          "last_name": {
+            "type": "string",
+            "title": "Last Name"
+          },
+          "team": {
+            "$ref": "#/components/schemas/NFLTeam"
+          },
+          "position": {
+            "$ref": "#/components/schemas/Position"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "first_name",
+          "last_name",
+          "team",
+          "position"
+        ],
+        "title": "Player"
+      },
+      "Position": {
+        "type": "string",
+        "enum": [
+          "QB",
+          "RB",
+          "WR",
+          "TE",
+          "K",
+          "D/ST"
+        ],
+        "title": "Position"
+      },
+      "ResetRequest": {
+        "properties": {
+          "expected_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Version"
+          },
+          "force": {
+            "type": "boolean",
+            "title": "Force",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "ResetRequest"
+      },
+      "Team": {
+        "properties": {
+          "owner_id": {
+            "type": "integer",
+            "title": "Owner Id"
+          },
+          "budget_remaining": {
+            "type": "integer",
+            "title": "Budget Remaining"
+          },
+          "picks": {
+            "items": {
+              "$ref": "#/components/schemas/DraftPick"
+            },
+            "type": "array",
+            "title": "Picks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "owner_id",
+          "budget_remaining"
+        ],
+        "title": "Team"
+      },
+      "UndoDraftRequest": {
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "title": "Expected Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "expected_version"
+        ],
+        "title": "UndoDraftRequest"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
