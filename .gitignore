@@ -204,6 +204,7 @@ cython_debug/
 # Claude Code
 #  Claude Code user settings and personal configurations
 .claude/
+CLAUDE.local.md
 
 # Marimo
 marimo/_static/
