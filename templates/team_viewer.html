@@ -3,6 +3,10 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+          content="Fantasy Football Team Viewer - View detailed team rosters, player stats, and position breakdowns for fantasy football teams">
+    <meta name="keywords"
+          content="fantasy football, team viewer, roster, player stats, fantasy sports, football team">
     <title>Fantasy Football Team Viewer</title>
     <style>
         body {
@@ -291,6 +295,23 @@
                 height: 40px;
             }
         }
+        .team-selector-label {
+            margin-right: 15px;
+            font-weight: bold;
+        }
+        .main-content-hidden {
+            display: none;
+        }
+        .team-summary-heading {
+            margin: 25px 0 15px 0;
+            color: #4a90e2;
+        }
+        .loading-hidden {
+            display: none;
+        }
+        .error-hidden {
+            display: none;
+        }
     </style>
   </head>
   <body>
@@ -299,12 +320,12 @@
       <p>Read-only team roster and statistics</p>
     </div>
     <div class="team-selector">
-      <label for="team-select" style="margin-right: 15px; font-weight: bold;">Select Team:</label>
+      <label for="team-select" class="team-selector-label">Select Team:</label>
       <select id="team-select" class="team-select">
         <option value="">Loading teams...</option>
       </select>
     </div>
-    <div id="main-content" class="main-content" style="display: none;">
+    <div id="main-content" class="main-content main-content-hidden">
       <div class="roster-section">
         <h2 id="team-name">Team Roster</h2>
         <div id="player-list" class="player-list">
@@ -316,14 +337,14 @@
         <div id="team-stats">
           <!-- Team stats will be populated here -->
         </div>
-        <h3 style="margin: 25px 0 15px 0; color: #4a90e2;">Position Breakdown</h3>
+        <h3 class="team-summary-heading">Position Breakdown</h3>
         <div id="position-breakdown" class="position-grid">
           <!-- Position counts will be populated here -->
         </div>
       </div>
     </div>
-    <div id="loading" class="loading" style="display: none;">Loading team data...</div>
-    <div id="error" class="error" style="display: none;">
+    <div id="loading" class="loading loading-hidden">Loading team data...</div>
+    <div id="error" class="error error-hidden">
       <!-- Error messages will appear here -->
     </div>
     <script>
