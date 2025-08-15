@@ -520,6 +520,71 @@
             border-color: #4a90e2;
             box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.3);
         }
+        
+        /* Context Menu Styles */
+        .context-menu {
+            position: absolute;
+            background: #2a2a2a;
+            border: 1px solid #4a4a4a;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            z-index: 10000;
+            padding: 4px 0;
+            min-width: 120px;
+            display: none;
+        }
+        
+        .context-menu-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            color: #e0e0e0;
+            font-size: 0.9em;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .context-menu-item:hover {
+            background: #3a3a3a;
+        }
+        
+        .context-menu-item.has-submenu::after {
+            content: "▶";
+            font-size: 0.7em;
+            color: #b0b0b0;
+        }
+        
+        .context-submenu {
+            position: absolute;
+            left: 100%;
+            top: 0;
+            background: #2a2a2a;
+            border: 1px solid #4a4a4a;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            padding: 4px 0;
+            min-width: 150px;
+            display: none;
+        }
+        
+        .drafted-player {
+            background: #2a2a2a;
+            padding: 6px;
+            margin-bottom: 4px;
+            border-radius: 4px;
+            border: 1px solid #404040;
+            transition: background-color 2s ease, border-color 2s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .drafted-player:hover {
+            background: #3a3a3a;
+        }
     </style>
   </head>
   <body>
@@ -632,6 +697,16 @@
       <a href="/api/v1/players" target="_blank">🔗 Players JSON</a>
       <a href="/api/v1/owners" target="_blank">🔗 Owners JSON</a>
     </div>
+    <!-- Context Menu -->
+    <div id="context-menu" class="context-menu">
+      <div class="context-menu-item" id="context-delete">Delete</div>
+      <div class="context-menu-item has-submenu" id="context-move">
+        Move to Team
+        <div id="context-submenu" class="context-submenu">
+          <!-- Team options will be populated dynamically -->
+        </div>
+      </div>
+    </div>
     <script>
         let currentVersion = {{ draft_state.version }};
         let selectedPlayerId = null;
@@ -649,6 +724,13 @@
         let adminSelectedPlayerId = null;
         let adminSelectedPlayerName = null;
         let adminHighlightedIndex = -1;
+        
+        // Context menu variables
+        let contextMenuPickId = null;
+        let contextMenuPlayerId = null;
+        let contextMenuPlayerName = null;
+        let contextMenuOwnerId = null;
+        let contextMenuPrice = null;
 
         // Load initial data
         async function loadData() {
@@ -1110,10 +1192,22 @@
                         const playerDiv = document.createElement('div');
                         const isNewlyDrafted = isNewDraft && pick.player_id === mostRecentPlayerId;
                         playerDiv.className = isNewlyDrafted ? 'drafted-player newly-drafted' : 'drafted-player';
+                        
+                        // Add data attributes for context menu
+                        playerDiv.dataset.pickId = pick.pick_id;
+                        playerDiv.dataset.playerId = pick.player_id;
+                        playerDiv.dataset.playerName = `${player.first_name} ${player.last_name}`;
+                        playerDiv.dataset.ownerId = team.owner_id;
+                        playerDiv.dataset.price = pick.price;
+                        
                         playerDiv.innerHTML = `
                             <div class="drafted-player-name">${player.first_name} ${player.last_name}</div>
                             <div class="drafted-player-details">${player.position} - ${player.team} ($${pick.price})</div>
                         `;
+                        
+                        // Add context menu event listener
+                        playerDiv.addEventListener('contextmenu', showContextMenu);
+                        
                         rosterDiv.appendChild(playerDiv);
                         
                         // Remove the highlight after a brief delay
@@ -1651,6 +1745,192 @@
                 showMessage('Failed to draft player', 'error');
             }
         }
+
+        // Context Menu Functions
+        function showContextMenu(event) {
+            event.preventDefault();
+            
+            const playerDiv = event.currentTarget;
+            contextMenuPickId = parseInt(playerDiv.dataset.pickId);
+            contextMenuPlayerId = parseInt(playerDiv.dataset.playerId);
+            contextMenuPlayerName = playerDiv.dataset.playerName;
+            contextMenuOwnerId = parseInt(playerDiv.dataset.ownerId);
+            contextMenuPrice = parseInt(playerDiv.dataset.price);
+            
+            const contextMenu = document.getElementById('context-menu');
+            const submenu = document.getElementById('context-submenu');
+            
+            // Populate submenu with other teams
+            submenu.innerHTML = '';
+            if (currentDraftState && currentDraftState.teams) {
+                currentDraftState.teams.forEach(team => {
+                    // Don't include the current team
+                    if (team.owner_id !== contextMenuOwnerId) {
+                        const owner = owners.find(o => o.id === team.owner_id);
+                        if (owner) {
+                            const teamOption = document.createElement('div');
+                            teamOption.className = 'context-menu-item';
+                            teamOption.textContent = owner.team_name;
+                            teamOption.onclick = () => movePlayerToTeam(team.owner_id);
+                            submenu.appendChild(teamOption);
+                        }
+                    }
+                });
+            }
+            
+            // Position the context menu
+            contextMenu.style.left = event.pageX + 'px';
+            contextMenu.style.top = event.pageY + 'px';
+            contextMenu.style.display = 'block';
+            
+            // Set up event handlers
+            document.getElementById('context-delete').onclick = deletePlayer;
+        }
+        
+        function hideContextMenu() {
+            document.getElementById('context-menu').style.display = 'none';
+            document.getElementById('context-submenu').style.display = 'none';
+        }
+        
+        async function deletePlayer() {
+            hideContextMenu();
+            
+            if (!contextMenuPickId) {
+                showMessage('No player selected', 'error');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to delete ${contextMenuPlayerName}?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/v1/draft/${contextMenuPickId}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        expected_version: currentVersion
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    currentVersion = result.new_version;
+                    showMessage(`${contextMenuPlayerName} deleted successfully!`, 'success');
+                    await refreshData();
+                } else {
+                    const error = await response.json();
+                    showMessage('Delete failed: ' + error.detail, 'error');
+                }
+            } catch (error) {
+                showMessage('Error deleting player: ' + error.message, 'error');
+            }
+        }
+        
+        async function movePlayerToTeam(targetOwnerId) {
+            hideContextMenu();
+            
+            if (!contextMenuPickId || !contextMenuPlayerId) {
+                showMessage('No player selected', 'error');
+                return;
+            }
+            
+            const targetOwner = owners.find(o => o.id === targetOwnerId);
+            if (!targetOwner) {
+                showMessage('Target team not found', 'error');
+                return;
+            }
+            
+            if (!confirm(`Move ${contextMenuPlayerName} to ${targetOwner.team_name}?`)) {
+                return;
+            }
+            
+            const originalPrice = contextMenuPrice || 1;
+            
+            try {
+                // Step 1: Delete the player from current team
+                const deleteResponse = await fetch(`/api/v1/draft/${contextMenuPickId}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        expected_version: currentVersion
+                    })
+                });
+                
+                if (!deleteResponse.ok) {
+                    const error = await deleteResponse.json();
+                    showMessage('Delete failed: ' + error.detail, 'error');
+                    return;
+                }
+                
+                const deleteResult = await deleteResponse.json();
+                currentVersion = deleteResult.new_version;
+                
+                // Step 2: Add player to target team using admin draft
+                const adminDraftResponse = await fetch('/api/v1/admin/draft', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        owner_id: targetOwnerId,
+                        player_id: contextMenuPlayerId,
+                        price: originalPrice,
+                        expected_version: currentVersion
+                    })
+                });
+                
+                if (adminDraftResponse.ok) {
+                    const adminResult = await adminDraftResponse.json();
+                    currentVersion = adminResult.new_version;
+                    showMessage(`${contextMenuPlayerName} moved to ${targetOwner.team_name} successfully!`, 'success');
+                    await refreshData();
+                } else {
+                    const error = await adminDraftResponse.json();
+                    showMessage('Admin draft failed: ' + error.detail, 'error');
+                    // Note: Player has been deleted but not re-added - this is an error state
+                }
+                
+            } catch (error) {
+                showMessage('Error moving player: ' + error.message, 'error');
+            }
+        }
+        
+        // Set up submenu hover behavior
+        document.addEventListener('DOMContentLoaded', function() {
+            const moveItem = document.getElementById('context-move');
+            const submenu = document.getElementById('context-submenu');
+            
+            moveItem.addEventListener('mouseenter', function() {
+                submenu.style.display = 'block';
+            });
+            
+            moveItem.addEventListener('mouseleave', function(e) {
+                // Only hide if not moving to submenu
+                setTimeout(() => {
+                    if (!submenu.matches(':hover') && !moveItem.matches(':hover')) {
+                        submenu.style.display = 'none';
+                    }
+                }, 100);
+            });
+            
+            submenu.addEventListener('mouseleave', function() {
+                submenu.style.display = 'none';
+            });
+        });
+        
+        // Hide context menu on click outside
+        document.addEventListener('click', function(event) {
+            const contextMenu = document.getElementById('context-menu');
+            if (!contextMenu.contains(event.target)) {
+                hideContextMenu();
+            }
+        });
+        
+        // Hide context menu on escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                hideContextMenu();
+            }
+        });
 
         // Load data when page loads
         loadData();
