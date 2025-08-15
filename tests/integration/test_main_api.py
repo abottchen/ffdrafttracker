@@ -414,7 +414,7 @@ class TestMainApiIntegration:
         undo_response = self.client.request(
             "DELETE",
             f"/api/v1/draft/{pick_id}",
-            json={"expected_version": version_after_draft},
+            headers={"If-Match": f'"{version_after_draft}"'},
         )
 
         assert undo_response.status_code == 200
@@ -453,7 +453,7 @@ class TestMainApiIntegration:
         cancel_response = self.client.request(
             "DELETE",
             "/api/v1/nominate",
-            json={"expected_version": version_after_nominate},
+            headers={"If-Match": f'"{version_after_nominate}"'},
         )
 
         assert cancel_response.status_code == 200

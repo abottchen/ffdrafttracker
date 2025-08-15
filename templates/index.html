@@ -1369,10 +1369,10 @@
             try {
                 const response = await fetch('/api/v1/nominate', {
                     method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        expected_version: currentVersion
-                    })
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'If-Match': `"${currentVersion}"`
+                    }
                 });
                 
                 if (response.ok) {
@@ -1527,10 +1527,10 @@
             try {
                 const response = await fetch(`/api/v1/draft/${pickId}`, {
                     method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        expected_version: currentVersion
-                    })
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'If-Match': `"${currentVersion}"`
+                    }
                 });
                 
                 if (response.ok) {
@@ -1807,10 +1807,10 @@
             try {
                 const response = await fetch(`/api/v1/draft/${contextMenuPickId}`, {
                     method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        expected_version: currentVersion
-                    })
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'If-Match': `"${currentVersion}"`
+                    }
                 });
                 
                 if (response.ok) {
@@ -1851,10 +1851,10 @@
                 // Step 1: Delete the player from current team
                 const deleteResponse = await fetch(`/api/v1/draft/${contextMenuPickId}`, {
                     method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        expected_version: currentVersion
-                    })
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'If-Match': `"${currentVersion}"`
+                    }
                 });
                 
                 if (!deleteResponse.ok) {

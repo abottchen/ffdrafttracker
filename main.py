@@ -4,7 +4,7 @@ import io
 import logging
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -80,12 +80,6 @@ class DraftRequest(BaseModel):
     expected_version: int
 
 
-class DeleteNominateRequest(BaseModel):
-    expected_version: int
-
-
-class UndoDraftRequest(BaseModel):
-    expected_version: int
 
 
 class ResetRequest(BaseModel):
@@ -775,13 +769,24 @@ async def admin_draft_player(request: AdminDraftRequest):
 
 # Admin endpoints
 @app.delete("/api/v1/nominate")
-async def cancel_nomination(request: DeleteNominateRequest):
+async def cancel_nomination(
+    if_match: str = Header(..., description="ETag for optimistic locking (expected version)")
+):
     """Cancel current nomination (admin action)."""
     # Load current state
     draft_state = load_draft_state()
 
+    # Parse ETag and check version for optimistic locking
+    try:
+        expected_version = int(if_match.strip('"'))
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="If-Match header must contain a valid version number"
+        )
+
     # Check version
-    check_version(draft_state.version, request.expected_version)
+    check_version(draft_state.version, expected_version)
 
     # Validate nomination exists
     if draft_state.nominated is None:
@@ -816,13 +821,24 @@ async def cancel_nomination(request: DeleteNominateRequest):
 
 
 @app.delete("/api/v1/draft/{pick_id}")
-async def remove_draft_pick(pick_id: int, request: UndoDraftRequest):
+async def remove_draft_pick(
+    pick_id: int, 
+    if_match: str = Header(..., description="ETag for optimistic locking (expected version)")
+):
     """Remove a draft pick and restore player to available pool."""
     # Load current state
     draft_state = load_draft_state()
 
-    # Check version for optimistic locking
-    check_version(draft_state.version, request.expected_version)
+    # Parse ETag and check version for optimistic locking
+    try:
+        expected_version = int(if_match.strip('"'))
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="If-Match header must contain a valid version number"
+        )
+    
+    check_version(draft_state.version, expected_version)
 
     # Find the pick and team
     pick_found = False

@@ -1114,7 +1114,7 @@ class TestDeleteEndpoints(TestMainApp):
         )
 
         response = self.client.request(
-            "DELETE", "/api/v1/nominate", json={"expected_version": 5}
+            "DELETE", "/api/v1/nominate", headers={"If-Match": '"5"'}
         )
 
         assert response.status_code == 200
@@ -1129,7 +1129,7 @@ class TestDeleteEndpoints(TestMainApp):
         mock_draft_state.return_value = self.sample_draft_state
 
         response = self.client.request(
-            "DELETE", "/api/v1/nominate", json={"expected_version": 5}
+            "DELETE", "/api/v1/nominate", headers={"If-Match": '"5"'}
         )
 
         assert response.status_code == 422
@@ -1141,7 +1141,7 @@ class TestDeleteEndpoints(TestMainApp):
         mock_draft_state.return_value = self.create_mock_draft_state()
 
         response = self.client.request(
-            "DELETE", "/api/v1/draft/1", json={"expected_version": 5}
+            "DELETE", "/api/v1/draft/1", headers={"If-Match": '"5"'}
         )
 
         assert response.status_code == 200
@@ -1157,7 +1157,7 @@ class TestDeleteEndpoints(TestMainApp):
         mock_draft_state.return_value = self.create_mock_draft_state()
 
         response = self.client.request(
-            "DELETE", "/api/v1/draft/999", json={"expected_version": 5}
+            "DELETE", "/api/v1/draft/999", headers={"If-Match": '"5"'}
         )
 
         assert response.status_code == 404
