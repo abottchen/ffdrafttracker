@@ -155,3 +155,4 @@ Nominated
 **Fantasy Football Domain**: Models reflect auction draft mechanics (nominations, bids, position limits)
 
 **Future FastAPI Integration**: Models designed for direct use in API endpoints with automatic validation and OpenAPI generation
+- whenever the API changes, update DESIGN.md to reflect the changes.  Then run the utils/generate_docs.py script to regenerate swagger docs
