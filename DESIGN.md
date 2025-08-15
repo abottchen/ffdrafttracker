@@ -75,9 +75,9 @@ A local fantasy football auction draft tracking tool with a web-based interface 
 - `action_log.json` - History of all draft actions for undo capability
 - `config.json` - Application configuration (budgets, min bids, etc.)
 
-## API Endpoints
+## API Architecture
 
-All API endpoints are served from the same FastAPI application at `/api/v1/*`
+All API endpoints are served from the same FastAPI application at `/api/v1/*`. For complete endpoint documentation, see the [live API documentation](https://abottchen.github.io/ffdrafttracker/).
 
 ### Optimistic Locking for Concurrency Control
 
@@ -117,176 +117,22 @@ This allows frontend to handle errors appropriately:
 }
 ```
 
-### POST /api/v1/nominate
-**Purpose:** Nominates a player for auction  
-**Request Body:**
-- `owner_id: int` - ID of owner making the nomination
-- `player_id: int` - ID of player being nominated
-- `initial_bid: int` - Opening bid amount (minimum $1)
-- `expected_version: int` - Expected draft state version for optimistic locking
-**Response Codes:**
-- `200` - Success with nomination confirmation and player details
-- `400` - Bad request (invalid player/owner ID, missing fields)
-- `409` - Conflict (version mismatch - state modified by another operation)
-- `422` - Unprocessable (nomination already active, bid below minimum)
-**Behavior:** 
-  - Validates no current nomination exists (nominated field is None)
-  - Validates initial_bid >= min_bid from config
-  - Updates nominated field with new Nominated object
-  - Uses atomic file operations
-  - Logs action with: timestamp, owner_id, player_id, initial_bid
+### Core API Design Patterns
 
-### POST /api/v1/draft
-**Purpose:** Records a successful draft pick after auction closes  
-**Request Body:**
-- `owner_id: int` - ID of owner who won the auction
-- `player_id: int` - ID of player being drafted
-- `final_price: int` - Final auction price
-- `expected_version: int` - Expected draft state version for optimistic locking
-**Response Codes:**
-- `200` - Success with draft confirmation and updated team roster
-- `400` - Bad request (invalid IDs, missing fields)
-- `409` - Conflict (version mismatch - state modified by another operation)
-- `422` - Unprocessable (no active nomination, price mismatch, insufficient budget)
-**Behavior:** 
-  - Validates nomination exists and matches player_id
-  - Validates owner has sufficient budget for final_price
-  - Creates DraftPick and adds to owner's Team
-  - Removes player_id from available_player_ids
-  - Clears nominated field
-  - Uses atomic file operations
-  - Logs action with: timestamp, owner_id, player_id, final_price, pick_id
+**State Management Flow:**
+1. **Nominate** → **Bid** (optional, multiple) → **Draft** → Repeat
+2. Each operation validates the current state before modification
+3. All state changes are atomic and logged for audit trails
 
-### GET / 
-**Purpose:** Serves the main application interface  
-**Response:** HTML page with embedded Alpine.js application  
-**Behavior:** Renders Jinja2 template with initial draft state
+**Admin Operations:**
+- Reset entire draft state
+- Undo individual picks
+- Cancel nominations  
+- Direct player assignment (bypassing auction for keepers)
 
-### GET /api/v1/draft-state
-**Purpose:** Get complete current draft state  
-**Response:** JSON of full DraftState object  
-**Behavior:** Returns current draft state from file
-
-### GET /api/v1/players
-**Purpose:** Get all player information  
-**Response:** JSON array of all Player objects  
-**Behavior:** Returns complete player database
-
-### GET /api/v1/players/available
-**Purpose:** Get available players with details  
-**Response:** JSON array of Player objects not yet drafted  
-**Behavior:** Returns Player objects for all IDs in available_player_ids
-
-### GET /api/v1/owners
-**Purpose:** Get all owner information  
-**Response:** JSON array of all Owner objects  
-**Behavior:** Returns complete owner database
-
-### GET /api/v1/owners/{owner_id}
-**Purpose:** Get specific owner information  
-**Response:** JSON with owner details or 404 if not found  
-**Behavior:** Returns individual owner by ID
-
-### GET /api/v1/config
-**Purpose:** Get draft configuration settings  
-**Response:** JSON of Configuration object  
-**Behavior:** Returns draft configuration including budgets, position limits, and total rounds  
-**Usage:** Used by frontend for client-side budget validation
-
-### GET /api/v1/export/csv
-**Purpose:** Export current draft state as CSV file for external analysis  
-**Response:** CSV file download with proper headers for browser download  
-**Content-Type:** `text/csv; charset=utf-8`  
-**Content-Disposition:** `attachment; filename=draft_export.csv`  
-**Behavior:** 
-  - Generates structured CSV with owner columns and player/price data
-  - First row: Owner names alternating with empty cells ("Adam","","Jodi","",...)
-  - Second row: Alternating "Player" and "$" headers for each owner
-  - Data rows: Player names in "Last, First" format with corresponding prices
-  - Players grouped under their respective owners based on draft picks
-  - Handles variable pick counts (empty cells for owners with fewer picks)
-  - Uses atomic data loading for consistency with current draft state
-
-### GET /api/v1/teams/{owner_id}
-**Purpose:** Get specific team roster with player details  
-**Response:** JSON with team info and full player/price data  
-**Behavior:** Returns Team with expanded Player objects for each pick
-
-### POST /api/v1/bid
-**Purpose:** Update bid on currently nominated player  
-**Request Body:**
-- `owner_id: int` - ID of owner placing bid
-- `bid_amount: int` - New bid amount (must exceed current)
-- `expected_version: int` - Expected draft state version for optimistic locking
-**Response Codes:**
-- `200` - Success with updated nomination info
-- `400` - Bad request (invalid owner ID, missing fields)
-- `409` - Conflict (version mismatch - state modified by another operation)
-- `422` - Unprocessable (no active nomination, insufficient bid amount, insufficient budget, position limit reached)
-**Behavior:** 
-  - Validates nomination exists
-  - Validates bid amount exceeds current bid and >= min_bid
-  - Validates owner has sufficient budget remaining for bid_amount
-  - Validates owner hasn't reached position maximum for player's position
-  - Updates current_bid and current_bidder_id if valid
-  - Uses atomic file operations
-  - Logs action with: timestamp, owner_id, player_id, bid_amount, previous_bid
-
-### DELETE /api/v1/nominate
-**Purpose:** Cancel current nomination (admin action)  
-**Request Body:**
-- `expected_version: int` - Expected draft state version for optimistic locking
-**Response Codes:**
-- `200` - Success confirmation
-- `409` - Conflict (version mismatch)
-- `422` - Unprocessable (no active nomination to cancel)
-**Behavior:** Clears nominated field in draft state, increments version
-
-### DELETE /api/v1/draft/{pick_id}
-**Purpose:** Undo a draft pick (admin action)  
-**Request Body:**
-- `expected_version: int` - Expected draft state version for optimistic locking
-**Response Codes:**
-- `200` - Success confirmation
-- `404` - Not found (pick_id doesn't exist)
-- `409` - Conflict (version mismatch)
-- `422` - Unprocessable (data integrity error - player is both drafted and available)
-**Response:** Success confirmation  
-**Behavior:** 
-  - Removes DraftPick from team
-  - Adds player_id back to available_player_ids
-
-### POST /api/v1/reset
-**Purpose:** Reset draft to initial state (admin action)  
-**Request Body:**
-- `expected_version: int` - Expected draft state version (optional, ignored if force=true)
-- `force: bool` - Skip version check if true (default false)
-**Response Codes:**
-- `200` - Success confirmation
-- `409` - Conflict (version mismatch, unless force=true)
-**Behavior:** Resets draft_state.json to initial configuration, sets version to 1
-
-### POST /api/v1/admin/draft
-**Purpose:** Admin-only endpoint to draft a player directly without nomination/bidding process  
-**Request Body:**
-- `owner_id: int` - ID of owner drafting the player
-- `player_id: int` - ID of player being drafted
-- `price: int` - Draft price (must be positive)
-- `expected_version: int` - Expected draft state version for optimistic locking
-**Response Codes:**
-- `200` - Success with draft confirmation and updated team roster
-- `400` - Bad request (invalid owner/player ID, invalid price)
-- `409` - Conflict (version mismatch - state modified by another operation)
-- `422` - Unprocessable (player not available, team not found in draft state)
-**Behavior:**
-- Skips all normal validation (budget limits, position limits, nomination requirements)
-- Only validates basic data integrity (player exists and available, owner exists, positive price)
-- Creates DraftPick and adds to owner's Team
-- Removes player_id from available_player_ids
-- Updates team budget (can go negative)
-- Uses atomic file operations
-- Logs action with "ADMIN DRAFT:" prefix for audit trail
-- Designed for quickly importing keeper players or handling admin scenarios
+**Data Export:**
+- CSV export for external analysis and record keeping
+- Structured format compatible with spreadsheet applications
 
 ## File Structure
 ```
@@ -331,32 +177,47 @@ ffdrafttracker/
 └── README.md             # Project overview
 ```
 
-## FastAPI Benefits
+## Architecture Decision: FastAPI
+
+### Why FastAPI Over Alternatives
+
+**Vs. Flask:**
+- Built-in request/response validation via Pydantic
+- Automatic OpenAPI generation eliminates documentation drift
+- Native async support for future scalability
+- Type hints provide better IDE support and catch errors at development time
+
+**Vs. Django:**
+- Lighter weight for API-focused application
+- No ORM complexity - simple file-based storage meets current needs
+- Faster development iteration with automatic docs
+- Modern Python patterns (type hints, async/await)
+
+**Vs. Express/Node.js:**
+- Leverages existing Python ecosystem for data processing
+- Pydantic provides superior data validation vs manual validation
+- Type safety catches errors that would be runtime failures in JavaScript
 
 ### Automatic OpenAPI Generation
 - **Code-First Approach:** Pydantic models serve as single source of truth
 - **No Build Step:** OpenAPI spec generated at runtime from Python code
 - **Always in Sync:** Documentation cannot drift from implementation
-- **Interactive Docs:** 
-  - Swagger UI available at `/docs` for testing
-  - ReDoc available at `/redoc` for documentation
-  - OpenAPI JSON at `/openapi.json` for client generation
+- **Documentation Hosting:** Static docs generated via utility script for GitHub Pages
 
-### Development Workflow
-1. Define Pydantic models in `models.py`
-2. Use models directly in FastAPI endpoints
-3. OpenAPI documentation automatically available
-4. No YAML files to maintain
-5. No code generation step required
-
-### Type Safety Flow
+### Type Safety Benefits
 ```
-Pydantic Models (Python) → Runtime API → Auto-generated OpenAPI
-                         ↓
-                   JSON Validation
+Pydantic Models (Python) → FastAPI Endpoints → OpenAPI Schema
+                         ↓                    ↓
+                   Runtime Validation    Client Generation
                          ↓
                    Type-safe API responses
 ```
+
+**Development Benefits:**
+- IDE autocomplete for request/response models
+- Validation errors caught at API boundary, not in business logic
+- Refactoring safety - type system catches breaking changes
+- Automatic serialization of complex Python objects to JSON
 
 ## Data Models
 

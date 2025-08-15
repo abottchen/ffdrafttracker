@@ -1,5 +1,10 @@
 # Fantasy Football Draft Tracker
 
+[![CI](https://github.com/abottchen/ffdrafttracker/workflows/CI/badge.svg)](https://github.com/abottchen/ffdrafttracker/actions)
+[![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-005571?logo=fastapi)](https://fastapi.tiangolo.com)
+[![API Documentation](https://img.shields.io/badge/API-Documentation-blue)](https://abottchen.github.io/ffdrafttracker/)
+
 A live auction draft tracking tool for fantasy football leagues. Features a web-based interface for managing auctions with real-time updates, optimistic locking for concurrent access, and separate admin/viewer interfaces.
 
 ## Features
