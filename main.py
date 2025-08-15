@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
-from src.models import Configuration, DraftPick, DraftState, Nominated, Player, Team
+from src.models import Configuration, DraftPick, DraftState, Nominated, Owner, Player, Team
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -280,19 +280,19 @@ async def root(request: Request):
     )
 
 
-@app.get("/api/v1/draft-state")
+@app.get("/api/v1/draft-state", response_model=DraftState)
 async def get_draft_state():
     """Get complete current draft state."""
     return load_draft_state()
 
 
-@app.get("/api/v1/players")
+@app.get("/api/v1/players", response_model=list[Player])
 async def get_all_players():
     """Get all player information."""
     return load_players()
 
 
-@app.get("/api/v1/players/available")
+@app.get("/api/v1/players/available", response_model=list[Player])
 async def get_available_players():
     """Get available players with details."""
     draft_state = load_draft_state()
@@ -310,7 +310,7 @@ async def get_available_players():
     return available
 
 
-@app.get("/api/v1/owners")
+@app.get("/api/v1/owners", response_model=list[Owner])
 async def get_all_owners():
     """Get all owner information."""
     owners_dict = load_owners()
@@ -320,7 +320,7 @@ async def get_all_owners():
     ]
 
 
-@app.get("/api/v1/config")
+@app.get("/api/v1/config", response_model=Configuration)
 async def get_config():
     """Get draft configuration."""
     config = load_configuration()
@@ -345,7 +345,7 @@ async def export_draft_csv():
         )
 
 
-@app.get("/api/v1/owners/{owner_id}")
+@app.get("/api/v1/owners/{owner_id}", response_model=Owner)
 async def get_owner(owner_id: int):
     """Get specific owner information."""
     owners = load_owners()
