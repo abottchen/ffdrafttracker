@@ -193,6 +193,20 @@ This allows frontend to handle errors appropriately:
 **Behavior:** Returns draft configuration including budgets, position limits, and total rounds  
 **Usage:** Used by frontend for client-side budget validation
 
+### GET /api/v1/export/csv
+**Purpose:** Export current draft state as CSV file for external analysis  
+**Response:** CSV file download with proper headers for browser download  
+**Content-Type:** `text/csv; charset=utf-8`  
+**Content-Disposition:** `attachment; filename=draft_export.csv`  
+**Behavior:** 
+  - Generates structured CSV with owner columns and player/price data
+  - First row: Owner names alternating with empty cells ("Adam","","Jodi","",...)
+  - Second row: Alternating "Player" and "$" headers for each owner
+  - Data rows: Player names in "Last, First" format with corresponding prices
+  - Players grouped under their respective owners based on draft picks
+  - Handles variable pick counts (empty cells for owners with fewer picks)
+  - Uses atomic data loading for consistency with current draft state
+
 ### GET /api/v1/teams/{owner_id}
 **Purpose:** Get specific team roster with player details  
 **Response:** JSON with team info and full player/price data  

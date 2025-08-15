@@ -217,6 +217,79 @@ class TestGetEndpoints(TestMainApp):
         assert data["total_rounds"] == 15
         assert "position_maximums" in data
 
+    @patch("main.load_players")
+    @patch("main.load_owners")
+    @patch("main.load_draft_state")
+    def test_export_csv_success(self, mock_draft_state, mock_owners, mock_players):
+        """Test GET /api/v1/export/csv returns properly formatted CSV."""
+        # Setup mock data with some drafted players
+        mock_players.return_value = self.sample_players
+        mock_owners.return_value = self.sample_owners
+
+        # Create teams with some picks for CSV content
+        teams_with_picks = [
+            Team(
+                owner_id=1,
+                budget_remaining=185,
+                picks=[DraftPick(pick_id=1, player_id=1, owner_id=1, price=15)],
+            ),
+            Team(
+                owner_id=2,
+                budget_remaining=180,
+                picks=[DraftPick(pick_id=2, player_id=2, owner_id=2, price=20)],
+            ),
+        ]
+
+        mock_draft_state.return_value = DraftState(
+            nominated=None,
+            available_player_ids=[3],
+            teams=teams_with_picks,
+            next_to_nominate=1,
+            version=5,
+        )
+
+        response = self.client.get("/api/v1/export/csv")
+
+        # Validate response headers and status
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "text/csv; charset=utf-8"
+        assert "attachment" in response.headers["content-disposition"]
+        assert "draft_export.csv" in response.headers["content-disposition"]
+
+        # Validate CSV content structure
+        csv_content = response.content.decode("utf-8")
+        lines = csv_content.strip().split("\n")
+
+        # Should have at least 3 lines: header row, Player/$ row, and data row
+        assert len(lines) >= 3
+
+        # First row should have owner names alternating with empty cells
+        first_row = lines[0]
+        assert '"Rick Sanchez"' in first_row
+        assert '"Morty Smith"' in first_row
+        assert '""' in first_row
+
+        # Second row should alternate Player and $ headers
+        second_row = lines[1]
+        assert '"Player"' in second_row
+        assert '"$"' in second_row
+
+        # Third row should have player data
+        third_row = lines[2]
+        assert '"Allen, Josh"' in third_row or '"McCaffrey, Christian"' in third_row
+        assert "15" in third_row or "20" in third_row
+
+    @patch("main.generate_draft_csv")
+    def test_export_csv_handles_generation_error(self, mock_generate):
+        """Test GET /api/v1/export/csv handles CSV generation errors."""
+        mock_generate.side_effect = Exception("CSV generation failed")
+
+        response = self.client.get("/api/v1/export/csv")
+
+        assert response.status_code == 500
+        assert "Failed to generate CSV export" in response.json()["detail"]
+        assert "CSV generation failed" in response.json()["detail"]
+
 
 class TestPostEndpoints(TestMainApp):
     """Test POST endpoints."""
