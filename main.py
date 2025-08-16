@@ -12,6 +12,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
 from src.models import Configuration, DraftPick, DraftState, Nominated, Owner, Player, Team
+from src.models.player_stats import PlayerStatsCollection
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -57,6 +58,7 @@ PLAYERS_FILE = DATA_DIR / "players.json"
 OWNERS_FILE = DATA_DIR / "owners.json"
 CONFIG_FILE = DATA_DIR / "config.json"
 ACTION_LOG_FILE = DATA_DIR / "action_log.json"
+PLAYER_STATS_FILE = DATA_DIR / "player_stats.json"
 
 
 # Request/Response models
@@ -302,6 +304,22 @@ async def get_available_players():
         if pid in player_dict
     ]
     return available
+
+
+@app.get("/api/v1/player/stats", response_model=PlayerStatsCollection)
+async def get_player_stats():
+    """Get player statistics and bye weeks. Returns empty collection if file doesn't exist."""
+    if not PLAYER_STATS_FILE.exists():
+        logger.info("Player stats file not found, returning empty collection")
+        return PlayerStatsCollection({})
+    
+    try:
+        with open(PLAYER_STATS_FILE) as f:
+            data = f.read()
+        return PlayerStatsCollection.model_validate_json(data)
+    except Exception as e:
+        logger.error(f"Error loading player stats: {e}, returning empty collection")
+        return PlayerStatsCollection({})
 
 
 @app.get("/api/v1/owners", response_model=list[Owner])
