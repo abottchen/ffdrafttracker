@@ -134,7 +134,7 @@
         }
         .nominated-player-details {
             font-size: 1em;
-            color: #b0b0b0;
+            color: #d0d0d0;
         }
         .nominated-bidder-info {
             text-align: center;
@@ -282,7 +282,7 @@
             border-bottom: none;
         }
         .team {
-            background: #2d2d2d;
+            background: linear-gradient(135deg, #2d2d2d 0%, #252525 100%);
             padding: 8px;
             border-radius: 6px;
             box-shadow: 0 2px 6px rgba(0,0,0,0.3);
@@ -295,12 +295,12 @@
             justify-content: space-between;
         }
         .team.next-to-nominate {
-            background: #1f3a2d;
+            background: linear-gradient(135deg, #1f3a2d 0%, #175027 100%);
             border: 2px solid #4caf50;
             box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
         }
         .team.done {
-            background: #3a1f1f;
+            background: linear-gradient(135deg, #3a1f1f 0%, #2f1717 100%);
             border: 2px solid #d32f2f;
             box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
             opacity: 0.7;
@@ -313,18 +313,40 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            color: #f0f0f0;
         }
         .owner-name {
             margin: 0 0 3px 0;
             font-size: 0.9em;
-            color: #b0b0b0;
+            color: #d0d0d0;
             line-height: 1.1;
         }
         .team-stats {
             margin: 0;
             font-size: 0.9em;
-            color: #909090;
+            color: #c0c0c0;
             line-height: 1.1;
+        }
+        .budget-amount {
+            color: #4caf50;
+            font-weight: bold;
+        }
+        .budget-amount.low {
+            color: #ff9800;
+        }
+        .budget-amount.critical {
+            color: #f44336;
+        }
+        .roster-progress {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: conic-gradient(var(--progress-color) 0deg, var(--progress-color) var(--progress), #2a2a2a var(--progress), #2a2a2a 360deg);
+            border: 2px solid #404040;
+            display: inline-block;
+            vertical-align: middle;
+            position: relative;
+            cursor: help;
         }
         .team-bid-controls {
             margin-top: 8px;
@@ -477,7 +499,7 @@
         }
         .drafted-player-details {
             font-size: 0.7em;
-            color: #b0b0b0;
+            color: #d0d0d0;
         }
         .error {
             background: #4a1f1f;
@@ -605,7 +627,7 @@
         .context-menu-item.has-submenu::after {
             content: "▶";
             font-size: 0.7em;
-            color: #b0b0b0;
+            color: #d0d0d0;
         }
         
         .context-submenu {
@@ -1008,7 +1030,7 @@
                 }
                 cancelButton.style.display = 'inline-block';
             } else {
-                nominationDetails.innerHTML = '<div style="width: 100%; text-align: center; color: #909090;">No player currently nominated</div>';
+                nominationDetails.innerHTML = '<div style="width: 100%; text-align: center; color: #c0c0c0;">No player currently nominated</div>';
                 cancelButton.style.display = 'none';
                 // Stop the timer when no player is nominated
                 stopNominationTimer();
@@ -1122,6 +1144,52 @@
             highlightedIndex = -1;
         }
 
+        function getBudgetClass(budget) {
+            if (!config) return ''; // If config not loaded yet, no class
+            
+            const percentage = (budget / config.initial_budget) * 100;
+            
+            if (percentage <= 5) return 'critical';   // 5% or less remaining
+            if (percentage <= 15) return 'low';       // 15% or less remaining
+            return '';
+        }
+        
+        function getRosterProgressDegrees(pickCount) {
+            if (!config) return 0; // If config not loaded yet, no progress
+            
+            const percentage = (pickCount / config.total_rounds) * 100;
+            return (percentage / 100) * 360; // Convert to degrees for conic-gradient
+        }
+        
+        function getRosterProgressColor(pickCount) {
+            if (!config) return '#4a90e2'; // Default blue if config not loaded
+            
+            const percentage = pickCount / config.total_rounds;
+            
+            if (percentage <= 0.33) {
+                // Red to orange (0% to 33%)
+                const localPercent = percentage / 0.33;
+                const red = 244;
+                const green = Math.round(67 + (152 * localPercent)); // 67 to 219
+                const blue = 54;
+                return `rgb(${red}, ${green}, ${blue})`;
+            } else if (percentage <= 0.66) {
+                // Orange to yellow (33% to 66%)
+                const localPercent = (percentage - 0.33) / 0.33;
+                const red = Math.round(244 - (21 * localPercent)); // 244 to 223
+                const green = Math.round(219 + (24 * localPercent)); // 219 to 243
+                const blue = 54;
+                return `rgb(${red}, ${green}, ${blue})`;
+            } else {
+                // Yellow to green (66% to 100%)
+                const localPercent = (percentage - 0.66) / 0.34;
+                const red = Math.round(223 - (147 * localPercent)); // 223 to 76
+                const green = 243; // Stay bright
+                const blue = Math.round(54 + (121 * localPercent)); // 54 to 175
+                return `rgb(${red}, ${green}, ${blue})`;
+            }
+        }
+        
         function adjustFontSize(element) {
             const maxHeight = 20; // Maximum height for single line in pixels
             const minFontSize = 0.7; // Minimum font size in em
@@ -1219,7 +1287,7 @@
                 teamDiv.innerHTML = `
                     <div class="team-name" id="team-name-${team.owner_id}">${owner ? owner.team_name : 'Unknown Team'}</div>
                     <div class="owner-name">${owner ? owner.owner_name : 'Unknown Owner'}</div>
-                    <div class="team-stats">$${team.budget_remaining} | ${team.picks.length} picks</div>
+                    <div class="team-stats"><span class="budget-amount ${getBudgetClass(team.budget_remaining)}">$${team.budget_remaining}</span> | <span class="roster-progress" style="--progress: ${getRosterProgressDegrees(team.picks.length)}deg; --progress-color: ${getRosterProgressColor(team.picks.length)}" title="${team.picks.length} / ${config ? config.total_rounds : '?'} players"></span></div>
                     <div class="team-bid-controls ${hasNomination ? 'visible' : ''}">
                         <input type="number" class="team-bid-input" value="${minBid}" min="${minBid}" id="bid-input-${team.owner_id}">
                         <button class="${bidButtonClass}" onclick="placeBidForOwner(${team.owner_id})" ${team.budget_remaining < minBid ? 'disabled' : ''}>Bid</button>
