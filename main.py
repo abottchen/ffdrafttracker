@@ -637,17 +637,36 @@ async def complete_draft(request: DraftRequest):
     # Clear nomination
     draft_state.nominated = None
 
-    # Update next to nominate (cycle through owners)
+    # Update next to nominate (cycle through owners, skipping completed rosters)
     owners = load_owners()
     owner_ids = sorted(owners.keys())  # Get ordered list of owner IDs
+    config = load_configuration()
+    
     if owner_ids:
         current_idx = (
             owner_ids.index(draft_state.next_to_nominate)
             if draft_state.next_to_nominate in owner_ids
             else 0
         )
-        next_idx = (current_idx + 1) % len(owner_ids)
-        draft_state.next_to_nominate = owner_ids[next_idx]
+        
+        # Find next owner who can still draft (hasn't reached total_rounds picks)
+        attempts = 0
+        while attempts < len(owner_ids):
+            next_idx = (current_idx + 1 + attempts) % len(owner_ids)
+            next_owner_id = owner_ids[next_idx]
+            
+            # Check if this owner has completed their roster
+            next_team = next((t for t in draft_state.teams if t.owner_id == next_owner_id), None)
+            if next_team and len(next_team.picks) < config.total_rounds:
+                # This owner can still draft
+                draft_state.next_to_nominate = next_owner_id
+                break
+            
+            attempts += 1
+        else:
+            # All owners have completed rosters, keep current nominator
+            # (This should rarely happen as the draft should end when all rosters are full)
+            pass
     else:
         draft_state.next_to_nominate = 1
 
