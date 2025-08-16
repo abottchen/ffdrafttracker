@@ -71,7 +71,7 @@ A local fantasy football auction draft tracking tool with a web-based interface 
 
 **Data Files:**
 - `draft_state.json` - JSON representation of the pydantic DraftState object
-- `players.json` - List of all available players with their details
+- `players.json` - List of all available players and defenses with their details
 - `owners.json` - Owner information and ID mappings
 - `action_log.json` - History of all draft actions for undo capability
 - `config.json` - Application configuration (budgets, min bids, etc.)

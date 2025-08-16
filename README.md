@@ -108,9 +108,16 @@ A live auction draft tracking tool for fantasy football leagues. Features a web-
 ```
 
 ### Player Database (`data/players.json`)
-Players with ESPN IDs for automatic image loading:
+Players and defenses with ESPN IDs for automatic image loading:
 ```json
 [
+  {
+    "id": 1,
+    "first_name": "Arizona",
+    "last_name": "Cardinals",
+    "team": "ARI",
+    "position": "D/ST"
+  },
   {
     "id": 4242335,
     "first_name": "Patrick",

@@ -207,6 +207,98 @@ def fetch_all_players(team_filter: Optional[str] = None) -> List[Dict]:
     return all_players
 
 
+def generate_defenses() -> List[Dict]:
+    """Generate all 32 NFL defense entries using IDs 1-32."""
+    # Team city names in alphabetical order by team abbreviation
+    team_cities = {
+        "ARI": "Arizona",
+        "ATL": "Atlanta", 
+        "BAL": "Baltimore",
+        "BUF": "Buffalo",
+        "CAR": "Carolina",
+        "CHI": "Chicago",
+        "CIN": "Cincinnati", 
+        "CLE": "Cleveland",
+        "DAL": "Dallas",
+        "DEN": "Denver",
+        "DET": "Detroit",
+        "GB": "Green Bay",
+        "HOU": "Houston",
+        "IND": "Indianapolis",
+        "JAX": "Jacksonville",
+        "KC": "Kansas City",
+        "LAC": "Los Angeles",
+        "LAR": "Los Angeles", 
+        "LV": "Las Vegas",
+        "MIA": "Miami",
+        "MIN": "Minnesota",
+        "NE": "New England",
+        "NO": "New Orleans",
+        "NYG": "New York",
+        "NYJ": "New York",
+        "PHI": "Philadelphia",
+        "PIT": "Pittsburgh",
+        "SEA": "Seattle",
+        "SF": "San Francisco",
+        "TB": "Tampa Bay", 
+        "TEN": "Tennessee",
+        "WAS": "Washington"
+    }
+    
+    # Team names in alphabetical order by team abbreviation
+    team_names = {
+        "ARI": "Cardinals",
+        "ATL": "Falcons",
+        "BAL": "Ravens", 
+        "BUF": "Bills",
+        "CAR": "Panthers",
+        "CHI": "Bears",
+        "CIN": "Bengals",
+        "CLE": "Browns",
+        "DAL": "Cowboys",
+        "DEN": "Broncos", 
+        "DET": "Lions",
+        "GB": "Packers",
+        "HOU": "Texans",
+        "IND": "Colts",
+        "JAX": "Jaguars",
+        "KC": "Chiefs",
+        "LAC": "Chargers",
+        "LAR": "Rams",
+        "LV": "Raiders",
+        "MIA": "Dolphins",
+        "MIN": "Vikings", 
+        "NE": "Patriots",
+        "NO": "Saints",
+        "NYG": "Giants",
+        "NYJ": "Jets",
+        "PHI": "Eagles",
+        "PIT": "Steelers",
+        "SEA": "Seahawks",
+        "SF": "49ers",
+        "TB": "Buccaneers",
+        "TEN": "Titans",
+        "WAS": "Commanders"
+    }
+    
+    defenses = []
+    player_id = 1
+    
+    # Generate defenses in alphabetical order by team abbreviation
+    for team_abbr in sorted(team_cities.keys()):
+        defense = {
+            "id": player_id,
+            "first_name": team_cities[team_abbr],
+            "last_name": team_names[team_abbr], 
+            "team": team_abbr,
+            "position": "D/ST"
+        }
+        defenses.append(defense)
+        player_id += 1
+    
+    return defenses
+
+
 def main():
     """Main entry point."""
     # Check for team filter argument
@@ -214,28 +306,38 @@ def main():
     if len(sys.argv) > 1:
         team_filter = sys.argv[1]
     
-    # Fetch player data
+    # Generate defenses first (IDs 1-32)
+    print("Generating NFL defenses...")
+    defenses = generate_defenses()
+    print(f"Generated {len(defenses)} defenses")
+    
+    # Fetch player data from ESPN
     players = fetch_all_players(team_filter)
     
     if not players:
         print("No players fetched")
         return
     
-    # Sort players by last name, then first name
-    players.sort(key=lambda p: (p['last_name'], p['first_name']))
+    # Combine defenses and players
+    all_players = defenses + players
+    
+    # Sort players by last name, then first name (defenses will sort to top due to alphabetical city names)
+    all_players.sort(key=lambda p: (p['last_name'], p['first_name']))
     
     # Write to players.json
     output_path = Path(__file__).parent.parent / 'data' / 'players.json'
     output_path.parent.mkdir(exist_ok=True)
     
     with open(output_path, 'w') as f:
-        json.dump(players, f, indent=2)
+        json.dump(all_players, f, indent=2)
     
-    print(f"\nSuccessfully wrote {len(players)} players to {output_path}")
+    print(f"\nSuccessfully wrote {len(all_players)} players to {output_path}")
+    print(f"  - {len(defenses)} defenses (IDs 1-32)")
+    print(f"  - {len(players)} individual players")
     
     # Print summary by position
     position_counts = {}
-    for player in players:
+    for player in all_players:
         pos = player['position']
         position_counts[pos] = position_counts.get(pos, 0) + 1
     

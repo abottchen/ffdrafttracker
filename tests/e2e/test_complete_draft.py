@@ -15,6 +15,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from main import app
+from src.enums.position import Position
 
 
 @pytest.mark.e2e
@@ -91,6 +92,9 @@ def test_complete_draft_workflow():
 
             # Validate final state
             _validate_final_state(final_state, teams, total_rounds, config)
+
+            # Validate position coverage - ensure at least one player from each position
+            _validate_position_coverage(client, final_state)
 
             # Check for any errors in logs
             _check_logs_for_errors()
@@ -202,7 +206,10 @@ def _simulate_complete_draft(
                 print("No more players available!")
                 break
 
-            player_id = random.choice(available)
+            # Use strategic player selection to ensure position coverage
+            player_id = _select_strategic_player(
+                client, available, current_state, round_count
+            )
 
             # Calculate max bid for nominating owner to ensure they can complete roster
             nominating_team = next(
@@ -416,6 +423,105 @@ def _validate_final_state(
     )
 
     print("Final state validation passed!")
+
+
+def _select_strategic_player(
+    client: TestClient,
+    available_player_ids: list[int],
+    current_state: dict,
+    round_count: int,
+) -> int:
+    """
+    Strategically select a player to ensure position coverage in the draft.
+    In early rounds, prioritize positions that haven't been drafted yet.
+    In later rounds, fall back to random selection.
+    """
+    # Get all players data to map player IDs to positions
+    players_response = client.get("/api/v1/players")
+    assert players_response.status_code == 200
+    all_players = players_response.json()
+
+    # Create mappings
+    player_id_to_position = {player["id"]: player["position"] for player in all_players}
+
+    # Collect positions that have already been drafted
+    drafted_positions = set()
+    for team in current_state["teams"]:
+        for pick in team["picks"]:
+            player_id = pick["player_id"]
+            if player_id in player_id_to_position:
+                position = player_id_to_position[player_id]
+                drafted_positions.add(position)
+
+    # Get all required positions from the Position enum
+    required_positions = {pos.value for pos in Position}
+    missing_positions = required_positions - drafted_positions
+
+    # If we're in early rounds and there are missing positions, prioritize them
+    if round_count < 50 and missing_positions:  # First ~50 picks focus on coverage
+        # Filter available players to only those in missing positions
+        priority_players = [
+            pid
+            for pid in available_player_ids
+            if pid in player_id_to_position
+            and player_id_to_position[pid] in missing_positions
+        ]
+
+        if priority_players:
+            selected = random.choice(priority_players)
+            missing_pos = player_id_to_position[selected]
+            print(
+                f"  Strategic selection: Player {selected} ({missing_pos}) "
+                f"to cover missing position"
+            )
+            return selected
+
+    # Fall back to random selection
+    return random.choice(available_player_ids)
+
+
+def _validate_position_coverage(client: TestClient, final_state: dict) -> None:
+    """
+    Validate that at least one player from each position defined in the Position enum
+    has been drafted. This ensures comprehensive position coverage and would catch
+    issues like missing defenses.
+    """
+    print("Validating position coverage...")
+
+    # Get all players data to map player IDs to positions
+    players_response = client.get("/api/v1/players")
+    assert players_response.status_code == 200
+    all_players = players_response.json()
+
+    # Create a mapping from player ID to position
+    player_id_to_position = {player["id"]: player["position"] for player in all_players}
+
+    # Collect all drafted player positions
+    drafted_positions = set()
+    for team in final_state["teams"]:
+        for pick in team["picks"]:
+            player_id = pick["player_id"]
+            if player_id in player_id_to_position:
+                position = player_id_to_position[player_id]
+                drafted_positions.add(position)
+
+    # Get all required positions from the Position enum
+    required_positions = {pos.value for pos in Position}
+
+    # Check that every position is represented
+    missing_positions = required_positions - drafted_positions
+
+    assert not missing_positions, (
+        f"Missing positions in draft: {missing_positions}. "
+        f"Drafted positions: {sorted(drafted_positions)}. "
+        f"Required positions: {sorted(required_positions)}. "
+        "This indicates that some position types are not available in the player pool."
+    )
+
+    print(
+        f"Position coverage validation passed! "
+        f"Drafted positions: {sorted(drafted_positions)}"
+    )
 
 
 def _check_logs_for_errors() -> None:

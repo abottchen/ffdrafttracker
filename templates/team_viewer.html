@@ -879,6 +879,17 @@
             }
         }
 
+        function getDefenseByeWeek(teamAbbr) {
+            // Find bye week by looking up any player from the same team
+            for (const playerId in playerStats) {
+                const stats = playerStats[playerId];
+                if (stats && stats.team === teamAbbr && stats.bye_week) {
+                    return stats.bye_week;
+                }
+            }
+            return null; // No bye week found for this team
+        }
+
         function formatByeWeek(byeWeek) {
             if (!byeWeek || typeof byeWeek !== 'number') {
                 return '';
@@ -942,15 +953,34 @@
             
             playerList.innerHTML = sortedPicks.map(pick => {
                 const player = pick.player;
-                const imageUrl = `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${player.id}.png&w=350&h=254`;
+                
+                // Use team logo for defenses, player headshot for individuals
+                let imageUrl;
+                if (player.position === 'D/ST') {
+                    imageUrl = getTeamLogoUrl(player.team);
+                } else {
+                    imageUrl = `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${player.id}.png&w=350&h=254`;
+                }
+                
                 const teamLogoUrl = getTeamLogoUrl(player.team);
                 
-                const byeWeekHtml = formatByeWeek(playerStats[player.id]?.bye_week);
+                // Handle bye week for defenses by looking up a player from the same team
+                let byeWeek;
+                if (player.position === 'D/ST') {
+                    byeWeek = getDefenseByeWeek(player.team);
+                } else {
+                    byeWeek = playerStats[player.id]?.bye_week;
+                }
+                const byeWeekHtml = formatByeWeek(byeWeek);
+                
+                // Display "DST" instead of "D/ST" for better fit
+                const displayPosition = player.position === 'D/ST' ? 'DST' : player.position;
+                const cssPositionClass = player.position === 'D/ST' ? 'DST' : player.position;
                 
                 return `
                     <div class="player-card">
                         <img src="${imageUrl}" alt="${player.last_name}" class="player-image" onerror="this.style.display='none'">
-                        <span class="player-position position-${player.position}">${player.position}</span>
+                        <span class="player-position position-${cssPositionClass}">${displayPosition}</span>
                         <div class="player-info">
                             <div class="player-name">${player.first_name} ${player.last_name}</div>
                             <div class="player-meta">

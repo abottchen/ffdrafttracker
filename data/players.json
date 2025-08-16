@@ -1,5 +1,229 @@
 [
   {
+    "id": 1,
+    "first_name": "Arizona",
+    "last_name": "Cardinals",
+    "team": "ARI",
+    "position": "D/ST"
+  },
+  {
+    "id": 2,
+    "first_name": "Atlanta",
+    "last_name": "Falcons",
+    "team": "ATL",
+    "position": "D/ST"
+  },
+  {
+    "id": 3,
+    "first_name": "Baltimore",
+    "last_name": "Ravens",
+    "team": "BAL",
+    "position": "D/ST"
+  },
+  {
+    "id": 4,
+    "first_name": "Buffalo",
+    "last_name": "Bills",
+    "team": "BUF",
+    "position": "D/ST"
+  },
+  {
+    "id": 5,
+    "first_name": "Carolina",
+    "last_name": "Panthers",
+    "team": "CAR",
+    "position": "D/ST"
+  },
+  {
+    "id": 6,
+    "first_name": "Chicago",
+    "last_name": "Bears",
+    "team": "CHI",
+    "position": "D/ST"
+  },
+  {
+    "id": 7,
+    "first_name": "Cincinnati",
+    "last_name": "Bengals",
+    "team": "CIN",
+    "position": "D/ST"
+  },
+  {
+    "id": 8,
+    "first_name": "Cleveland",
+    "last_name": "Browns",
+    "team": "CLE",
+    "position": "D/ST"
+  },
+  {
+    "id": 9,
+    "first_name": "Dallas",
+    "last_name": "Cowboys",
+    "team": "DAL",
+    "position": "D/ST"
+  },
+  {
+    "id": 10,
+    "first_name": "Denver",
+    "last_name": "Broncos",
+    "team": "DEN",
+    "position": "D/ST"
+  },
+  {
+    "id": 11,
+    "first_name": "Detroit",
+    "last_name": "Lions",
+    "team": "DET",
+    "position": "D/ST"
+  },
+  {
+    "id": 12,
+    "first_name": "Green Bay",
+    "last_name": "Packers",
+    "team": "GB",
+    "position": "D/ST"
+  },
+  {
+    "id": 13,
+    "first_name": "Houston",
+    "last_name": "Texans",
+    "team": "HOU",
+    "position": "D/ST"
+  },
+  {
+    "id": 14,
+    "first_name": "Indianapolis",
+    "last_name": "Colts",
+    "team": "IND",
+    "position": "D/ST"
+  },
+  {
+    "id": 15,
+    "first_name": "Jacksonville",
+    "last_name": "Jaguars",
+    "team": "JAX",
+    "position": "D/ST"
+  },
+  {
+    "id": 16,
+    "first_name": "Kansas City",
+    "last_name": "Chiefs",
+    "team": "KC",
+    "position": "D/ST"
+  },
+  {
+    "id": 17,
+    "first_name": "Los Angeles",
+    "last_name": "Chargers",
+    "team": "LAC",
+    "position": "D/ST"
+  },
+  {
+    "id": 18,
+    "first_name": "Los Angeles",
+    "last_name": "Rams",
+    "team": "LAR",
+    "position": "D/ST"
+  },
+  {
+    "id": 19,
+    "first_name": "Las Vegas",
+    "last_name": "Raiders",
+    "team": "LV",
+    "position": "D/ST"
+  },
+  {
+    "id": 20,
+    "first_name": "Miami",
+    "last_name": "Dolphins",
+    "team": "MIA",
+    "position": "D/ST"
+  },
+  {
+    "id": 21,
+    "first_name": "Minnesota",
+    "last_name": "Vikings",
+    "team": "MIN",
+    "position": "D/ST"
+  },
+  {
+    "id": 22,
+    "first_name": "New England",
+    "last_name": "Patriots",
+    "team": "NE",
+    "position": "D/ST"
+  },
+  {
+    "id": 23,
+    "first_name": "New Orleans",
+    "last_name": "Saints",
+    "team": "NO",
+    "position": "D/ST"
+  },
+  {
+    "id": 24,
+    "first_name": "New York",
+    "last_name": "Giants",
+    "team": "NYG",
+    "position": "D/ST"
+  },
+  {
+    "id": 25,
+    "first_name": "New York",
+    "last_name": "Jets",
+    "team": "NYJ",
+    "position": "D/ST"
+  },
+  {
+    "id": 26,
+    "first_name": "Philadelphia",
+    "last_name": "Eagles",
+    "team": "PHI",
+    "position": "D/ST"
+  },
+  {
+    "id": 27,
+    "first_name": "Pittsburgh",
+    "last_name": "Steelers",
+    "team": "PIT",
+    "position": "D/ST"
+  },
+  {
+    "id": 28,
+    "first_name": "Seattle",
+    "last_name": "Seahawks",
+    "team": "SEA",
+    "position": "D/ST"
+  },
+  {
+    "id": 29,
+    "first_name": "San Francisco",
+    "last_name": "49ers",
+    "team": "SF",
+    "position": "D/ST"
+  },
+  {
+    "id": 30,
+    "first_name": "Tampa Bay",
+    "last_name": "Buccaneers",
+    "team": "TB",
+    "position": "D/ST"
+  },
+  {
+    "id": 31,
+    "first_name": "Tennessee",
+    "last_name": "Titans",
+    "team": "TEN",
+    "position": "D/ST"
+  },
+  {
+    "id": 32,
+    "first_name": "Washington",
+    "last_name": "Commanders",
+    "team": "WAS",
+    "position": "D/ST"
+  },
+  {
     "id": 4429202,
     "first_name": "Israel",
     "last_name": "Abanikanda",
