@@ -240,12 +240,10 @@ class TestGetEndpoints(TestMainApp):
             ),
         ]
 
-        mock_draft_state.return_value = DraftState(
+        mock_draft_state.return_value = self.create_mock_draft_state(
             nominated=None,
             available_player_ids=[3],
-            teams=teams_with_picks,
-            next_to_nominate=1,
-            version=5,
+            teams=teams_with_picks
         )
 
         response = self.client.get("/api/v1/export/csv")
@@ -585,16 +583,14 @@ class TestPostEndpoints(TestMainApp):
             ),  # 16 players, $20 left
         ]
 
-        draft_state_with_nomination = DraftState(
-            nominated=Nominated(
-                player_id=1, current_bidder_id=1, nominating_owner_id=1, current_bid=3
-            ),
-            available_player_ids=[1, 3],
-            teams=low_budget_teams,
-            next_to_nominate=1,
-            version=5,
+        nomination = Nominated(
+            player_id=1, current_bidder_id=1, nominating_owner_id=1, current_bid=3
         )
-        mock_draft_state.return_value = draft_state_with_nomination
+        mock_draft_state.return_value = self.create_mock_draft_state(
+            nominated=nomination,
+            available_player_ids=[1, 3],
+            teams=low_budget_teams
+        )
 
         response = self.client.post(
             "/api/v1/bid",
@@ -634,16 +630,14 @@ class TestPostEndpoints(TestMainApp):
             ),  # 16 players, $20 left
         ]
 
-        draft_state_with_nomination = DraftState(
-            nominated=Nominated(
-                player_id=1, current_bidder_id=1, nominating_owner_id=1, current_bid=3
-            ),
-            available_player_ids=[1, 3],
-            teams=sufficient_budget_teams,
-            next_to_nominate=1,
-            version=5,
+        nomination = Nominated(
+            player_id=1, current_bidder_id=1, nominating_owner_id=1, current_bid=3
         )
-        mock_draft_state.return_value = draft_state_with_nomination
+        mock_draft_state.return_value = self.create_mock_draft_state(
+            nominated=nomination,
+            available_player_ids=[1, 3],
+            teams=sufficient_budget_teams
+        )
 
         response = self.client.post(
             "/api/v1/bid",
@@ -683,16 +677,14 @@ class TestPostEndpoints(TestMainApp):
             ),  # 18 players, $10 left
         ]
 
-        draft_state_with_nomination = DraftState(
-            nominated=Nominated(
-                player_id=1, current_bidder_id=1, nominating_owner_id=1, current_bid=3
-            ),
-            available_player_ids=[1, 3],
-            teams=teams_with_one_spot_left,
-            next_to_nominate=1,
-            version=5,
+        nomination = Nominated(
+            player_id=1, current_bidder_id=1, nominating_owner_id=1, current_bid=3
         )
-        mock_draft_state.return_value = draft_state_with_nomination
+        mock_draft_state.return_value = self.create_mock_draft_state(
+            nominated=nomination,
+            available_player_ids=[1, 3],
+            teams=teams_with_one_spot_left
+        )
 
         response = self.client.post(
             "/api/v1/bid",
@@ -732,16 +724,14 @@ class TestPostEndpoints(TestMainApp):
             ),  # 18 players, $15 left
         ]
 
-        draft_state_with_nomination = DraftState(
-            nominated=Nominated(
-                player_id=1, current_bidder_id=1, nominating_owner_id=1, current_bid=3
-            ),
-            available_player_ids=[1, 3],
-            teams=teams_ready_to_complete,
-            next_to_nominate=1,
-            version=5,
+        nomination = Nominated(
+            player_id=1, current_bidder_id=1, nominating_owner_id=1, current_bid=3
         )
-        mock_draft_state.return_value = draft_state_with_nomination
+        mock_draft_state.return_value = self.create_mock_draft_state(
+            nominated=nomination,
+            available_player_ids=[1, 3],
+            teams=teams_ready_to_complete
+        )
 
         response = self.client.post(
             "/api/v1/bid",
@@ -756,6 +746,10 @@ class TestPostEndpoints(TestMainApp):
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
+
+        # Validate business logic per DESIGN.md
+        # Uses atomic file operations
+        mock_draft_state.return_value.save_to_file.assert_called_once()
 
     @patch("main.load_draft_state")
     def test_draft_success(self, mock_draft_state):

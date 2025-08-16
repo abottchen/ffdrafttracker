@@ -40,7 +40,19 @@ class TestMainApiIntegration:
             CONFIG_FILE=self.config_file,
         )
         patch_paths.start()
-        self.add_cleanup(patch_paths.stop)
+        self.patch_paths = patch_paths  # Store reference for manual cleanup
+
+    def teardown_method(self):
+        """Clean up after each test method."""
+        # Restore original file paths
+        self.patch_paths.stop()
+
+        # Clean up temp directory
+        import shutil
+        try:
+            shutil.rmtree(self.temp_dir, ignore_errors=True)
+        except Exception:
+            pass  # Ignore cleanup errors
 
     def setup_test_data(self):
         """Create test data files."""
@@ -110,10 +122,6 @@ class TestMainApiIntegration:
             json.dumps(draft_state_data, indent=2)
         )
 
-    def add_cleanup(self, func):
-        """Add cleanup function (pytest-style)."""
-        # Simple cleanup registration for this example
-        pass
 
     def test_full_auction_workflow(self):
         """Test complete auction workflow: nominate -> bid -> draft."""
