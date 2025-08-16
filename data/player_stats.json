@@ -444,15 +444,15 @@
     "position": "K",
     "team": "DAL",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "40",
+      "fga": "47",
       "fg_pct": "85.1",
       "long": "65",
       "xpm": "30",
       "xpa": "30",
       "points": "150"
     },
-    "stats_summary": "0/0FG 30/30XP 150pts"
+    "stats_summary": "40/47FG 30/30XP 150pts"
   },
   "4243389": {
     "bye_week": 5,
@@ -661,15 +661,15 @@
     "position": "K",
     "team": "BUF",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "24",
+      "fga": "29",
       "fg_pct": "82.8",
       "long": "61",
       "xpm": "59",
       "xpa": "64",
       "points": "131"
     },
-    "stats_summary": "0/0FG 59/64XP 131pts"
+    "stats_summary": "24/29FG 59/64XP 131pts"
   },
   "4360939": {
     "bye_week": 7,
@@ -706,15 +706,15 @@
     "position": "K",
     "team": "DET",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "26",
+      "fga": "29",
       "fg_pct": "89.7",
       "long": "58",
       "xpm": "64",
       "xpa": "67",
       "points": "142"
     },
-    "stats_summary": "0/0FG 64/67XP 142pts"
+    "stats_summary": "26/29FG 64/67XP 142pts"
   },
   "4048228": {
     "bye_week": 12,
@@ -990,15 +990,15 @@
     "position": "K",
     "team": "PIT",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "41",
+      "fga": "44",
       "fg_pct": "93.2",
       "long": "57",
       "xpm": "35",
       "xpa": "35",
       "points": "158"
     },
-    "stats_summary": "0/0FG 35/35XP 158pts"
+    "stats_summary": "41/44FG 35/35XP 158pts"
   },
   "3045523": {
     "bye_week": 14,
@@ -1483,15 +1483,15 @@
     "position": "K",
     "team": "KC",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "21",
+      "fga": "25",
       "fg_pct": "84.0",
       "long": "53",
       "xpm": "29",
       "xpa": "31",
       "points": "92"
     },
-    "stats_summary": "0/0FG 29/31XP 92pts"
+    "stats_summary": "21/25FG 29/31XP 92pts"
   },
   "3917849": {
     "bye_week": 12,
@@ -1561,15 +1561,15 @@
     "position": "K",
     "team": "LV",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "34",
+      "fga": "40",
       "fg_pct": "85.0",
       "long": "54",
       "xpm": "23",
       "xpa": "25",
       "points": "125"
     },
-    "stats_summary": "0/0FG 23/25XP 125pts"
+    "stats_summary": "34/40FG 23/25XP 125pts"
   },
   "3948283": {
     "bye_week": 5,
@@ -2520,15 +2520,15 @@
     "position": "K",
     "team": "LAC",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "39",
+      "fga": "42",
       "fg_pct": "92.9",
       "long": "59",
       "xpm": "33",
       "xpa": "36",
       "points": "150"
     },
-    "stats_summary": "0/0FG 33/36XP 150pts"
+    "stats_summary": "39/42FG 33/36XP 150pts"
   },
   "2976212": {
     "bye_week": 14,
@@ -2960,15 +2960,15 @@
     "position": "K",
     "team": "PHI",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "28",
+      "fga": "36",
       "fg_pct": "77.8",
       "long": "50",
       "xpm": "47",
       "xpa": "48",
       "points": "131"
     },
-    "stats_summary": "0/0FG 47/48XP 131pts"
+    "stats_summary": "28/36FG 47/48XP 131pts"
   },
   "3051876": {
     "bye_week": 12,
@@ -3128,15 +3128,15 @@
     "position": "K",
     "team": "HOU",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "36",
+      "fga": "42",
       "fg_pct": "85.7",
       "long": "59",
       "xpm": "34",
       "xpa": "36",
       "points": "142"
     },
-    "stats_summary": "0/0FG 34/36XP 142pts"
+    "stats_summary": "36/42FG 34/36XP 142pts"
   },
   "4605858": {
     "bye_week": 10,
@@ -3393,15 +3393,15 @@
     "position": "K",
     "team": "NYJ",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "21",
+      "fga": "22",
       "fg_pct": "95.5",
       "long": "56",
       "xpm": "25",
       "xpa": "25",
       "points": "88"
     },
-    "stats_summary": "0/0FG 25/25XP 88pts"
+    "stats_summary": "21/22FG 25/25XP 88pts"
   },
   "4372019": {
     "bye_week": 9,
@@ -3549,15 +3549,15 @@
     "position": "K",
     "team": "NYG",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "9",
+      "fga": "11",
       "fg_pct": "81.8",
       "long": "53",
       "xpm": "15",
       "xpa": "15",
       "points": "42"
     },
-    "stats_summary": "0/0FG 15/15XP 42pts"
+    "stats_summary": "9/11FG 15/15XP 42pts"
   },
   "16760": {
     "bye_week": 8,
@@ -3612,15 +3612,15 @@
     "position": "K",
     "team": "WAS",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "31",
+      "fga": "37",
       "fg_pct": "83.8",
       "long": "56",
       "xpm": "33",
       "xpa": "33",
       "points": "126"
     },
-    "stats_summary": "0/0FG 33/33XP 126pts"
+    "stats_summary": "31/37FG 33/33XP 126pts"
   },
   "4567784": {
     "bye_week": 14,
@@ -3955,15 +3955,15 @@
     "position": "K",
     "team": "NO",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "27",
+      "fga": "31",
       "fg_pct": "87.1",
       "long": "57",
       "xpm": "31",
       "xpa": "33",
       "points": "112"
     },
-    "stats_summary": "0/0FG 31/33XP 112pts"
+    "stats_summary": "27/31FG 31/33XP 112pts"
   },
   "4372561": {
     "bye_week": 14,
@@ -4679,15 +4679,15 @@
     "position": "K",
     "team": "CLE",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "18",
+      "fga": "27",
       "fg_pct": "66.7",
       "long": "56",
       "xpm": "17",
       "xpa": "20",
       "points": "71"
     },
-    "stats_summary": "0/0FG 17/20XP 71pts"
+    "stats_summary": "18/27FG 17/20XP 71pts"
   },
   "4708486": {
     "bye_week": 14,
@@ -5858,15 +5858,15 @@
     "position": "K",
     "team": "LAR",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "29",
+      "fga": "34",
       "fg_pct": "85.3",
       "long": "58",
       "xpm": "32",
       "xpa": "36",
       "points": "119"
     },
-    "stats_summary": "0/0FG 32/36XP 119pts"
+    "stats_summary": "29/34FG 32/36XP 119pts"
   },
   "4240861": {
     "bye_week": 6,
@@ -6062,15 +6062,15 @@
     "position": "K",
     "team": "ATL",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "25",
+      "fga": "34",
       "fg_pct": "73.5",
       "long": "58",
       "xpm": "26",
       "xpa": "26",
       "points": "101"
     },
-    "stats_summary": "0/0FG 26/26XP 101pts"
+    "stats_summary": "25/34FG 26/26XP 101pts"
   },
   "4572680": {
     "bye_week": 5,
@@ -6409,15 +6409,15 @@
     "position": "K",
     "team": "JAX",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "27",
+      "fga": "29",
       "fg_pct": "93.1",
       "long": "59",
       "xpm": "27",
       "xpa": "27",
       "points": "108"
     },
-    "stats_summary": "0/0FG 27/27XP 108pts"
+    "stats_summary": "27/29FG 27/27XP 108pts"
   },
   "4429023": {
     "bye_week": 5,
@@ -6609,15 +6609,15 @@
     "position": "K",
     "team": "DEN",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "31",
+      "fga": "34",
       "fg_pct": "91.2",
       "long": "55",
       "xpm": "46",
       "xpa": "46",
       "points": "139"
     },
-    "stats_summary": "0/0FG 46/46XP 139pts"
+    "stats_summary": "31/34FG 46/46XP 139pts"
   },
   "4426530": {
     "bye_week": 14,
@@ -6935,15 +6935,15 @@
     "position": "K",
     "team": "NYG",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "1",
+      "fga": "1",
       "fg_pct": "100.0",
       "long": "31",
       "xpm": "1",
       "xpa": "1",
       "points": "4"
     },
-    "stats_summary": "0/0FG 1/1XP 4pts"
+    "stats_summary": "1/1FG 1/1XP 4pts"
   },
   "4361307": {
     "bye_week": 8,
@@ -7154,15 +7154,15 @@
     "position": "K",
     "team": "TB",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "30",
+      "fga": "32",
       "fg_pct": "93.8",
       "long": "56",
       "xpm": "54",
       "xpa": "56",
       "points": "144"
     },
-    "stats_summary": "0/0FG 54/56XP 144pts"
+    "stats_summary": "30/32FG 54/56XP 144pts"
   },
   "4722893": {
     "bye_week": 12,
@@ -7215,15 +7215,15 @@
     "position": "K",
     "team": "GB",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "20",
+      "fga": "21",
       "fg_pct": "95.2",
       "long": "55",
       "xpm": "30",
       "xpa": "30",
       "points": "90"
     },
-    "stats_summary": "0/0FG 30/30XP 90pts"
+    "stats_summary": "20/21FG 30/30XP 90pts"
   },
   "4430834": {
     "bye_week": 9,
@@ -7288,15 +7288,15 @@
     "position": "K",
     "team": "CIN",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "16",
+      "fga": "22",
       "fg_pct": "72.7",
       "long": "56",
       "xpm": "37",
       "xpa": "38",
       "points": "85"
     },
-    "stats_summary": "0/0FG 37/38XP 85pts"
+    "stats_summary": "16/22FG 37/38XP 85pts"
   },
   "4427985": {
     "bye_week": 11,
@@ -7781,15 +7781,15 @@
     "position": "K",
     "team": "SF",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "24",
+      "fga": "34",
       "fg_pct": "70.6",
       "long": "53",
       "xpm": "32",
       "xpa": "33",
       "points": "104"
     },
-    "stats_summary": "0/0FG 32/33XP 104pts"
+    "stats_summary": "24/34FG 32/33XP 104pts"
   },
   "4040655": {
     "bye_week": 5,
@@ -8082,15 +8082,15 @@
     "position": "K",
     "team": "SEA",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "26",
+      "fga": "30",
       "fg_pct": "86.7",
       "long": "59",
       "xpm": "37",
       "xpa": "40",
       "points": "115"
     },
-    "stats_summary": "0/0FG 37/40XP 115pts"
+    "stats_summary": "26/30FG 37/40XP 115pts"
   },
   "4595348": {
     "bye_week": 14,
@@ -9167,15 +9167,15 @@
     "position": "K",
     "team": "MIN",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "24",
+      "fga": "30",
       "fg_pct": "80.0",
       "long": "58",
       "xpm": "38",
       "xpa": "38",
       "points": "110"
     },
-    "stats_summary": "0/0FG 38/38XP 110pts"
+    "stats_summary": "24/30FG 38/38XP 110pts"
   },
   "4696700": {
     "bye_week": 8,
@@ -9566,15 +9566,15 @@
     "position": "K",
     "team": "NE",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "11",
+      "fga": "12",
       "fg_pct": "91.7",
       "long": "55",
       "xpm": "7",
       "xpa": "8",
       "points": "40"
     },
-    "stats_summary": "0/0FG 7/8XP 40pts"
+    "stats_summary": "11/12FG 7/8XP 40pts"
   },
   "4430431": {
     "bye_week": 14,
@@ -9676,15 +9676,15 @@
     "position": "K",
     "team": "ARI",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "28",
+      "fga": "32",
       "fg_pct": "87.5",
       "long": "58",
       "xpm": "26",
       "xpa": "27",
       "points": "110"
     },
-    "stats_summary": "0/0FG 26/27XP 110pts"
+    "stats_summary": "28/32FG 26/27XP 110pts"
   },
   "3722362": {
     "bye_week": 6,
@@ -9785,15 +9785,15 @@
     "position": "K",
     "team": "MIA",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "37",
+      "fga": "41",
       "fg_pct": "90.2",
       "long": "57",
       "xpm": "26",
       "xpa": "28",
       "points": "137"
     },
-    "stats_summary": "0/0FG 26/28XP 137pts"
+    "stats_summary": "37/41FG 26/28XP 137pts"
   },
   "4045163": {
     "bye_week": 10,
@@ -9835,15 +9835,15 @@
     "position": "K",
     "team": "CHI",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "21",
+      "fga": "25",
       "fg_pct": "84.0",
       "long": "54",
       "xpm": "25",
       "xpa": "26",
       "points": "88"
     },
-    "stats_summary": "0/0FG 25/26XP 88pts"
+    "stats_summary": "21/25FG 25/26XP 88pts"
   },
   "2975863": {
     "bye_week": 8,
@@ -10331,15 +10331,15 @@
     "position": "K",
     "team": "TEN",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "26",
+      "fga": "33",
       "fg_pct": "78.8",
       "long": "63",
       "xpm": "25",
       "xpa": "26",
       "points": "103"
     },
-    "stats_summary": "0/0FG 25/26XP 103pts"
+    "stats_summary": "26/33FG 25/26XP 103pts"
   },
   "4250764": {
     "bye_week": 9,
@@ -12865,15 +12865,15 @@
     "position": "K",
     "team": "CAR",
     "kicking": {
-      "fgm": "0",
-      "fga": "0",
+      "fgm": "3",
+      "fga": "3",
       "fg_pct": "100.0",
       "long": "41",
       "xpm": "3",
       "xpa": "3",
       "points": "12"
     },
-    "stats_summary": "0/0FG 3/3XP 12pts"
+    "stats_summary": "3/3FG 3/3XP 12pts"
   },
   "4249616": {
     "bye_week": 9,

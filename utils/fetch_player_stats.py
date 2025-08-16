@@ -135,15 +135,34 @@ def fetch_player_stats(player_id: int, player_name: str, position: str) -> Optio
             stats_data["receiving"] = receiving_stats
             
         elif "KICKING" in section_title and position == "K":
+            # Handle the FG column that contains "made-attempted" format (e.g., "40-47")
+            fg_combined = get_stat(['FG'])
+            fgm, fga = "0", "0"
+            if fg_combined and '-' in fg_combined:
+                try:
+                    fgm, fga = fg_combined.split('-')
+                except ValueError:
+                    pass  # Keep defaults of "0", "0"
+            
             kicking_stats = {
-                "fgm": get_stat(['FGM', 'FG MADE']),
-                "fga": get_stat(['FGA', 'FG ATT']),
+                "fgm": fgm,
+                "fga": fga,
                 "fg_pct": get_stat(['FG%', 'PCT']),
                 "long": get_stat(['LNG', 'LONG']),
                 "xpm": get_stat(['XPM', 'PAT MADE']),
                 "xpa": get_stat(['XPA', 'PAT ATT']),
                 "points": get_stat(['PTS', 'POINTS'])
             }
+            
+            # Validation: warn if FG% > 0 but either FGM or FGA is 0
+            fg_pct = kicking_stats['fg_pct']
+            try:
+                fg_pct_float = float(fg_pct)
+                if fg_pct_float > 0 and (fgm == "0" or fga == "0"):
+                    print(f"  ⚠️  WARNING: FG% is {fg_pct}% but FGM/FGA parsed as {fgm}/{fga} - possible parsing error!")
+            except (ValueError, TypeError):
+                pass  # Ignore if FG% is not a valid number
+            
             stats_data["kicking"] = kicking_stats
     
     # Format consolidated stats string based on position
