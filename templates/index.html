@@ -419,6 +419,56 @@
             background: #1f3a2d;
             border: 1px solid #4caf50;
         }
+        /* Bright newly-drafted colors by position */
+        .drafted-player.position-QB.newly-drafted {
+            background: #4a3d6b !important;  /* Bright purple */
+            border: 2px solid #7b6bb5 !important;
+        }
+        .drafted-player.position-RB.newly-drafted {
+            background: #3d5a4a !important;  /* Bright green */
+            border: 2px solid #5fb572 !important;
+        }
+        .drafted-player.position-WR.newly-drafted {
+            background: #5a4d3d !important;  /* Bright gold */
+            border: 2px solid #b5a55f !important;
+        }
+        .drafted-player.position-TE.newly-drafted {
+            background: #5a3d3d !important;  /* Bright orange */
+            border: 2px solid #b5725f !important;
+        }
+        .drafted-player.position-K.newly-drafted {
+            background: #3d4a5a !important;  /* Bright blue */
+            border: 2px solid #5f82b5 !important;
+        }
+        .drafted-player.position-DEF.newly-drafted {
+            background: #4a3d47 !important;  /* Bright burgundy */
+            border: 2px solid #9f5f75 !important;
+        }
+        /* Subtle position-based colors */
+        .drafted-player.position-QB {
+            background: linear-gradient(135deg, #2a2a2a 0%, #3d2e52 100%);  /* Purple tint */
+            border-color: #5a4a75;
+        }
+        .drafted-player.position-RB {
+            background: linear-gradient(135deg, #2a2a2a 0%, #2d403a 100%);  /* Green tint */
+            border-color: #426055;
+        }
+        .drafted-player.position-WR {
+            background: linear-gradient(135deg, #2a2a2a 0%, #423a2d 100%);  /* Yellow/gold tint */
+            border-color: #605542;
+        }
+        .drafted-player.position-TE {
+            background: linear-gradient(135deg, #2a2a2a 0%, #42312a 100%);  /* Orange tint */
+            border-color: #604a42;
+        }
+        .drafted-player.position-K {
+            background: linear-gradient(135deg, #2a2a2a 0%, #2d3a42 100%);  /* Blue tint */
+            border-color: #425560;
+        }
+        .drafted-player.position-DEF {
+            background: linear-gradient(135deg, #2a2a2a 0%, #3d2d35 100%);  /* Red/burgundy tint */
+            border-color: #5a424a;
+        }
         .drafted-player-name {
             font-size: 0.8em;
             font-weight: bold;
@@ -906,15 +956,17 @@
                 }
             }
             
-            // Change bar color based on progress
+            // Change bar color based on progress (red to green)
             if (percentage >= 90) {
-                progressBar.style.background = 'linear-gradient(90deg, #d32f2f 0%, #ff6b6b 100%)';
+                progressBar.style.background = 'linear-gradient(90deg, #4caf50 0%, #8bc34a 100%)';  // Green - nearly complete
             } else if (percentage >= 75) {
-                progressBar.style.background = 'linear-gradient(90deg, #ff9800 0%, #ffc107 100%)';
+                progressBar.style.background = 'linear-gradient(90deg, #66bb6a 0%, #81c784 100%)';  // Light green
             } else if (percentage >= 50) {
-                progressBar.style.background = 'linear-gradient(90deg, #4caf50 0%, #8bc34a 100%)';
+                progressBar.style.background = 'linear-gradient(90deg, #ff9800 0%, #ffc107 100%)';  // Orange - midway
+            } else if (percentage >= 25) {
+                progressBar.style.background = 'linear-gradient(90deg, #ff6b6b 0%, #ff9800 100%)';  // Orange-red
             } else {
-                progressBar.style.background = 'linear-gradient(90deg, #4a90e2 0%, #51cf66 100%)';
+                progressBar.style.background = 'linear-gradient(90deg, #d32f2f 0%, #ff6b6b 100%)';  // Red - just starting
             }
         }
         
@@ -1235,7 +1287,10 @@
                     if (player) {
                         const playerDiv = document.createElement('div');
                         const isNewlyDrafted = isNewDraft && pick.player_id === mostRecentPlayerId;
-                        playerDiv.className = isNewlyDrafted ? 'drafted-player newly-drafted' : 'drafted-player';
+                        const positionClass = `position-${player.position}`;
+                        playerDiv.className = isNewlyDrafted 
+                            ? `drafted-player ${positionClass} newly-drafted` 
+                            : `drafted-player ${positionClass}`;
                         
                         // Add data attributes for context menu
                         playerDiv.dataset.pickId = pick.pick_id;
@@ -1258,7 +1313,7 @@
                         if (isNewlyDrafted) {
                             setTimeout(() => {
                                 playerDiv.classList.remove('newly-drafted');
-                            }, 100);
+                            }, 1500);  // Increased from 100ms to 1.5s to make the flash more visible
                         }
                     }
                 });
