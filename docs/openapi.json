@@ -90,6 +90,25 @@
         }
       }
     },
+    "/api/v1/player/stats": {
+      "get": {
+        "summary": "Get Player Stats",
+        "description": "Get player statistics and bye weeks. Returns empty collection if file doesn't exist.",
+        "operationId": "get_player_stats_api_v1_player_stats_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerStatsCollection"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/owners": {
       "get": {
         "summary": "Get All Owners",
@@ -700,6 +719,57 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "KickingStats": {
+        "properties": {
+          "fgm": {
+            "type": "string",
+            "title": "Fgm",
+            "description": "Field goals made"
+          },
+          "fga": {
+            "type": "string",
+            "title": "Fga",
+            "description": "Field goals attempted"
+          },
+          "fg_pct": {
+            "type": "string",
+            "title": "Fg Pct",
+            "description": "Field goal percentage"
+          },
+          "long": {
+            "type": "string",
+            "title": "Long",
+            "description": "Longest field goal"
+          },
+          "xpm": {
+            "type": "string",
+            "title": "Xpm",
+            "description": "Extra points made"
+          },
+          "xpa": {
+            "type": "string",
+            "title": "Xpa",
+            "description": "Extra points attempted"
+          },
+          "points": {
+            "type": "string",
+            "title": "Points",
+            "description": "Total points scored"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fgm",
+          "fga",
+          "fg_pct",
+          "long",
+          "xpm",
+          "xpa",
+          "points"
+        ],
+        "title": "KickingStats",
+        "description": "Kicking statistics for kickers."
+      },
       "NFLTeam": {
         "type": "string",
         "enum": [
@@ -817,6 +887,69 @@
         ],
         "title": "Owner"
       },
+      "PassingStats": {
+        "properties": {
+          "completions": {
+            "type": "string",
+            "title": "Completions",
+            "description": "Number of completions"
+          },
+          "attempts": {
+            "type": "string",
+            "title": "Attempts",
+            "description": "Number of passing attempts"
+          },
+          "pct": {
+            "type": "string",
+            "title": "Pct",
+            "description": "Completion percentage"
+          },
+          "yards": {
+            "type": "string",
+            "title": "Yards",
+            "description": "Passing yards"
+          },
+          "avg": {
+            "type": "string",
+            "title": "Avg",
+            "description": "Yards per attempt"
+          },
+          "tds": {
+            "type": "string",
+            "title": "Tds",
+            "description": "Passing touchdowns"
+          },
+          "ints": {
+            "type": "string",
+            "title": "Ints",
+            "description": "Interceptions thrown"
+          },
+          "sacks": {
+            "type": "string",
+            "title": "Sacks",
+            "description": "Times sacked"
+          },
+          "rating": {
+            "type": "string",
+            "title": "Rating",
+            "description": "Passer rating"
+          }
+        },
+        "type": "object",
+        "required": [
+          "completions",
+          "attempts",
+          "pct",
+          "yards",
+          "avg",
+          "tds",
+          "ints",
+          "sacks",
+          "rating"
+        ],
+        "title": "PassingStats",
+        "description": "Passing statistics for quarterbacks."
+      },
       "Player": {
         "properties": {
           "id": {
@@ -848,6 +981,103 @@
         ],
         "title": "Player"
       },
+      "PlayerStats": {
+        "properties": {
+          "bye_week": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bye Week",
+            "description": "Bye week number (1-18)"
+          },
+          "position": {
+            "type": "string",
+            "title": "Position",
+            "description": "Player position"
+          },
+          "team": {
+            "type": "string",
+            "title": "Team",
+            "description": "NFL team abbreviation"
+          },
+          "passing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PassingStats"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Passing statistics (QBs)"
+          },
+          "rushing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RushingStats"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rushing statistics (RBs, WRs, QBs)"
+          },
+          "receiving": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReceivingStats"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Receiving statistics (WRs, TEs, RBs)"
+          },
+          "kicking": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/KickingStats"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Kicking statistics (Ks)"
+          },
+          "stats_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stats Summary",
+            "description": "Formatted stats summary for UI display"
+          }
+        },
+        "type": "object",
+        "required": [
+          "position",
+          "team"
+        ],
+        "title": "PlayerStats",
+        "description": "Statistics for an individual player."
+      },
+      "PlayerStatsCollection": {
+        "additionalProperties": {
+          "$ref": "#/components/schemas/PlayerStats"
+        },
+        "type": "object",
+        "title": "PlayerStatsCollection",
+        "description": "Collection of player statistics keyed by player ID."
+      },
       "Position": {
         "type": "string",
         "enum": [
@@ -859,6 +1089,57 @@
           "D/ST"
         ],
         "title": "Position"
+      },
+      "ReceivingStats": {
+        "properties": {
+          "receptions": {
+            "type": "string",
+            "title": "Receptions",
+            "description": "Number of receptions"
+          },
+          "targets": {
+            "type": "string",
+            "title": "Targets",
+            "description": "Number of targets"
+          },
+          "yards": {
+            "type": "string",
+            "title": "Yards",
+            "description": "Receiving yards"
+          },
+          "avg": {
+            "type": "string",
+            "title": "Avg",
+            "description": "Yards per reception"
+          },
+          "tds": {
+            "type": "string",
+            "title": "Tds",
+            "description": "Receiving touchdowns"
+          },
+          "long": {
+            "type": "string",
+            "title": "Long",
+            "description": "Longest reception"
+          },
+          "fumbles": {
+            "type": "string",
+            "title": "Fumbles",
+            "description": "Fumbles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "receptions",
+          "targets",
+          "yards",
+          "avg",
+          "tds",
+          "long",
+          "fumbles"
+        ],
+        "title": "ReceivingStats",
+        "description": "Receiving statistics for wide receivers, tight ends, and running backs."
       },
       "ResetRequest": {
         "properties": {
@@ -881,6 +1162,51 @@
         },
         "type": "object",
         "title": "ResetRequest"
+      },
+      "RushingStats": {
+        "properties": {
+          "carries": {
+            "type": "string",
+            "title": "Carries",
+            "description": "Number of rushing attempts"
+          },
+          "yards": {
+            "type": "string",
+            "title": "Yards",
+            "description": "Rushing yards"
+          },
+          "avg": {
+            "type": "string",
+            "title": "Avg",
+            "description": "Yards per carry"
+          },
+          "tds": {
+            "type": "string",
+            "title": "Tds",
+            "description": "Rushing touchdowns"
+          },
+          "long": {
+            "type": "string",
+            "title": "Long",
+            "description": "Longest rush"
+          },
+          "fumbles": {
+            "type": "string",
+            "title": "Fumbles",
+            "description": "Fumbles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "carries",
+          "yards",
+          "avg",
+          "tds",
+          "long",
+          "fumbles"
+        ],
+        "title": "RushingStats",
+        "description": "Rushing statistics for running backs, wide receivers, and quarterbacks."
       },
       "Team": {
         "properties": {

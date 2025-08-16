@@ -108,7 +108,7 @@ def test_complete_draft_workflow():
 
 
 def _setup_test_data(data_dir: Path) -> None:
-    """Set up test data files for the E2E test using real player data and fake owners."""
+    """Set up test data files for E2E test using real player and fake owner data."""
     import shutil
 
     # Copy real data files from the data directory

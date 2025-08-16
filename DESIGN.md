@@ -50,6 +50,7 @@ A local fantasy football auction draft tracking tool with a web-based interface 
 **Key Features:**
 - Team selection dropdown (defaults to owner ID 1)
 - Complete roster display with player images, positions, teams, and prices
+- **Player statistics integration**: 2024 season stats and 2025 bye weeks displayed between team logo and price
 - Team summary statistics (budget remaining, position counts vs maximums)
 - Dark theme with color differentiation for easy reading
 - Auto-refresh every 5 seconds for real-time updates
@@ -74,6 +75,7 @@ A local fantasy football auction draft tracking tool with a web-based interface 
 - `owners.json` - Owner information and ID mappings
 - `action_log.json` - History of all draft actions for undo capability
 - `config.json` - Application configuration (budgets, min bids, etc.)
+- `player_stats.json` - Player statistics and bye weeks (optional, generated separately)
 
 ## API Architecture
 
@@ -134,6 +136,11 @@ This allows frontend to handle errors appropriately:
 - CSV export for external analysis and record keeping
 - Structured format compatible with spreadsheet applications
 
+**Player Statistics Integration:**
+- Optional enhanced player data with 2024 season statistics and 2025 bye weeks
+- Graceful degradation: application functions fully without stats data
+- Stats fetched from `/api/v1/player/stats` endpoint with defensive error handling
+
 ## File Structure
 ```
 ffdrafttracker/
@@ -154,7 +161,8 @@ ffdrafttracker/
 │       ├── draft_state.py # DraftState model
 │       ├── action_log.py  # ActionLog model
 │       ├── action_logger.py # ActionLogger utility
-│       └── configuration.py # Configuration model
+│       ├── configuration.py # Configuration model
+│       └── player_stats.py # Player statistics models
 ├── static/                # Static assets (if needed)
 ├── templates/
 │   ├── index.html         # Main draft application template
@@ -164,12 +172,14 @@ ffdrafttracker/
 │   ├── players.json       # Player database
 │   ├── owners.json        # Owner information
 │   ├── action_log.json    # Complete action history
-│   └── config.json        # Application configuration
+│   ├── config.json        # Application configuration
+│   └── player_stats.json  # Player statistics and bye weeks (optional)
 ├── tests/                 # Test suite
 │   ├── unit/              # Unit tests for models
 │   └── integration/       # Integration tests for file persistence
 ├── utils/
-│   └── fetch_espn_players.py # Utility for player data import
+│   ├── fetch_espn_players.py # Utility for player data import
+│   └── fetch_player_stats.py # Utility for player statistics import
 ├── requirements.txt       # Python dependencies
 ├── pyproject.toml        # Project configuration
 ├── DESIGN.md             # This architecture document
@@ -285,6 +295,21 @@ Pydantic Models (Python) → FastAPI Endpoints → OpenAPI Schema
 - `position_maximums: Dict[str, int]` - Max players per position (e.g., {"QB": 2, "RB": 4})
 - `total_rounds: int` - Total draft rounds (e.g., 19)
 - `data_directory: str` - Where to store data files
+
+**PlayerStats** (`player_stats.py`): Enhanced player data (optional)
+- `bye_week: Optional[int]` - 2025 NFL bye week (1-18)
+- `position: str` - Player position for validation
+- `team: str` - NFL team abbreviation
+- `passing: Optional[PassingStats]` - QB passing statistics
+- `rushing: Optional[RushingStats]` - Rushing statistics (QBs, RBs, WRs)
+- `receiving: Optional[ReceivingStats]` - Receiving statistics (WRs, TEs, RBs)
+- `kicking: Optional[KickingStats]` - Kicking statistics (Ks)
+- `stats_summary: Optional[str]` - Formatted display string
+
+**PlayerStatsCollection** (`player_stats.py`): Dictionary of player statistics
+- Root model containing `Dict[str, PlayerStats]` keyed by player ID
+- Provides O(1) lookup methods for efficient UI rendering
+- Graceful handling of missing or incomplete data
 
 **Design Notes**: 
 - Player objects remain immutable - prices are tracked in DraftPick

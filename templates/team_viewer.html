@@ -191,9 +191,9 @@
             flex: 1;
             min-width: 0;
             display: grid;
-            grid-template-columns: 200px 50px 40px;
+            grid-template-columns: 200px 60px 45px 1fr;
             align-items: center;
-            gap: 12px;
+            gap: 8px;
         }
         .player-name {
             font-size: 1em;
@@ -217,11 +217,135 @@
             font-size: 0.75em;
             font-weight: bold;
             margin-right: 6px;
+            width: 32px;
+            text-align: center;
+            flex-shrink: 0;
         }
         .player-team-logo {
-            width: 32px;
-            height: 32px;
+            width: 48px;
+            height: 48px;
             object-fit: contain;
+        }
+        .player-meta {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .player-stats {
+            background: linear-gradient(135deg, #2a2a2a 0%, #1f1f1f 100%);
+            border: 1px solid #404040;
+            border-radius: 8px;
+            padding: 6px 8px;
+            font-size: 0.85em;
+            min-height: 38px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+        }
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        .stats-table td {
+            padding: 1px 6px;
+            text-align: center;
+            vertical-align: top;
+            min-width: 35px;
+            border: none;
+        }
+        .stat-label-row {
+            height: 12px;
+        }
+        .stat-value-row {
+            height: 18px;
+        }
+        .stat-label {
+            font-size: 0.7em;
+            font-weight: 500;
+            line-height: 1;
+            margin: 0;
+            white-space: nowrap;
+        }
+        .stat-value {
+            font-size: 1.6em;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            line-height: 1;
+            margin: 0;
+            white-space: nowrap;
+        }
+        .stat-separator-col {
+            width: 8px;
+            position: relative;
+            padding: 0 !important;
+        }
+        .stat-separator-col::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 2px;
+            bottom: 2px;
+            width: 1px;
+            background: #555;
+            transform: translateX(-50%);
+        }
+        .bye-week-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 45px;
+            height: 42px;
+            background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
+            border-radius: 6px;
+            border: 1px solid #0d47a1;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .bye-label {
+            font-size: 0.6em;
+            font-weight: 600;
+            color: #fff;
+            text-transform: uppercase;
+            line-height: 1;
+            margin: 0;
+        }
+        .bye-number {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #fff;
+            line-height: 1;
+            margin: 0;
+            font-family: 'Courier New', monospace;
+        }
+        .stat-passing .stat-label {
+            color: #64b5f6;
+        }
+        .stat-passing .stat-value {
+            color: #90caf9;
+        }
+        .stat-rushing .stat-label {
+            color: #81c784;
+        }
+        .stat-rushing .stat-value {
+            color: #a5d6a7;
+        }
+        .stat-receiving .stat-label {
+            color: #ffb74d;
+        }
+        .stat-receiving .stat-value {
+            color: #ffcc02;
+        }
+        .stat-kicking .stat-label {
+            color: #f06292;
+        }
+        .stat-kicking .stat-value {
+            color: #f48fb1;
+        }
+        .stat-separator {
+            width: 1px;
+            height: 16px;
+            background: #404040;
+            margin: 0 4px;
         }
         .player-price {
             font-size: 1em;
@@ -350,6 +474,7 @@
         let currentTeamId = {{ selected_team_id }};
         let owners = [];
         let config = null;
+        let playerStats = {};
 
         // NFL Team Logo URLs - using ESPN's CDN
         function getTeamLogoUrl(teamAbbr) {
@@ -438,6 +563,332 @@
             }
         }
 
+        async function loadPlayerStats() {
+            try {
+                const response = await fetch(`${API_BASE}/player/stats`);
+                if (!response.ok) {
+                    console.warn('Failed to load player stats');
+                    return;
+                }
+                
+                playerStats = await response.json();
+                console.log('Loaded player stats for', Object.keys(playerStats).length, 'players');
+            } catch (error) {
+                console.warn('Failed to load player stats:', error.message);
+                playerStats = {};
+            }
+        }
+
+        function formatPlayerStats(playerId) {
+            // Very defensive - handle any missing data gracefully
+            try {
+                const stats = playerStats[playerId];
+                if (!stats) {
+                    return ''; // Just show nothing if no stats available
+                }
+
+                let statColumns = [];
+                
+                // Show ALL available stats based on position
+                if (stats.position === 'QB') {
+                    // QB passing stats
+                    if (stats.passing) {
+                        const p = stats.passing;
+                        statColumns.push({
+                            label: 'Comp',
+                            value: p.completions,
+                            type: 'passing'
+                        });
+                        statColumns.push({
+                            label: 'Att',
+                            value: p.attempts,
+                            type: 'passing'
+                        });
+                        statColumns.push({
+                            label: 'Yds',
+                            value: p.yards,
+                            type: 'passing'
+                        });
+                        statColumns.push({
+                            label: 'TD',
+                            value: p.tds,
+                            type: 'passing'
+                        });
+                        statColumns.push({
+                            label: 'INT',
+                            value: p.ints,
+                            type: 'passing'
+                        });
+                        statColumns.push({
+                            label: '%',
+                            value: p.pct,
+                            type: 'passing'
+                        });
+                        statColumns.push({
+                            label: 'Rate',
+                            value: p.rating,
+                            type: 'passing'
+                        });
+                        statColumns.push({
+                            label: 'Sacks',
+                            value: p.sacks,
+                            type: 'passing'
+                        });
+                    }
+                    
+                    // QB rushing stats (if any)
+                    if (stats.rushing && parseInt(stats.rushing.carries) > 0) {
+                        if (statColumns.length > 0) statColumns.push({ separator: true });
+                        const r = stats.rushing;
+                        statColumns.push({
+                            label: 'Car',
+                            value: r.carries,
+                            type: 'rushing'
+                        });
+                        statColumns.push({
+                            label: 'RYds',
+                            value: r.yards,
+                            type: 'rushing'
+                        });
+                        statColumns.push({
+                            label: 'RTD',
+                            value: r.tds,
+                            type: 'rushing'
+                        });
+                        statColumns.push({
+                            label: 'Avg',
+                            value: r.avg,
+                            type: 'rushing'
+                        });
+                        statColumns.push({
+                            label: 'Long',
+                            value: r.long,
+                            type: 'rushing'
+                        });
+                    }
+                    
+                } else if (stats.position === 'RB') {
+                    // RB rushing stats
+                    if (stats.rushing) {
+                        const r = stats.rushing;
+                        statColumns.push({
+                            label: 'Car',
+                            value: r.carries,
+                            type: 'rushing'
+                        });
+                        statColumns.push({
+                            label: 'Yds',
+                            value: r.yards,
+                            type: 'rushing'
+                        });
+                        statColumns.push({
+                            label: 'TD',
+                            value: r.tds,
+                            type: 'rushing'
+                        });
+                        statColumns.push({
+                            label: 'Avg',
+                            value: r.avg,
+                            type: 'rushing'
+                        });
+                        statColumns.push({
+                            label: 'Long',
+                            value: r.long,
+                            type: 'rushing'
+                        });
+                        statColumns.push({
+                            label: 'Fum',
+                            value: r.fumbles,
+                            type: 'rushing'
+                        });
+                    }
+                    
+                    // RB receiving stats
+                    if (stats.receiving && parseInt(stats.receiving.receptions) > 0) {
+                        if (statColumns.length > 0) statColumns.push({ separator: true });
+                        const rec = stats.receiving;
+                        statColumns.push({
+                            label: 'Rec',
+                            value: rec.receptions,
+                            type: 'receiving'
+                        });
+                        statColumns.push({
+                            label: 'RecYds',
+                            value: rec.yards,
+                            type: 'receiving'
+                        });
+                        statColumns.push({
+                            label: 'RecTD',
+                            value: rec.tds,
+                            type: 'receiving'
+                        });
+                        statColumns.push({
+                            label: 'Tgt',
+                            value: rec.targets,
+                            type: 'receiving'
+                        });
+                        statColumns.push({
+                            label: 'Avg',
+                            value: rec.avg,
+                            type: 'receiving'
+                        });
+                        statColumns.push({
+                            label: 'Long',
+                            value: rec.long,
+                            type: 'receiving'
+                        });
+                    }
+                    
+                } else if (stats.position === 'WR' || stats.position === 'TE') {
+                    // WR/TE receiving stats
+                    if (stats.receiving) {
+                        const rec = stats.receiving;
+                        statColumns.push({
+                            label: 'Rec',
+                            value: rec.receptions,
+                            type: 'receiving'
+                        });
+                        statColumns.push({
+                            label: 'Yds',
+                            value: rec.yards,
+                            type: 'receiving'
+                        });
+                        statColumns.push({
+                            label: 'TD',
+                            value: rec.tds,
+                            type: 'receiving'
+                        });
+                        statColumns.push({
+                            label: 'Tgt',
+                            value: rec.targets,
+                            type: 'receiving'
+                        });
+                        statColumns.push({
+                            label: 'Avg',
+                            value: rec.avg,
+                            type: 'receiving'
+                        });
+                        statColumns.push({
+                            label: 'Long',
+                            value: rec.long,
+                            type: 'receiving'
+                        });
+                        statColumns.push({
+                            label: 'Fum',
+                            value: rec.fumbles,
+                            type: 'receiving'
+                        });
+                    }
+                    
+                    // WR rushing stats (if any)
+                    if (stats.position === 'WR' && stats.rushing && parseInt(stats.rushing.carries) > 0) {
+                        if (statColumns.length > 0) statColumns.push({ separator: true });
+                        const r = stats.rushing;
+                        statColumns.push({
+                            label: 'Car',
+                            value: r.carries,
+                            type: 'rushing'
+                        });
+                        statColumns.push({
+                            label: 'RYds',
+                            value: r.yards,
+                            type: 'rushing'
+                        });
+                        statColumns.push({
+                            label: 'RTD',
+                            value: r.tds,
+                            type: 'rushing'
+                        });
+                        statColumns.push({
+                            label: 'Avg',
+                            value: r.avg,
+                            type: 'rushing'
+                        });
+                    }
+                    
+                } else if (stats.position === 'K') {
+                    // Kicker stats
+                    if (stats.kicking) {
+                        const k = stats.kicking;
+                        statColumns.push({
+                            label: 'FGM',
+                            value: k.fgm,
+                            type: 'kicking'
+                        });
+                        statColumns.push({
+                            label: 'FGA',
+                            value: k.fga,
+                            type: 'kicking'
+                        });
+                        statColumns.push({
+                            label: 'XPM',
+                            value: k.xpm,
+                            type: 'kicking'
+                        });
+                        statColumns.push({
+                            label: 'XPA',
+                            value: k.xpa,
+                            type: 'kicking'
+                        });
+                        statColumns.push({
+                            label: 'Pts',
+                            value: k.points,
+                            type: 'kicking'
+                        });
+                        statColumns.push({
+                            label: '%',
+                            value: k.fg_pct,
+                            type: 'kicking'
+                        });
+                        statColumns.push({
+                            label: 'Long',
+                            value: k.long,
+                            type: 'kicking'
+                        });
+                    }
+                }
+                
+                if (statColumns.length === 0) {
+                    return '';
+                }
+                
+                // Generate table structure
+                let labelRow = '';
+                let valueRow = '';
+                
+                for (const col of statColumns) {
+                    if (col.separator) {
+                        labelRow += '<td class="stat-separator-col"></td>';
+                        valueRow += '<td class="stat-separator-col"></td>';
+                    } else {
+                        const cssClass = `stat-${col.type}`;
+                        labelRow += `<td class="${cssClass}"><div class="stat-label">${col.label}</div></td>`;
+                        valueRow += `<td class="${cssClass}"><div class="stat-value">${col.value}</div></td>`;
+                    }
+                }
+                
+                return `<table class="stats-table">
+                    <tr class="stat-label-row">${labelRow}</tr>
+                    <tr class="stat-value-row">${valueRow}</tr>
+                </table>`;
+                
+            } catch (error) {
+                // If anything fails, just return empty string - don't break the UI
+                console.debug('Error formatting stats for player', playerId, error);
+                return '';
+            }
+        }
+
+        function formatByeWeek(byeWeek) {
+            if (!byeWeek || typeof byeWeek !== 'number') {
+                return '';
+            }
+            return `<div class="bye-week-column">
+                <div class="bye-label">Bye</div>
+                <div class="bye-number">${byeWeek}</div>
+            </div>`;
+        }
+
         async function loadTeamData(teamId) {
             try {
                 hideError();
@@ -494,14 +945,20 @@
                 const imageUrl = `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${player.id}.png&w=350&h=254`;
                 const teamLogoUrl = getTeamLogoUrl(player.team);
                 
+                const byeWeekHtml = formatByeWeek(playerStats[player.id]?.bye_week);
+                
                 return `
                     <div class="player-card">
                         <img src="${imageUrl}" alt="${player.last_name}" class="player-image" onerror="this.style.display='none'">
+                        <span class="player-position position-${player.position}">${player.position}</span>
                         <div class="player-info">
                             <div class="player-name">${player.first_name} ${player.last_name}</div>
-                            <div class="player-details">
-                                <span class="player-position position-${player.position}">${player.position}</span>
+                            <div class="player-meta">
                                 <img src="${teamLogoUrl}" alt="${player.team}" class="player-team-logo" title="${player.team}">
+                            </div>
+                            ${byeWeekHtml}
+                            <div class="player-stats">
+                                ${formatPlayerStats(player.id)}
                             </div>
                         </div>
                         <div class="player-price">$${pick.pick.price}</div>
@@ -601,6 +1058,7 @@
         // Initialize
         async function init() {
             await loadConfig();
+            await loadPlayerStats();
             await loadOwners();
             
             // Auto-refresh every 5 seconds
