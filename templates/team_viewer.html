@@ -126,6 +126,20 @@
         .budget-value {
             color: #4caf50;
         }
+        .summary-progress {
+            height: 8px;
+            background: #1a1a1a;
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid #404040;
+            margin: -8px 0 12px 0;
+        }
+        .summary-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #2a70c2 0%, #5a9ff2 100%);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
         .position-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -134,25 +148,94 @@
         }
         .position-item {
             background: #1a1a1a;
-            padding: 12px;
+            padding: 10px;
             border-radius: 8px;
-            text-align: center;
             border: 1px solid #404040;
         }
-        .position-name {
+        .position-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .position-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 0.75em;
             font-weight: bold;
-            color: #4a90e2;
-            margin-bottom: 5px;
+            color: white;
+            text-align: center;
+            min-width: 35px;
         }
         .position-count {
-            font-size: 1.2em;
+            font-size: 0.85em;
             font-weight: bold;
         }
         .position-count.at-max {
             color: #ff6b6b;
         }
         .position-count.under-max {
-            color: #51cf66;
+            color: #b0b0b0;
+        }
+        .position-progress {
+            height: 6px;
+            background: #2a2a2a;
+            border-radius: 3px;
+            overflow: hidden;
+            border: 1px solid #3a3a3a;
+        }
+        .position-progress-bar {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+        .progress-bar-normal {
+            background: linear-gradient(90deg, #4a90e2 0%, #5a9ff2 100%);
+        }
+        .progress-bar-warning {
+            background: linear-gradient(90deg, #f39c12 0%, #f4a62a 100%);
+        }
+        .progress-bar-full {
+            background: linear-gradient(90deg, #e74c3c 0%, #f55a4e 100%);
+        }
+        .roster-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 8px 6px 8px;
+            border-bottom: 1px solid #404040;
+            margin-bottom: 4px;
+            flex-shrink: 0;
+            font-size: 0.65em;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #666;
+            letter-spacing: 0.5px;
+        }
+        .header-player {
+            width: 40px;
+            margin-right: 8px;
+        }
+        .header-position {
+            width: 32px;
+            text-align: center;
+            margin-right: 8px;
+        }
+        .header-name {
+            width: 200px;
+        }
+        .header-bye {
+            width: 48px;
+            text-align: center;
+        }
+        .header-stats {
+            flex: 1;
+            padding-left: 8px;
+        }
+        .header-price {
+            width: 45px;
+            text-align: right;
         }
         .player-list {
             display: flex;
@@ -161,6 +244,12 @@
             flex: 1;
             overflow-y: auto;
             padding-right: 5px;
+        }
+        .position-separator {
+            height: 1px;
+            background: linear-gradient(to right, transparent 0%, #4a4a4a 20%, #4a4a4a 80%, transparent 100%);
+            margin: 8px 0;
+            flex-shrink: 0;
         }
         .player-card {
             background: #1a1a1a;
@@ -178,20 +267,38 @@
             transform: translateY(-1px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.4);
         }
+        .player-image-container {
+            position: relative;
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+            border-radius: 4px;
+            border: 1px solid #4a4a4a;
+            overflow: hidden;
+            background: #2a2a2a;
+        }
+        .player-image-background {
+            position: absolute;
+            top: -15px;
+            left: -5px;
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+            opacity: 0.3;
+            z-index: 1;
+        }
         .player-image {
+            position: relative;
             width: 40px;
             height: 40px;
             object-fit: cover;
-            border-radius: 4px;
-            border: 1px solid #4a4a4a;
-            background: #2a2a2a;
-            flex-shrink: 0;
+            z-index: 2;
         }
         .player-info {
             flex: 1;
             min-width: 0;
             display: grid;
-            grid-template-columns: 200px 60px 45px 1fr;
+            grid-template-columns: 200px 48px 1fr;
             align-items: center;
             gap: 8px;
         }
@@ -241,6 +348,34 @@
             min-height: 38px;
             box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
         }
+        .stats-table td {
+            position: relative;
+        }
+        .stats-table td.stat-passing::before,
+        .stats-table td.stat-rushing::before,
+        .stats-table td.stat-receiving::before,
+        .stats-table td.stat-kicking::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: 0;
+            right: 0;
+            bottom: -2px;
+            border-radius: 3px;
+            z-index: -1;
+        }
+        .stats-table td.stat-passing::before {
+            background: rgba(100, 181, 246, 0.08);
+        }
+        .stats-table td.stat-rushing::before {
+            background: rgba(129, 199, 132, 0.08);
+        }
+        .stats-table td.stat-receiving::before {
+            background: rgba(255, 213, 79, 0.08);
+        }
+        .stats-table td.stat-kicking::before {
+            background: rgba(240, 98, 146, 0.08);
+        }
         .stats-table {
             width: 100%;
             border-collapse: collapse;
@@ -265,6 +400,7 @@
             line-height: 1;
             margin: 0;
             white-space: nowrap;
+            cursor: help;
         }
         .stat-value {
             font-size: 1.6em;
@@ -293,29 +429,55 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            width: 45px;
+            justify-content: flex-end;
+            width: 48px;
             height: 42px;
-            background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center top;
             border-radius: 6px;
-            border: 1px solid #0d47a1;
+            border: 1px solid #4a4a4a;
             box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+            padding-bottom: 3px;
+        }
+        .bye-week-column::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 5px;
+            z-index: 1;
         }
         .bye-label {
-            font-size: 0.6em;
+            font-size: 0.5em;
             font-weight: 600;
             color: #fff;
             text-transform: uppercase;
             line-height: 1;
             margin: 0;
+            position: relative;
+            z-index: 2;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.9);
         }
         .bye-number {
-            font-size: 1.4em;
+            font-size: 1em;
             font-weight: bold;
             color: #fff;
             line-height: 1;
             margin: 0;
             font-family: 'Courier New', monospace;
+            position: relative;
+            z-index: 2;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.9);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 3px 7px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
         .stat-passing .stat-label {
             color: #64b5f6;
@@ -330,10 +492,10 @@
             color: #a5d6a7;
         }
         .stat-receiving .stat-label {
-            color: #ffb74d;
+            color: #ffd54f;
         }
         .stat-receiving .stat-value {
-            color: #ffcc02;
+            color: #fff59d;
         }
         .stat-kicking .stat-label {
             color: #f06292;
@@ -351,7 +513,7 @@
             font-size: 1em;
             font-weight: bold;
             color: #4caf50;
-            text-align: center;
+            text-align: right;
             min-width: 45px;
             flex-shrink: 0;
         }
@@ -450,6 +612,14 @@
     <div id="main-content" class="main-content main-content-hidden">
       <div class="roster-section">
         <h2 id="team-name">Team Roster</h2>
+        <div class="roster-header">
+          <div class="header-player"></div>
+          <div class="header-position">Pos</div>
+          <div class="header-name">Player</div>
+          <div class="header-bye">Bye</div>
+          <div class="header-stats">Statistics</div>
+          <div class="header-price">Price</div>
+        </div>
         <div id="player-list" class="player-list">
           <!-- Players will be populated here -->
         </div>
@@ -579,6 +749,43 @@
             }
         }
 
+        function getStatTooltip(label) {
+            const tooltips = {
+                // Passing
+                'Comp': 'Completions',
+                'Att': 'Pass Attempts',
+                'Yds': 'Passing Yards',
+                'TD': 'Passing Touchdowns',
+                'INT': 'Interceptions',
+                '%': 'Completion Percentage',
+                'Rate': 'Passer Rating',
+                'Sacks': 'Times Sacked',
+                
+                // Rushing
+                'Car': 'Carries',
+                'RYds': 'Rushing Yards',
+                'RTD': 'Rushing Touchdowns',
+                'Avg': 'Yards per Carry',
+                'Long': 'Longest Run',
+                'Fum': 'Fumbles',
+                
+                // Receiving
+                'Rec': 'Receptions',
+                'RecYds': 'Receiving Yards',
+                'RecTD': 'Receiving Touchdowns',
+                'Tgt': 'Targets',
+                
+                // Kicking
+                'FGM': 'Field Goals Made',
+                'FGA': 'Field Goals Attempted',
+                'XPM': 'Extra Points Made',
+                'XPA': 'Extra Points Attempted',
+                'Pts': 'Total Points Scored'
+            };
+            
+            return tooltips[label] || label;
+        }
+        
         function formatPlayerStats(playerId) {
             // Very defensive - handle any missing data gracefully
             try {
@@ -862,7 +1069,8 @@
                         valueRow += '<td class="stat-separator-col"></td>';
                     } else {
                         const cssClass = `stat-${col.type}`;
-                        labelRow += `<td class="${cssClass}"><div class="stat-label">${col.label}</div></td>`;
+                        const tooltip = getStatTooltip(col.label);
+                        labelRow += `<td class="${cssClass}"><div class="stat-label" title="${tooltip}">${col.label}</div></td>`;
                         valueRow += `<td class="${cssClass}"><div class="stat-value">${col.value}</div></td>`;
                     }
                 }
@@ -890,12 +1098,12 @@
             return null; // No bye week found for this team
         }
 
-        function formatByeWeek(byeWeek) {
+        function formatByeWeek(byeWeek, teamAbbr) {
             if (!byeWeek || typeof byeWeek !== 'number') {
                 return '';
             }
-            return `<div class="bye-week-column">
-                <div class="bye-label">Bye</div>
+            const teamLogoUrl = getTeamLogoUrl(teamAbbr);
+            return `<div class="bye-week-column" style="background-image: url('${teamLogoUrl}')">
                 <div class="bye-number">${byeWeek}</div>
             </div>`;
         }
@@ -951,7 +1159,31 @@
                 return a.pick.pick_id - b.pick.pick_id;
             });
             
-            playerList.innerHTML = sortedPicks.map(pick => {
+            // Group players by position
+            const positionOrder = ['QB', 'RB', 'WR', 'TE', 'K', 'D/ST'];
+            const playersByPosition = {};
+            
+            sortedPicks.forEach(pick => {
+                const position = pick.player.position;
+                if (!playersByPosition[position]) {
+                    playersByPosition[position] = [];
+                }
+                playersByPosition[position].push(pick);
+            });
+            
+            let html = '';
+            let isFirstGroup = true;
+            
+            positionOrder.forEach(position => {
+                if (playersByPosition[position] && playersByPosition[position].length > 0) {
+                    // Add separator between position groups
+                    if (!isFirstGroup) {
+                        html += '<div class="position-separator"></div>';
+                    }
+                    isFirstGroup = false;
+                    
+                    // Add players in this position group
+                    html += playersByPosition[position].map(pick => {
                 const player = pick.player;
                 
                 // Use team logo for defenses, player headshot for individuals
@@ -971,7 +1203,7 @@
                 } else {
                     byeWeek = playerStats[player.id]?.bye_week;
                 }
-                const byeWeekHtml = formatByeWeek(byeWeek);
+                const byeWeekHtml = formatByeWeek(byeWeek, player.team);
                 
                 // Display "DST" instead of "D/ST" for better fit
                 const displayPosition = player.position === 'D/ST' ? 'DST' : player.position;
@@ -979,13 +1211,13 @@
                 
                 return `
                     <div class="player-card">
-                        <img src="${imageUrl}" alt="${player.last_name}" class="player-image" onerror="this.style.display='none'">
+                        <div class="player-image-container">
+                            <img src="${teamLogoUrl}" alt="${player.team}" class="player-image-background" title="${player.team}">
+                            <img src="${imageUrl}" alt="${player.last_name}" class="player-image" onerror="this.style.display='none'">
+                        </div>
                         <span class="player-position position-${cssPositionClass}">${displayPosition}</span>
                         <div class="player-info">
                             <div class="player-name">${player.first_name} ${player.last_name}</div>
-                            <div class="player-meta">
-                                <img src="${teamLogoUrl}" alt="${player.team}" class="player-team-logo" title="${player.team}">
-                            </div>
                             ${byeWeekHtml}
                             <div class="player-stats">
                                 ${formatPlayerStats(player.id)}
@@ -994,7 +1226,11 @@
                         <div class="player-price">$${pick.pick.price}</div>
                     </div>
                 `;
-            }).join('');
+                    }).join('');
+                }
+            });
+            
+            playerList.innerHTML = html;
         }
 
         function displayTeamSummary(teamData, owner) {
@@ -1029,6 +1265,9 @@
                     <span class="summary-label">Players Drafted</span>
                     <span class="summary-value">${teamData.picks.length} / ${config.total_rounds}</span>
                 </div>
+                <div class="summary-progress">
+                    <div class="summary-progress-bar" style="width: ${(teamData.picks.length / config.total_rounds) * 100}%"></div>
+                </div>
                 <div class="summary-item">
                     <span class="summary-label">Remaining Picks</span>
                     <span class="summary-value">${remainingPicks}</span>
@@ -1040,12 +1279,30 @@
             positionDiv.innerHTML = positions.map(position => {
                 const current = positionCounts[position] || 0;
                 const max = config.position_maximums[position] || 0;
+                const percentage = max > 0 ? (current / max) * 100 : 0;
                 const statusClass = current >= max ? 'at-max' : 'under-max';
+                
+                // Determine bar color based on fill percentage
+                let barClass = 'progress-bar-normal';
+                if (percentage >= 100) {
+                    barClass = 'progress-bar-full';
+                } else if (percentage >= 75) {
+                    barClass = 'progress-bar-warning';
+                }
+                
+                // Use same position class for consistency
+                const displayPosition = position === 'D/ST' ? 'DST' : position;
+                const cssPositionClass = position === 'D/ST' ? 'DST' : position;
                 
                 return `
                     <div class="position-item">
-                        <div class="position-name">${position}</div>
-                        <div class="position-count ${statusClass}">${current} / ${max}</div>
+                        <div class="position-header">
+                            <span class="position-badge position-${cssPositionClass}">${displayPosition}</span>
+                            <div class="position-count ${statusClass}">${current} / ${max}</div>
+                        </div>
+                        <div class="position-progress">
+                            <div class="position-progress-bar ${barClass}" style="width: ${Math.min(percentage, 100)}%"></div>
+                        </div>
                     </div>
                 `;
             }).join('');
