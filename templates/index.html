@@ -92,11 +92,11 @@
             align-items: center;
         }
         .nomination-panel {
-            background: #2d2d2d;
-            border: 1px solid #404040;
+            background: linear-gradient(135deg, #2f2f2f 0%, #2a2a2a 100%);
+            border: 2px solid #4a90e2;
             padding: 18px;
             border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3), 0 0 20px rgba(74, 144, 226, 0.2);
             height: 100%;
             display: flex;
             align-items: center;
@@ -349,17 +349,40 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            position: relative;
+            overflow: visible;
         }
-        .team.next-to-nominate {
-            background: linear-gradient(135deg, #1f3a2d 0%, #175027 100%);
-            border: 2px solid #4caf50;
-            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        
+        .team-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            z-index: 10;
         }
-        .team.done {
-            background: linear-gradient(135deg, #3a1f1f 0%, #2f1717 100%);
-            border: 2px solid #d32f2f;
-            box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
-            opacity: 0.7;
+        
+        .team-badge.next-up {
+            background: linear-gradient(135deg, #4a7c59 0%, #5fb572 100%);
+            color: white;
+            border: 1px solid #5fb572;
+            animation: pulse-subtle 2s infinite;
+        }
+        
+        .team-badge.done {
+            background: linear-gradient(135deg, #d32f2f 0%, #e74c3c 100%);
+            color: white;
+            border: 1px solid #e74c3c;
+        }
+        
+        @keyframes pulse-subtle {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.9; transform: scale(1.05); }
         }
         .team-name {
             margin: 0 0 3px 0;
@@ -378,79 +401,94 @@
             line-height: 1.1;
         }
         .team-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin: 0;
             font-size: 0.9em;
-            color: #c0c0c0;
             line-height: 1.1;
+            padding: 0 5px;
         }
         .budget-amount {
-            color: #4caf50;
-            font-weight: bold;
+            color: #10b981;
+            font-weight: 600;
         }
         .budget-amount.low {
-            color: #ff9800;
+            color: #f59e0b;
         }
         .budget-amount.critical {
-            color: #f44336;
+            color: #ef4444;
         }
-        .roster-progress {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: conic-gradient(var(--progress-color) 0deg, var(--progress-color) var(--progress), #2a2a2a var(--progress), #2a2a2a 360deg);
-            border: 2px solid #404040;
-            display: inline-block;
-            vertical-align: middle;
-            position: relative;
-            cursor: help;
+        .roster-count {
+            color: #9ca3af;
+            font-weight: 500;
+        }
+        .roster-count.complete {
+            color: #10b981;
         }
         .team-bid-controls {
-            margin-top: 8px;
+            margin-top: 6px;
             visibility: hidden;
             align-self: stretch;
+            display: flex;
+            justify-content: center;
+            gap: 3px;
         }
         .team-bid-controls.visible {
             visibility: visible;
         }
         .team-bid-input {
-            width: 60px;
-            padding: 4px;
-            border: 1px solid #4a4a4a;
-            border-radius: 3px;
-            font-size: 0.8em;
+            width: 40px;
+            padding: 3px 4px;
+            border: 1px solid #3a3a3a;
+            border-radius: 3px 0 0 3px;
+            font-size: 0.75em;
             text-align: center;
-            background: #2a2a2a;
+            background: #1f1f1f;
             color: #e0e0e0;
-            margin-right: 4px;
+            border-right: none;
         }
         .team-bid-button {
-            background: #8b7ba3;
-            color: white;
-            border: none;
-            padding: 4px 8px;
-            border-radius: 3px;
+            background: #4a4a4a;
+            color: #c0c0c0;
+            border: 1px solid #5a5a5a;
+            padding: 3px 8px;
+            border-radius: 0 3px 3px 0;
             cursor: pointer;
             font-size: 0.7em;
+            font-weight: 500;
+            transition: all 0.15s ease;
         }
         .team-bid-button:hover {
-            background: #6f5f82;
+            background: #5a5a5a;
+            color: #ffffff;
+            border-color: #6a6a6a;
         }
         .team-bid-button:disabled {
-            background: #5a5a5a;
+            background: #3a3a3a;
+            color: #6a6a6a;
             cursor: not-allowed;
+            opacity: 0.5;
         }
         .team-bid-button.current-bidder {
-            position: relative;
-        }
-        .team-bid-button.current-bidder::after {
-            content: "✓";
+            background: #2d5a2d;
             color: #4caf50;
-            font-weight: bold;
-            font-size: 1.8em;
-            position: absolute;
-            right: -25px;
-            top: 50%;
-            transform: translateY(-50%);
+            border: 1px solid #4caf50;
+            font-weight: 600;
+        }
+        .team-bid-button.current-bidder:hover {
+            background: #3a6b3a;
+        }
+        .team:hover .team-bid-controls.visible {
+            opacity: 1;
+        }
+        .team:not(:hover) .team-bid-controls.visible {
+            opacity: 0.7;
+        }
+        .team.clickable-for-bid:hover {
+            background: linear-gradient(135deg, #353535 0%, #2a2a2a 100%);
+            border-color: #555;
+            transform: translateY(-1px);
         }
         .drafted-players-panel {
             background: #2d2d2d;
@@ -479,10 +517,10 @@
             background: #1a1a1a;
             padding: 12px;
             border-radius: 8px;
-            border: 1px solid #404040;
+            border: 1px solid #353535;
             height: 100%;
             overflow-y: auto;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.15);
             /* Hide scrollbar */
             scrollbar-width: none; /* Firefox */
             -ms-overflow-style: none; /* Internet Explorer 10+ */
@@ -544,30 +582,24 @@
             background: #4a3d47 !important;  /* Bright burgundy */
             border: 2px solid #9f5f75 !important;
         }
-        /* Subtle position-based colors */
+        /* Position-based colored borders for better contrast */
         .drafted-player.position-QB {
-            background: linear-gradient(135deg, #2a2a2a 0%, #3d2e52 100%);  /* Purple tint */
-            border-color: #5a4a75;
+            border-left: 3px solid #7b6bb5;  /* Purple */
         }
         .drafted-player.position-RB {
-            background: linear-gradient(135deg, #2a2a2a 0%, #2d403a 100%);  /* Green tint */
-            border-color: #426055;
+            border-left: 3px solid #5fb572;  /* Green */
         }
         .drafted-player.position-WR {
-            background: linear-gradient(135deg, #2a2a2a 0%, #423a2d 100%);  /* Yellow/gold tint */
-            border-color: #605542;
+            border-left: 3px solid #b5a55f;  /* Gold */
         }
         .drafted-player.position-TE {
-            background: linear-gradient(135deg, #2a2a2a 0%, #42312a 100%);  /* Orange tint */
-            border-color: #604a42;
+            border-left: 3px solid #b5725f;  /* Orange */
         }
         .drafted-player.position-K {
-            background: linear-gradient(135deg, #2a2a2a 0%, #2d3a42 100%);  /* Blue tint */
-            border-color: #425560;
+            border-left: 3px solid #5f82b5;  /* Blue */
         }
         .drafted-player.position-DEF {
-            background: linear-gradient(135deg, #2a2a2a 0%, #3d2d35 100%);  /* Red/burgundy tint */
-            border-color: #5a424a;
+            border-left: 3px solid #e74c3c;  /* Bright red */
         }
         .drafted-player-name {
             font-size: 0.85em;
@@ -675,7 +707,7 @@
         .stat-value {
             color: #e0e0e0;
             font-weight: 600;
-            font-size: 1.1em;
+            font-size: 1.3em;
         }
         .message-hidden {
             display: none;
@@ -1288,7 +1320,7 @@
                             <img src="${imageUrl}" alt="${player.last_name}" class="nominated-player-image" onerror="this.style.display='none'">
                         </div>
                         <div class="nominated-player-info">
-                            <div class="nominated-player-name"><span class="position-badge position-${player.position === 'D/ST' ? 'DEF' : player.position}">${player.position}</span> ${player.last_name}, ${player.first_name}</div>
+                            <div class="nominated-player-name"><span class="position-badge position-${player.position === 'D/ST' ? 'DEF' : player.position}">${player.position}</span> ${player.position === 'D/ST' ? `${player.first_name} ${player.last_name}` : `${player.last_name}, ${player.first_name}`}</div>
                         </div>
                         <div class="nominated-player-stats">
                             <div class="stats-table">
@@ -1538,17 +1570,27 @@
             // Check if there's an active nomination to show bid controls
             const hasNomination = nominated !== null;
             
+            let tabIndex = 1; // Start tabindex counter
+            
             teams.forEach(team => {
                 const owner = owners.find(o => o.id === team.owner_id);
                 const teamDiv = document.createElement('div');
+                teamDiv.className = 'team';
                 
-                let teamClass = 'team';
-                if (doneTeams.has(team.owner_id)) {
-                    teamClass += ' done';
+                // Determine if roster is full
+                const rosterLimit = config ? config.total_rounds : 16;
+                const isRosterFull = team.picks.length >= rosterLimit;
+                
+                // Check if team is done (either marked done or roster full)
+                const isDone = doneTeams.has(team.owner_id) || isRosterFull;
+                
+                // Determine badge status
+                let badgeHTML = '';
+                if (isDone) {
+                    badgeHTML = '<span class="team-badge done">DONE</span>';
                 } else if (team.owner_id === nextToNominate) {
-                    teamClass += ' next-to-nominate';
+                    badgeHTML = '<span class="team-badge next-up">NEXT UP</span>';
                 }
-                teamDiv.className = teamClass;
                 
                 // Get minimum bid amount
                 let minBid = 1;
@@ -1560,29 +1602,82 @@
                 const isCurrentBidder = hasNomination && nominated && nominated.current_bidder_id === team.owner_id;
                 const bidButtonClass = isCurrentBidder ? 'team-bid-button current-bidder' : 'team-bid-button';
                 
+                // Only show bid controls if team is not done and there's an active nomination
+                const showBidControls = hasNomination && !isDone;
+                
+                // Check if team can actually place a bid (has sufficient budget)
+                const canBid = showBidControls && team.budget_remaining >= minBid;
+                
+                // Assign tabindex for teams that can bid, increment counter
+                const inputTabIndex = canBid ? tabIndex++ : -1;
+                
                 teamDiv.innerHTML = `
+                    ${badgeHTML}
                     <div class="team-name" id="team-name-${team.owner_id}" title="${owner ? owner.owner_name : 'Unknown Owner'} - ${team.picks.length} players, $${team.budget_remaining} remaining">${owner ? owner.team_name : 'Unknown Team'}</div>
                     <div class="owner-name">${owner ? owner.owner_name : 'Unknown Owner'}</div>
-                    <div class="team-stats"><span class="budget-amount ${getBudgetClass(team.budget_remaining)}" title="Budget: $${team.budget_remaining} remaining">$${team.budget_remaining}</span> | <span class="roster-progress" style="--progress: ${getRosterProgressDegrees(team.picks.length)}deg; --progress-color: ${getRosterProgressColor(team.picks.length)}" title="Roster: ${team.picks.length} / ${config ? config.total_rounds : '?'} players drafted"></span></div>
-                    <div class="team-bid-controls ${hasNomination ? 'visible' : ''}">
-                        <input type="number" class="team-bid-input" value="${minBid}" min="${minBid}" id="bid-input-${team.owner_id}" title="Enter bid amount (minimum $${minBid})">
-                        <button class="${bidButtonClass}" onclick="placeBidForOwner(${team.owner_id})" ${team.budget_remaining < minBid ? 'disabled' : ''} title="${team.budget_remaining < minBid ? 'Insufficient budget for minimum bid' : 'Place bid for this team'}">Bid</button>
+                    <div class="team-stats">
+                        <span class="budget-amount ${getBudgetClass(team.budget_remaining)}" title="Budget: $${team.budget_remaining} remaining">$${team.budget_remaining}</span>
+                        <span class="roster-count ${team.picks.length >= (config ? config.total_rounds : 16) ? 'complete' : ''}" title="Roster: ${team.picks.length} / ${config ? config.total_rounds : '?'} players drafted">${team.picks.length}/${config ? config.total_rounds : '16'}</span>
+                    </div>
+                    <div class="team-bid-controls ${showBidControls ? 'visible' : ''}">
+                        <input type="number" class="team-bid-input" value="${minBid}" min="${minBid}" id="bid-input-${team.owner_id}" title="Enter bid amount" tabindex="${inputTabIndex}">
+                        <button class="${bidButtonClass}" onclick="placeBidForOwner(${team.owner_id})" ${team.budget_remaining < minBid ? 'disabled' : ''} title="${team.budget_remaining < minBid ? 'Insufficient budget' : 'Place bid'}">Bid</button>
                     </div>
                 `;
                 list.appendChild(teamDiv);
                 
-                // Add event listener for bid input changes
-                if (hasNomination) {
+                // Add click handler to focus bid input when clicking anywhere on team card
+                if (canBid) {
+                    teamDiv.classList.add('clickable-for-bid');
+                    teamDiv.addEventListener('click', (e) => {
+                        // Don't interfere if they clicked directly on the input or button
+                        if (e.target.classList.contains('team-bid-input') || e.target.classList.contains('team-bid-button')) {
+                            return;
+                        }
+                        
+                        const bidInput = document.getElementById(`bid-input-${team.owner_id}`);
+                        if (bidInput) {
+                            bidInput.focus();
+                            bidInput.select(); // Select all text for easy replacement
+                        }
+                    });
+                    
+                    // Add visual hover indicator for clickable teams
+                    teamDiv.style.cursor = 'pointer';
+                }
+                
+                // Add event listener for bid input changes (only for teams that aren't done)
+                if (showBidControls) {
                     const bidInput = document.getElementById(`bid-input-${team.owner_id}`);
                     if (bidInput) {
                         bidInput.addEventListener('input', () => {
                             updateBidButtonState(team.owner_id, teams, nominated);
                         });
+                        // Allow Enter key to submit bid
+                        bidInput.addEventListener('keypress', (e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                placeBidForOwner(team.owner_id);
+                            }
+                        });
                         // Initial validation
                         updateBidButtonState(team.owner_id, teams, nominated);
                     }
                 }
-                
+            });
+            
+            // Focus first available bid input if there's a nomination
+            if (hasNomination) {
+                setTimeout(() => {
+                    const firstBidInput = document.querySelector('.team-bid-input[tabindex="1"]');
+                    if (firstBidInput) {
+                        firstBidInput.focus();
+                        firstBidInput.select(); // Select the default value for easy replacement
+                    }
+                }, 100);
+            }
+            
+            teams.forEach(team => {
                 // Auto-resize team name if it would wrap
                 setTimeout(() => {
                     const nameElement = document.getElementById(`team-name-${team.owner_id}`);
@@ -1653,7 +1748,7 @@
                         positionPlayers.forEach(({ pick, player }) => {
                             const playerDiv = document.createElement('div');
                             const isNewlyDrafted = isNewDraft && pick.player_id === mostRecentPlayerId;
-                            const positionClass = `position-${player.position}`;
+                            const positionClass = `position-${player.position === 'D/ST' ? 'DEF' : player.position}`;
                             playerDiv.className = isNewlyDrafted 
                                 ? `drafted-player ${positionClass} newly-drafted` 
                                 : `drafted-player ${positionClass}`;
@@ -1740,6 +1835,31 @@
             }
         }
 
+        async function quickBid(ownerId, bidAmount) {
+            try {
+                const response = await fetch('/api/v1/bid', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        owner_id: ownerId,
+                        bid_amount: bidAmount,
+                        expected_version: currentVersion
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    currentVersion = result.version;
+                    refreshData();
+                } else {
+                    const error = await response.json();
+                    showMessage(error.detail || 'Failed to place bid', 'error');
+                }
+            } catch (err) {
+                showMessage('Network error: ' + err.message, 'error');
+            }
+        }
+        
         async function placeBidForOwner(ownerId) {
             const bidInput = document.getElementById(`bid-input-${ownerId}`);
             const bid = parseInt(bidInput.value);
