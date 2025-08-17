@@ -83,9 +83,9 @@
         }
         .status-panel {
             background: #2d2d2d;
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            padding: 18px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             border: 1px solid #404040;
             height: 100%;
             display: flex;
@@ -94,9 +94,9 @@
         .nomination-panel {
             background: #2d2d2d;
             border: 1px solid #404040;
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            padding: 18px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             height: 100%;
             display: flex;
             align-items: center;
@@ -107,16 +107,35 @@
             width: auto;
             align-self: center;
         }
+        .nominated-player-image-container {
+            max-height: calc(8vh - 30px);
+            width: auto;
+            border-radius: 8px;
+            flex-shrink: 0;
+            background: #1a1a1a;
+            position: relative;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            overflow: hidden;
+        }
+        .nominated-player-image-container::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            pointer-events: none;
+        }
         .nominated-player-image {
             max-height: calc(8vh - 30px);
             width: auto;
             object-fit: contain;
             border-radius: 8px;
-            flex-shrink: 0;
-            border: 3px solid #4a90e2;
-            box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
-            background: #1a1a1a;
-            padding: 4px;
+            position: relative;
+            z-index: 2;
         }
         .nominated-player-info {
             flex: 1 1 auto;
@@ -127,10 +146,47 @@
             justify-content: center;
         }
         .nominated-player-name {
-            font-size: 1.3em;
+            font-size: 1.6em;
             font-weight: bold;
             color: #e0e0e0;
-            margin-bottom: 4px;
+            margin-bottom: 8px;
+        }
+        .position-badge {
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: 600;
+            margin-right: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .position-badge.position-QB {
+            background: #7b6bb5; /* Bright purple */
+            border: 1px solid #9b8bd5;
+        }
+        .position-badge.position-RB {
+            background: #5fb572; /* Bright green */
+            border: 1px solid #7fc592;
+            color: #2a2a2a; /* Dark text for readability */
+        }
+        .position-badge.position-WR {
+            background: #b5a55f; /* Bright gold */
+            border: 1px solid #d5c57f;
+            color: #2a2a2a; /* Dark text for readability */
+        }
+        .position-badge.position-TE {
+            background: #b5725f; /* Bright orange */
+            border: 1px solid #d5927f;
+            color: #2a2a2a; /* Dark text for readability */
+        }
+        .position-badge.position-K {
+            background: #5f82b5; /* Bright blue */
+            border: 1px solid #7fa2d5;
+        }
+        .position-badge.position-DEF {
+            background: #9f5f75; /* Bright burgundy */
+            border: 1px solid #bf7f95;
         }
         .nominated-player-details {
             font-size: 1em;
@@ -185,7 +241,7 @@
         .teams-horizontal {
             display: grid;
             grid-template-columns: repeat(10, 1fr);
-            gap: 3px;
+            gap: 6px;
             width: 100%;
             height: 12vh;
             padding: 15px;
@@ -283,9 +339,9 @@
         }
         .team {
             background: linear-gradient(135deg, #2d2d2d 0%, #252525 100%);
-            padding: 8px;
-            border-radius: 6px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.3);
             height: 100%;
             text-align: center;
             transition: all 0.3s ease;
@@ -399,43 +455,65 @@
         .drafted-players-panel {
             background: #2d2d2d;
             padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             border: 1px solid #404040;
             height: calc(80vh - 15px - 42px);
             margin: 0 15px;
             overflow-y: auto;
+            /* Hide scrollbar */
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* Internet Explorer 10+ */
+        }
+        .drafted-players-panel::-webkit-scrollbar {
+            display: none; /* WebKit */
         }
         .drafted-players-grid {
             display: grid;
             grid-template-columns: repeat(10, 1fr);
-            gap: 3px;
+            gap: 8px;
             align-items: stretch;
             height: 100%;
         }
         .team-roster {
             background: #1a1a1a;
-            padding: 8px;
-            border-radius: 6px;
+            padding: 12px;
+            border-radius: 8px;
             border: 1px solid #404040;
             height: 100%;
             overflow-y: auto;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            /* Hide scrollbar */
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* Internet Explorer 10+ */
         }
-        .team-roster h4 {
-            margin: 0 0 8px 0;
-            font-size: 0.9em;
-            color: #e0e0e0;
-            text-align: center;
-            border-bottom: 1px solid #404040;
-            padding-bottom: 4px;
+        .team-roster::-webkit-scrollbar {
+            display: none; /* WebKit */
         }
         .drafted-player {
             background: #2a2a2a;
-            padding: 6px;
-            margin-bottom: 4px;
-            border-radius: 4px;
+            padding: 8px;
+            margin-bottom: 6px;
+            border-radius: 6px;
             border: 1px solid #404040;
-            transition: background-color 2s ease, border-color 2s ease;
+            transition: all 0.3s ease;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+        }
+        .drafted-player-image {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #404040;
+            flex-shrink: 0;
+        }
+        .drafted-player-info {
+            flex: 1;
+            min-width: 0;
         }
         .drafted-player.newly-drafted {
             background: #1f3a2d;
@@ -492,14 +570,20 @@
             border-color: #5a424a;
         }
         .drafted-player-name {
-            font-size: 0.8em;
-            font-weight: bold;
-            color: #e0e0e0;
+            font-size: 0.85em;
+            font-weight: 600;
+            color: #f0f0f0;
             margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .drafted-player-details {
-            font-size: 0.7em;
-            color: #d0d0d0;
+            font-size: 0.75em;
+            color: #c0c0c0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .error {
             background: #4a1f1f;
@@ -543,6 +627,55 @@
             align-items: center;
             gap: 20px;
             width: 100%;
+        }
+        .nominated-player-stats {
+            background: linear-gradient(135deg, #2a2a2a 0%, #1f1f1f 100%);
+            border: 1px solid #404040;
+            border-radius: 8px;
+            padding: 12px;
+            min-width: 350px;
+            flex-shrink: 0;
+        }
+        .nominated-player-stats h4 {
+            margin: 0 0 8px 0;
+            color: #4a90e2;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #404040;
+            padding-bottom: 4px;
+        }
+        .stats-table {
+            width: 100%;
+            font-size: 0.75em;
+        }
+        .stats-header {
+            display: flex;
+            width: 100%;
+            padding-bottom: 4px;
+            border-bottom: 1px solid #404040;
+            margin-bottom: 4px;
+        }
+        .stats-values {
+            display: flex;
+            width: 100%;
+        }
+        .stat-column {
+            flex: 1;
+            text-align: center;
+            padding: 0 4px;
+        }
+        .stat-header {
+            color: #b0b0b0;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.9em;
+            letter-spacing: 0.3px;
+        }
+        .stat-value {
+            color: #e0e0e0;
+            font-weight: 600;
+            font-size: 1.1em;
         }
         .message-hidden {
             display: none;
@@ -656,6 +789,8 @@
         
         .drafted-player:hover {
             background: #3a3a3a;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
     </style>
   </head>
@@ -789,8 +924,128 @@
         let highlightedIndex = -1;
         let lastDraftedPlayerId = null;
         let currentDraftState = null;
+        let playerStats = {};
 
         // NFL Team Logo URLs - using ESPN's CDN
+        function formatPlayerStats(playerId, position) {
+            try {
+                const stats = playerStats[playerId];
+                if (!stats || !stats.stats_summary) {
+                    return `
+                        <div class="stats-header">
+                            <div class="stat-column"><span class="stat-header">No 2024 Stats</span></div>
+                        </div>
+                        <div class="stats-values">
+                            <div class="stat-column"><span class="stat-value">-</span></div>
+                        </div>
+                    `;
+                }
+
+                // Parse detailed stats based on position
+                if (position === 'QB' && stats.passing) {
+                    const p = stats.passing;
+                    return `
+                        <div class="stats-header">
+                            <div class="stat-column"><span class="stat-header">Comp</span></div>
+                            <div class="stat-column"><span class="stat-header">Att</span></div>
+                            <div class="stat-column"><span class="stat-header">Yds</span></div>
+                            <div class="stat-column"><span class="stat-header">TD</span></div>
+                            <div class="stat-column"><span class="stat-header">Int</span></div>
+                            <div class="stat-column"><span class="stat-header">Rate</span></div>
+                        </div>
+                        <div class="stats-values">
+                            <div class="stat-column"><span class="stat-value">${p.completions}</span></div>
+                            <div class="stat-column"><span class="stat-value">${p.attempts}</span></div>
+                            <div class="stat-column"><span class="stat-value">${p.yards}</span></div>
+                            <div class="stat-column"><span class="stat-value">${p.tds}</span></div>
+                            <div class="stat-column"><span class="stat-value">${p.ints}</span></div>
+                            <div class="stat-column"><span class="stat-value">${p.rating || '--'}</span></div>
+                        </div>
+                    `;
+                } else if (position === 'RB' && (stats.rushing || stats.receiving)) {
+                    const r = stats.rushing || {};
+                    const rec = stats.receiving || {};
+                    return `
+                        <div class="stats-header">
+                            <div class="stat-column"><span class="stat-header">Car</span></div>
+                            <div class="stat-column"><span class="stat-header">Ryds</span></div>
+                            <div class="stat-column"><span class="stat-header">RTD</span></div>
+                            <div class="stat-column"><span class="stat-header">Rec</span></div>
+                            <div class="stat-column"><span class="stat-header">Recyds</span></div>
+                            <div class="stat-column"><span class="stat-header">Rectd</span></div>
+                        </div>
+                        <div class="stats-values">
+                            <div class="stat-column"><span class="stat-value">${r.carries || '--'}</span></div>
+                            <div class="stat-column"><span class="stat-value">${r.yards || '--'}</span></div>
+                            <div class="stat-column"><span class="stat-value">${r.tds || '--'}</span></div>
+                            <div class="stat-column"><span class="stat-value">${rec.receptions || '--'}</span></div>
+                            <div class="stat-column"><span class="stat-value">${rec.yards || '--'}</span></div>
+                            <div class="stat-column"><span class="stat-value">${rec.tds || '--'}</span></div>
+                        </div>
+                    `;
+                } else if ((position === 'WR' || position === 'TE') && stats.receiving) {
+                    const rec = stats.receiving;
+                    return `
+                        <div class="stats-header">
+                            <div class="stat-column"><span class="stat-header">Rec</span></div>
+                            <div class="stat-column"><span class="stat-header">Tgts</span></div>
+                            <div class="stat-column"><span class="stat-header">Yds</span></div>
+                            <div class="stat-column"><span class="stat-header">TD</span></div>
+                            <div class="stat-column"><span class="stat-header">Avg</span></div>
+                            <div class="stat-column"><span class="stat-header">Long</span></div>
+                        </div>
+                        <div class="stats-values">
+                            <div class="stat-column"><span class="stat-value">${rec.receptions}</span></div>
+                            <div class="stat-column"><span class="stat-value">${rec.targets}</span></div>
+                            <div class="stat-column"><span class="stat-value">${rec.yards}</span></div>
+                            <div class="stat-column"><span class="stat-value">${rec.tds}</span></div>
+                            <div class="stat-column"><span class="stat-value">${rec.avg || '--'}</span></div>
+                            <div class="stat-column"><span class="stat-value">${rec.long || '--'}</span></div>
+                        </div>
+                    `;
+                } else if (position === 'K' && stats.kicking) {
+                    const k = stats.kicking;
+                    return `
+                        <div class="stats-header">
+                            <div class="stat-column"><span class="stat-header">FGM</span></div>
+                            <div class="stat-column"><span class="stat-header">FGA</span></div>
+                            <div class="stat-column"><span class="stat-header">FG%</span></div>
+                            <div class="stat-column"><span class="stat-header">XPM</span></div>
+                            <div class="stat-column"><span class="stat-header">XPA</span></div>
+                            <div class="stat-column"><span class="stat-header">Pts</span></div>
+                        </div>
+                        <div class="stats-values">
+                            <div class="stat-column"><span class="stat-value">${k.fgm}</span></div>
+                            <div class="stat-column"><span class="stat-value">${k.fga}</span></div>
+                            <div class="stat-column"><span class="stat-value">${k.fg_pct}%</span></div>
+                            <div class="stat-column"><span class="stat-value">${k.xpm}</span></div>
+                            <div class="stat-column"><span class="stat-value">${k.xpa}</span></div>
+                            <div class="stat-column"><span class="stat-value">${k.points}</span></div>
+                        </div>
+                    `;
+                }
+
+                // Fallback to stats_summary for D/ST or when detailed stats unavailable
+                return `
+                    <div class="stats-header">
+                        <div class="stat-column"><span class="stat-header">2024 Season</span></div>
+                    </div>
+                    <div class="stats-values">
+                        <div class="stat-column"><span class="stat-value">${stats.stats_summary}</span></div>
+                    </div>
+                `;
+            } catch (error) {
+                return `
+                    <div class="stats-header">
+                        <div class="stat-column"><span class="stat-header">Error</span></div>
+                    </div>
+                    <div class="stats-values">
+                        <div class="stat-column"><span class="stat-value">--</span></div>
+                    </div>
+                `;
+            }
+        }
+
         function getTeamLogoUrl(teamAbbr) {
             const teamMappings = {
                 'ARI': 'https://a.espncdn.com/i/teamlogos/nfl/500/ari.png',
@@ -849,6 +1104,18 @@
                 // Load players
                 const playersResponse = await fetch('/api/v1/players');
                 players = await playersResponse.json();
+
+                // Load player stats
+                try {
+                    const statsResponse = await fetch('/api/v1/player/stats');
+                    if (statsResponse.ok) {
+                        playerStats = await statsResponse.json();
+                        console.log('Loaded player stats for', Object.keys(playerStats).length, 'players');
+                    }
+                } catch (error) {
+                    console.warn('Failed to load player stats:', error.message);
+                    playerStats = {};
+                }
                 
                 // Load owners
                 const ownersResponse = await fetch('/api/v1/owners');
@@ -1005,19 +1272,28 @@
                 const bidder = owners.find(o => o.id === nominated.current_bidder_id);
                 
                 if (player) {
+                    // Get team logo for background
+                    const teamLogoUrl = getTeamLogoUrl(player.team);
+                    
                     // Use team logo for defenses, player headshot for individual players
                     let imageUrl;
                     if (player.position === 'D/ST') {
-                        imageUrl = getTeamLogoUrl(player.team);
+                        imageUrl = teamLogoUrl;
                     } else {
                         imageUrl = `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${player.id}.png&w=350&h=254`;
                     }
                     
                     nominationDetails.innerHTML = `
-                        <img src="${imageUrl}" alt="${player.last_name}" class="nominated-player-image" onerror="this.style.display='none'">
+                        <div class="nominated-player-image-container" style="background-image: url(${teamLogoUrl});">
+                            <img src="${imageUrl}" alt="${player.last_name}" class="nominated-player-image" onerror="this.style.display='none'">
+                        </div>
                         <div class="nominated-player-info">
-                            <div class="nominated-player-name">${player.last_name}, ${player.first_name}</div>
-                            <div class="nominated-player-details">${player.position} - ${player.team}</div>
+                            <div class="nominated-player-name"><span class="position-badge position-${player.position === 'D/ST' ? 'DEF' : player.position}">${player.position}</span> ${player.last_name}, ${player.first_name}</div>
+                        </div>
+                        <div class="nominated-player-stats">
+                            <div class="stats-table">
+                                ${formatPlayerStats(player.id, player.position)}
+                            </div>
                         </div>
                         <div class="nominated-bidder-info">
                             <div class="nominated-bidder-name">${bidder ? bidder.team_name : 'Unknown'}</div>
@@ -1285,12 +1561,12 @@
                 const bidButtonClass = isCurrentBidder ? 'team-bid-button current-bidder' : 'team-bid-button';
                 
                 teamDiv.innerHTML = `
-                    <div class="team-name" id="team-name-${team.owner_id}">${owner ? owner.team_name : 'Unknown Team'}</div>
+                    <div class="team-name" id="team-name-${team.owner_id}" title="${owner ? owner.owner_name : 'Unknown Owner'} - ${team.picks.length} players, $${team.budget_remaining} remaining">${owner ? owner.team_name : 'Unknown Team'}</div>
                     <div class="owner-name">${owner ? owner.owner_name : 'Unknown Owner'}</div>
-                    <div class="team-stats"><span class="budget-amount ${getBudgetClass(team.budget_remaining)}">$${team.budget_remaining}</span> | <span class="roster-progress" style="--progress: ${getRosterProgressDegrees(team.picks.length)}deg; --progress-color: ${getRosterProgressColor(team.picks.length)}" title="${team.picks.length} / ${config ? config.total_rounds : '?'} players"></span></div>
+                    <div class="team-stats"><span class="budget-amount ${getBudgetClass(team.budget_remaining)}" title="Budget: $${team.budget_remaining} remaining">$${team.budget_remaining}</span> | <span class="roster-progress" style="--progress: ${getRosterProgressDegrees(team.picks.length)}deg; --progress-color: ${getRosterProgressColor(team.picks.length)}" title="Roster: ${team.picks.length} / ${config ? config.total_rounds : '?'} players drafted"></span></div>
                     <div class="team-bid-controls ${hasNomination ? 'visible' : ''}">
-                        <input type="number" class="team-bid-input" value="${minBid}" min="${minBid}" id="bid-input-${team.owner_id}">
-                        <button class="${bidButtonClass}" onclick="placeBidForOwner(${team.owner_id})" ${team.budget_remaining < minBid ? 'disabled' : ''}>Bid</button>
+                        <input type="number" class="team-bid-input" value="${minBid}" min="${minBid}" id="bid-input-${team.owner_id}" title="Enter bid amount (minimum $${minBid})">
+                        <button class="${bidButtonClass}" onclick="placeBidForOwner(${team.owner_id})" ${team.budget_remaining < minBid ? 'disabled' : ''} title="${team.budget_remaining < minBid ? 'Insufficient budget for minimum bid' : 'Place bid for this team'}">Bid</button>
                     </div>
                 `;
                 list.appendChild(teamDiv);
@@ -1344,45 +1620,76 @@
                 teamDiv.className = 'team-roster';
                 
                 teamDiv.innerHTML = `
-                    <h4>${owner ? owner.team_name : 'Unknown Team'}</h4>
                     <div id="roster-${team.owner_id}"></div>
                 `;
                 
-                // Add drafted players
+                // Add drafted players grouped by position
                 const rosterDiv = teamDiv.querySelector(`#roster-${team.owner_id}`);
+                
+                // Group players by position
+                const positionOrder = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
+                const playersByPosition = {};
+                
+                // Initialize position groups
+                positionOrder.forEach(pos => {
+                    playersByPosition[pos] = [];
+                });
+                
+                // Group picks by position
                 team.picks.forEach(pick => {
                     const player = players.find(p => p.id === pick.player_id);
                     if (player) {
-                        const playerDiv = document.createElement('div');
-                        const isNewlyDrafted = isNewDraft && pick.player_id === mostRecentPlayerId;
-                        const positionClass = `position-${player.position}`;
-                        playerDiv.className = isNewlyDrafted 
-                            ? `drafted-player ${positionClass} newly-drafted` 
-                            : `drafted-player ${positionClass}`;
-                        
-                        // Add data attributes for context menu
-                        playerDiv.dataset.pickId = pick.pick_id;
-                        playerDiv.dataset.playerId = pick.player_id;
-                        playerDiv.dataset.playerName = `${player.first_name} ${player.last_name}`;
-                        playerDiv.dataset.ownerId = team.owner_id;
-                        playerDiv.dataset.price = pick.price;
-                        
-                        playerDiv.innerHTML = `
-                            <div class="drafted-player-name">${player.first_name} ${player.last_name}</div>
-                            <div class="drafted-player-details">${player.position} - ${player.team} ($${pick.price})</div>
-                        `;
-                        
-                        // Add context menu event listener
-                        playerDiv.addEventListener('contextmenu', showContextMenu);
-                        
-                        rosterDiv.appendChild(playerDiv);
-                        
-                        // Remove the highlight after a brief delay
-                        if (isNewlyDrafted) {
-                            setTimeout(() => {
-                                playerDiv.classList.remove('newly-drafted');
-                            }, 1500);  // Increased from 100ms to 1.5s to make the flash more visible
+                        const position = player.position === 'D/ST' ? 'DEF' : player.position;
+                        if (playersByPosition[position]) {
+                            playersByPosition[position].push({ pick, player });
                         }
+                    }
+                });
+                
+                // Render players by position
+                positionOrder.forEach(position => {
+                    const positionPlayers = playersByPosition[position];
+                    if (positionPlayers.length > 0) {
+                        positionPlayers.forEach(({ pick, player }) => {
+                            const playerDiv = document.createElement('div');
+                            const isNewlyDrafted = isNewDraft && pick.player_id === mostRecentPlayerId;
+                            const positionClass = `position-${player.position}`;
+                            playerDiv.className = isNewlyDrafted 
+                                ? `drafted-player ${positionClass} newly-drafted` 
+                                : `drafted-player ${positionClass}`;
+                            
+                            // Add data attributes for context menu
+                            playerDiv.dataset.pickId = pick.pick_id;
+                            playerDiv.dataset.playerId = pick.player_id;
+                            playerDiv.dataset.playerName = `${player.first_name} ${player.last_name}`;
+                            playerDiv.dataset.ownerId = team.owner_id;
+                            playerDiv.dataset.price = pick.price;
+                            
+                            // Get team logo URL
+                            const teamLogoUrl = getTeamLogoUrl(player.team);
+                            
+                            playerDiv.title = `${player.first_name} ${player.last_name} - ${player.position}, ${player.team} - Drafted for $${pick.price} (Pick #${pick.pick_id})`;
+                            
+                            playerDiv.innerHTML = `
+                                <img src="${teamLogoUrl}" alt="${player.team}" class="drafted-player-image" onerror="this.style.display='none'">
+                                <div class="drafted-player-info">
+                                    <div class="drafted-player-name">${player.first_name} ${player.last_name}</div>
+                                    <div class="drafted-player-details">${player.position} ($${pick.price})</div>
+                                </div>
+                            `;
+                            
+                            // Add context menu event listener
+                            playerDiv.addEventListener('contextmenu', showContextMenu);
+                            
+                            rosterDiv.appendChild(playerDiv);
+                            
+                            // Remove the highlight after a brief delay
+                            if (isNewlyDrafted) {
+                                setTimeout(() => {
+                                    playerDiv.classList.remove('newly-drafted');
+                                }, 1500);
+                            }
+                        });
                     }
                 });
                 
