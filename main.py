@@ -4,14 +4,22 @@ import io
 import logging
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request, Header
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
-from src.models import Configuration, DraftPick, DraftState, Nominated, Owner, Player, Team
+from src.models import (
+    Configuration,
+    DraftPick,
+    DraftState,
+    Nominated,
+    Owner,
+    Player,
+    Team,
+)
 from src.models.player_stats import PlayerStatsCollection
 
 # Configure logging
@@ -308,11 +316,11 @@ async def get_available_players():
 
 @app.get("/api/v1/player/stats", response_model=PlayerStatsCollection)
 async def get_player_stats():
-    """Get player statistics and bye weeks. Returns empty collection if file doesn't exist."""
+    """Get player statistics and bye weeks. Returns empty collection if not found."""
     if not PLAYER_STATS_FILE.exists():
         logger.info("Player stats file not found, returning empty collection")
         return PlayerStatsCollection({})
-    
+
     try:
         with open(PLAYER_STATS_FILE) as f:
             data = f.read()
@@ -659,31 +667,33 @@ async def complete_draft(request: DraftRequest):
     owners = load_owners()
     owner_ids = sorted(owners.keys())  # Get ordered list of owner IDs
     config = load_configuration()
-    
+
     if owner_ids:
         current_idx = (
             owner_ids.index(draft_state.next_to_nominate)
             if draft_state.next_to_nominate in owner_ids
             else 0
         )
-        
+
         # Find next owner who can still draft (hasn't reached total_rounds picks)
         attempts = 0
         while attempts < len(owner_ids):
             next_idx = (current_idx + 1 + attempts) % len(owner_ids)
             next_owner_id = owner_ids[next_idx]
-            
+
             # Check if this owner has completed their roster
-            next_team = next((t for t in draft_state.teams if t.owner_id == next_owner_id), None)
+            next_team = next(
+                (t for t in draft_state.teams if t.owner_id == next_owner_id), None
+            )
             if next_team and len(next_team.picks) < config.total_rounds:
                 # This owner can still draft
                 draft_state.next_to_nominate = next_owner_id
                 break
-            
+
             attempts += 1
         else:
             # All owners have completed rosters, keep current nominator
-            # (This should rarely happen as the draft should end when all rosters are full)
+            # (This should rarely happen as draft should end when all rosters are full)
             pass
     else:
         draft_state.next_to_nominate = 1
@@ -807,7 +817,9 @@ async def admin_draft_player(request: AdminDraftRequest):
 # Admin endpoints
 @app.delete("/api/v1/nominate")
 async def cancel_nomination(
-    if_match: str = Header(..., description="ETag for optimistic locking (expected version)")
+    if_match: str = Header(
+        ..., description="ETag for optimistic locking (expected version)"
+    )
 ):
     """Cancel current nomination (admin action)."""
     # Load current state
@@ -859,8 +871,10 @@ async def cancel_nomination(
 
 @app.delete("/api/v1/draft/{pick_id}")
 async def remove_draft_pick(
-    pick_id: int, 
-    if_match: str = Header(..., description="ETag for optimistic locking (expected version)")
+    pick_id: int,
+    if_match: str = Header(
+        ..., description="ETag for optimistic locking (expected version)"
+    )
 ):
     """Remove a draft pick and restore player to available pool."""
     # Load current state
@@ -874,7 +888,7 @@ async def remove_draft_pick(
             status_code=400,
             detail="If-Match header must contain a valid version number"
         )
-    
+
     check_version(draft_state.version, expected_version)
 
     # Find the pick and team
@@ -991,6 +1005,10 @@ viewer_app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static files for viewer app (same as main app)
+if STATIC_DIR.exists() and any(STATIC_DIR.iterdir()):
+    viewer_app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
 # Team Viewer Routes

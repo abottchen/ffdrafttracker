@@ -281,7 +281,8 @@ Pydantic Models (Python) → FastAPI Endpoints → OpenAPI Schema
 - `nominated: Optional[Nominated]` - Currently nominated player (if any)
 - `available_player_ids: List[int]` - IDs of all undrafted players
 - `teams: List[Team]` - All teams with their rosters
-- `owner_id_next_to_nominate: int` - Owner ID of next person to nominate (in numerical order)
+- `next_to_nominate: int` - Owner ID of next person to nominate (in numerical order)
+- `version: int` - Version for optimistic locking (default 1)
 
 **ActionLog** (`action_log.py`): Audit trail for undo capability
 - `timestamp: datetime` - When the action occurred
@@ -333,7 +334,7 @@ Pydantic Models (Python) → FastAPI Endpoints → OpenAPI Schema
 **Nomination Order:**
 - Proceeds in numerical order by owner_id
 - Cycles back to lowest owner_id after highest
-- owner_id_next_to_nominate field tracks current turn
+- next_to_nominate field tracks current turn
 
 ## Expected State Flow
 

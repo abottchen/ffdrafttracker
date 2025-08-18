@@ -1,0 +1,197 @@
+/* Fantasy Football Draft Tracker - Common Styles */
+
+/* Base Styles */
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+    Cantarell, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #1a1a1a;
+  color: #e0e0e0;
+  box-sizing: border-box;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Button Styles */
+.button {
+  background: #8b7ba3;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin: 4px;
+  font-size: 0.9em;
+}
+
+.button:hover {
+  background: #6f5f82;
+}
+
+.button:disabled {
+  background: #5a5a5a;
+  cursor: not-allowed;
+}
+
+/* Message Styles */
+.error {
+  background: #4a1f1f;
+  color: #ff6b6b;
+  padding: 10px;
+  border-radius: 5px;
+  margin: 10px 0;
+  border: 1px solid #ff6b6b;
+}
+
+.success {
+  background: #1f4a2d;
+  color: #51cf66;
+  padding: 10px;
+  border-radius: 5px;
+  margin: 10px 0;
+  border: 1px solid #51cf66;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: #b0b0b0;
+  font-size: 1.2em;
+}
+
+/* Utility Classes */
+.error-hidden,
+.loading-hidden,
+.message-hidden {
+  display: none;
+}
+
+/* Form Input Styles */
+.team-select {
+  padding: 8px 12px;
+  border: 1px solid #4a4a4a;
+  border-radius: 5px;
+  background: #2a2a2a;
+  color: #e0e0e0;
+  margin-right: 10px;
+  font-size: 0.9em;
+}
+
+.team-select:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.3);
+}
+
+.price-input {
+  padding: 8px 12px;
+  border: 1px solid #4a4a4a;
+  border-radius: 5px;
+  background: #2a2a2a;
+  color: #e0e0e0;
+  font-size: 0.9em;
+  width: 100px;
+}
+
+.price-input:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.3);
+}
+
+/* Position Badge Styles */
+.position-badge {
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75em;
+  font-weight: 600;
+  margin-right: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.position-badge.position-QB {
+  background: #7b6bb5; /* Bright purple */
+  border: 1px solid #9b8bd5;
+}
+
+.position-badge.position-RB {
+  background: #5fb572; /* Bright green */
+  border: 1px solid #7fc592;
+  color: #2a2a2a; /* Dark text for readability */
+}
+
+.position-badge.position-WR {
+  background: #b5a55f; /* Bright gold */
+  border: 1px solid #d5c57f;
+  color: #2a2a2a; /* Dark text for readability */
+}
+
+.position-badge.position-TE {
+  background: #b5725f; /* Bright orange */
+  border: 1px solid #d5927f;
+  color: #2a2a2a; /* Dark text for readability */
+}
+
+.position-badge.position-K {
+  background: #5f82b5; /* Bright blue */
+  border: 1px solid #7fa2d5;
+}
+
+.position-badge.position-DEF,
+.position-badge.position-DST {
+  background: #9f5f75; /* Bright burgundy */
+  border: 1px solid #bf7f95;
+}
+
+/* Position-specific colors for backgrounds/cards */
+.position-QB {
+  background-color: #8b5a3c;
+}
+
+.position-RB {
+  background-color: #2d5a2d;
+}
+
+.position-WR {
+  background-color: #5a3c8b;
+}
+
+.position-TE {
+  background-color: #8b3c5a;
+}
+
+.position-K {
+  background-color: #5a5a3c;
+}
+
+.position-DST,
+.position-DEF {
+  background-color: #3c5a8b;
+}
+
+/* Common Panel Styles */
+.panel {
+  background: #2d2d2d;
+  padding: 15px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 1px solid #404040;
+}
+
+/* Form Styles */
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #e0e0e0;
+}
