@@ -101,16 +101,16 @@ def fetch_team_roster(team_abbr: str, url: str) -> list[dict]:
 
         player_id = int(match.group(1))
 
+        # Get player name from the link text
+        full_name = link.text.strip()
+        if not full_name:
+            continue
+
         # Skip if we've already processed this player
         if player_id in processed_ids:
             print(f"    DUPLICATE SKIPPED: {full_name} (ID: {player_id}) - {team_abbr}")
             continue
         processed_ids.add(player_id)
-
-        # Get player name from the link text
-        full_name = link.text.strip()
-        if not full_name:
-            continue
 
         # Split name into first and last
         name_parts = full_name.split(' ', 1)
@@ -151,31 +151,11 @@ def fetch_team_roster(team_abbr: str, url: str) -> list[dict]:
                         preceding_char = k_match.group(1)
                         # If preceded by a letter that could be part of a name, skip
                         if preceding_char.isalpha():
-                            if (
-                            "Bryan Cook" in full_name or
-                            "Harrison Butker" in full_name
-                        ):
-                                print(
-                                    f"  DEBUG {full_name}: K pattern found but "
-                                    f"preceded by letter '{preceding_char}', skipping"
-                                )
+                            pass  # Skip - K is likely part of a name, not a position
                         else:
                             position = POSITION_MAP['K'].value
-                            if (
-                            "Bryan Cook" in full_name or
-                            "Harrison Butker" in full_name
-                        ):
-                                print(
-                                    f"  DEBUG {full_name}: Matched K pattern -> "
-                                    f"position '{position}'"
-                                )
                     else:
                         position = POSITION_MAP['K'].value
-                        if (
-                            "Bryan Cook" in full_name or
-                            "Harrison Butker" in full_name
-                        ):
-                            print(f"  DEBUG {full_name}: Matched K pattern -> position '{position}'")
 
         # If no position found in table row, skip this player
         if not position:
@@ -334,7 +314,7 @@ def main():
     # Combine defenses and players
     all_players = defenses + players
 
-    # Sort players by last name, then first name (defenses will sort to top due to alphabetical city names)
+    # Sort players by last name, then first name (defenses sort to top alphabetically)
     all_players.sort(key=lambda p: (p['last_name'], p['first_name']))
 
     # Write to players.json
