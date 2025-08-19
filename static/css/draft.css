@@ -18,27 +18,27 @@ body {
 
 /* Draft Progress */
 .draft-progress-container {
-  background: #2d2d2d;
+  background: var(--bg-secondary);
   padding: 5px 10px;
-  border-radius: 6px;
+  border-radius: var(--radius-card);
   margin-bottom: 0;
-  border: 1px solid #404040;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-card);
 }
 
 .draft-progress-bar-container {
   width: 100%;
   height: 20px;
-  background: #1a1a1a;
+  background: var(--bg-primary);
   border-radius: 10px;
   overflow: hidden;
   position: relative;
-  border: 1px solid #404040;
+  border: 1px solid var(--border-primary);
 }
 
 .draft-progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, #4a90e2 0%, #51cf66 100%);
+  background: linear-gradient(90deg, var(--accent-primary) 0%, #51cf66 100%);
   border-radius: 10px;
   transition: width 0.5s ease;
   display: flex;
@@ -108,11 +108,11 @@ body {
 
 /* Status Panel */
 .status-panel {
-  background: #2d2d2d;
+  background: var(--bg-secondary);
   padding: 18px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  border: 1px solid #404040;
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-panel);
+  border: 1px solid var(--border-primary);
   height: 100%;
   min-height: calc(8vh - 10px);
   max-height: calc(8vh - 10px);
@@ -123,8 +123,8 @@ body {
 
 /* Nomination Panel */
 .nomination-panel {
-  background: linear-gradient(135deg, #2f2f2f 0%, #2a2a2a 100%);
-  border: 2px solid #4a90e2;
+  background: linear-gradient(135deg, #2f2f2f 0%, var(--bg-tertiary) 100%);
+  border: 2px solid var(--accent-primary);
   padding: 18px;
   border-radius: 12px;
   box-shadow:
@@ -166,7 +166,7 @@ body {
   width: auto;
   border-radius: 8px;
   flex-shrink: 0;
-  background: #1a1a1a;
+  background: var(--bg-primary);
   position: relative;
   background-size: cover;
   background-position: center;
@@ -206,7 +206,7 @@ body {
 .nominated-player-name {
   font-size: 1.6em;
   font-weight: bold;
-  color: #e0e0e0;
+  color: var(--text-primary);
   margin-bottom: 8px;
 }
 
@@ -230,25 +230,25 @@ body {
 
 .nominated-bidder-name {
   font-size: 1.1em;
-  color: #e0e0e0;
+  color: var(--text-primary);
   margin-bottom: 6px;
 }
 
 .nominated-bidder-amount {
   font-size: 2em;
   font-weight: bold;
-  color: #4caf50;
+  color: var(--success);
 }
 
 /* Nomination Timer */
 .nomination-timer {
   font-size: 2.5em;
   font-weight: bold;
-  color: #4a90e2;
-  background: #1a1a1a;
+  color: var(--accent-primary);
+  background: var(--bg-primary);
   padding: 8px 20px;
   border-radius: 8px;
-  border: 2px solid #4a90e2;
+  border: 2px solid var(--accent-primary);
   min-width: 140px;
   text-align: center;
   font-family: "Courier New", monospace;
@@ -272,16 +272,16 @@ body {
 .player-search {
   width: 100%;
   padding: 10px;
-  border: 1px solid #4a4a4a;
+  border: 1px solid var(--border-secondary);
   border-radius: 5px;
   font-size: 1em;
-  background: #2a2a2a;
-  color: #e0e0e0;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
 }
 
 .player-search:focus {
   outline: none;
-  border-color: #4a90e2;
+  border-color: var(--accent-primary);
   box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.3);
 }
 
@@ -290,8 +290,8 @@ body {
   top: 100%;
   left: 0;
   right: 0;
-  background: #2a2a2a;
-  border: 1px solid #4a4a4a;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
   border-top: none;
   border-radius: 0 0 5px 5px;
   max-height: 200px;
@@ -303,8 +303,8 @@ body {
 .player-option {
   padding: 10px;
   cursor: pointer;
-  border-bottom: 1px solid #404040;
-  color: #e0e0e0;
+  border-bottom: 1px solid var(--border-primary);
+  color: var(--text-primary);
 }
 
 .player-option:hover {
@@ -323,17 +323,17 @@ body {
 .bid-input {
   width: 80px;
   padding: 8px;
-  border: 1px solid #4a4a4a;
+  border: 1px solid var(--border-secondary);
   border-radius: 5px;
   font-size: 1em;
   text-align: center;
-  background: #2a2a2a;
-  color: #e0e0e0;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
 }
 
 .bid-input:focus {
   outline: none;
-  border-color: #4a90e2;
+  border-color: var(--accent-primary);
   box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.3);
 }
 
@@ -350,14 +350,14 @@ body {
 
 /* Team Styles */
 .team {
-  background: linear-gradient(135deg, #2d2d2d 0%, #252525 100%);
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, #252525 100%);
   padding: 10px;
   border-radius: 8px;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
   height: 100%;
   text-align: center;
   transition: all 0.3s ease;
-  border: 1px solid #404040;
+  border: 1px solid var(--border-primary);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -476,12 +476,12 @@ body {
   font-size: 0.75em;
   text-align: center;
   background: #1f1f1f;
-  color: #e0e0e0;
+  color: var(--text-primary);
   border-right: none;
 }
 
 .team-bid-button {
-  background: #4a4a4a;
+  background: var(--border-secondary);
   color: #c0c0c0;
   border: 1px solid #5a5a5a;
   padding: 3px 8px;
@@ -507,8 +507,8 @@ body {
 
 .team-bid-button.current-bidder {
   background: #2d5a2d;
-  color: #4caf50;
-  border: 1px solid #4caf50;
+  color: var(--success);
+  border: 1px solid var(--success);
   font-weight: 600;
 }
 
@@ -525,18 +525,18 @@ body {
 }
 
 .team.clickable-for-bid:hover {
-  background: linear-gradient(135deg, #353535 0%, #2a2a2a 100%);
+  background: linear-gradient(135deg, #353535 0%, var(--bg-tertiary) 100%);
   border-color: #555;
   transform: translateY(-1px);
 }
 
 /* Drafted Players Panel */
 .drafted-players-panel {
-  background: #2d2d2d;
+  background: var(--bg-secondary);
   padding: 15px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  border: 1px solid #404040;
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-panel);
+  border: 1px solid var(--border-primary);
   height: calc(80vh - 15px - 42px);
   margin: 0 15px;
   overflow-y: auto;
@@ -558,7 +558,7 @@ body {
 }
 
 .team-roster {
-  background: #1a1a1a;
+  background: var(--bg-primary);
   padding: 12px;
   border-radius: 8px;
   border: 1px solid #353535;
@@ -575,11 +575,11 @@ body {
 }
 
 .drafted-player {
-  background: #2a2a2a;
+  background: var(--bg-tertiary);
   padding: 8px;
   margin-bottom: 6px;
-  border-radius: 6px;
-  border: 1px solid #404040;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border-primary);
   transition: all 0.3s ease;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
   display: flex;
@@ -600,7 +600,7 @@ body {
   height: 24px;
   border-radius: 50%;
   object-fit: cover;
-  background: #404040;
+  background: var(--border-primary);
   flex-shrink: 0;
 }
 
@@ -611,7 +611,7 @@ body {
 
 .drafted-player.newly-drafted {
   background: #1f3a2d;
-  border: 1px solid #4caf50;
+  border: 1px solid var(--success);
 }
 
 /* Bright newly-drafted colors by position */
@@ -690,8 +690,8 @@ body {
 
 /* Player Stats Panel */
 .nominated-player-stats {
-  background: linear-gradient(135deg, #2a2a2a 0%, #1f1f1f 100%);
-  border: 1px solid #404040;
+  background: linear-gradient(135deg, var(--bg-tertiary) 0%, #1f1f1f 100%);
+  border: 1px solid var(--border-primary);
   border-radius: 8px;
   padding: 12px;
   min-width: 350px;
@@ -700,11 +700,11 @@ body {
 
 .nominated-player-stats h4 {
   margin: 0 0 8px 0;
-  color: #4a90e2;
+  color: var(--accent-primary);
   font-size: 0.9em;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-bottom: 1px solid #404040;
+  border-bottom: 1px solid var(--border-primary);
   padding-bottom: 4px;
 }
 
@@ -717,7 +717,7 @@ body {
   display: flex;
   width: 100%;
   padding-bottom: 4px;
-  border-bottom: 1px solid #404040;
+  border-bottom: 1px solid var(--border-primary);
   margin-bottom: 4px;
 }
 
@@ -733,7 +733,7 @@ body {
 }
 
 .stat-header {
-  color: #b0b0b0;
+  color: var(--text-muted);
   font-weight: 600;
   text-transform: uppercase;
   font-size: 0.9em;
@@ -741,25 +741,25 @@ body {
 }
 
 .stat-value {
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-weight: 600;
   font-size: 1.3em;
 }
 
 /* API Links / Admin Controls */
 .api-links {
-  background: #2d2d2d;
+  background: var(--bg-secondary);
   padding: 15px;
-  border-radius: 10px;
+  border-radius: var(--radius-card);
   margin: 20px 15px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-  border: 1px solid #404040;
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--border-primary);
 }
 
 .api-links a {
   display: inline-block;
   margin: 5px 10px 5px 0;
-  color: #4a90e2;
+  color: var(--accent-primary);
   text-decoration: none;
 }
 
@@ -769,10 +769,10 @@ body {
 }
 
 .admin-draft-section {
-  background: #1a1a1a;
+  background: var(--bg-primary);
   padding: 15px;
   border-radius: 8px;
-  border: 1px solid #404040;
+  border: 1px solid var(--border-primary);
   margin: 10px 0;
 }
 
@@ -783,8 +783,8 @@ body {
 /* Context Menu Styles */
 .context-menu {
   position: absolute;
-  background: #2a2a2a;
-  border: 1px solid #4a4a4a;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   z-index: 10000;
@@ -796,7 +796,7 @@ body {
 .context-menu-item {
   padding: 8px 16px;
   cursor: pointer;
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 0.9em;
   border: none;
   background: none;
@@ -821,8 +821,8 @@ body {
   position: absolute;
   left: 100%;
   top: 0;
-  background: #2a2a2a;
-  border: 1px solid #4a4a4a;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   padding: 4px 0;

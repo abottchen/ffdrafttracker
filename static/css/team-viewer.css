@@ -27,12 +27,7 @@ body {
 
 /* Team Selector */
 .team-selector {
-  background: #2d2d2d;
-  padding: 15px;
-  border-radius: 12px;
   margin-bottom: 10px;
-  border: 1px solid #404040;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   text-align: center;
   flex-shrink: 0;
 }
@@ -44,10 +39,10 @@ body {
 
 .team-select {
   padding: 12px 16px;
-  border: 1px solid #4a4a4a;
+  border: 1px solid var(--border-secondary);
   border-radius: 8px;
-  background: #2a2a2a;
-  color: #e0e0e0;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
   font-size: 1.1em;
   min-width: 250px;
 }
@@ -69,11 +64,11 @@ body {
 
 /* Roster Section */
 .roster-section {
-  background: #2d2d2d;
+  background: var(--bg-secondary);
   padding: 15px;
-  border-radius: 12px;
-  border: 1px solid #404040;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border-radius: var(--radius-panel);
+  border: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-panel);
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -82,10 +77,6 @@ body {
 
 .roster-section h2 {
   margin: 0 0 10px 0;
-  color: #4a90e2;
-  font-size: 1.5em;
-  border-bottom: 2px solid #404040;
-  padding-bottom: 8px;
   flex-shrink: 0;
 }
 
@@ -95,7 +86,7 @@ body {
   align-items: center;
   gap: 8px;
   padding: 4px 8px 6px 8px;
-  border-bottom: 1px solid #404040;
+  border-bottom: 1px solid var(--border-primary);
   margin-bottom: 4px;
   flex-shrink: 0;
   font-size: 0.65em;
@@ -150,8 +141,8 @@ body {
   background: linear-gradient(
     to right,
     transparent 0%,
-    #4a4a4a 20%,
-    #4a4a4a 80%,
+    var(--border-secondary) 20%,
+    var(--border-secondary) 80%,
     transparent 100%
   );
   margin: 8px 0;
@@ -160,16 +151,14 @@ body {
 
 /* Player Card */
 .player-card {
-  background: #1a1a1a;
+  background: var(--bg-primary);
   padding: 5px 8px;
-  border-radius: 6px;
-  border: 1px solid #404040;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border-primary);
   display: flex;
   align-items: center;
   gap: 8px;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
+  transition: all 0.3s ease;
   min-height: 0;
   flex-shrink: 0;
 }
@@ -186,9 +175,9 @@ body {
   height: 40px;
   flex-shrink: 0;
   border-radius: 4px;
-  border: 1px solid #4a4a4a;
+  border: 1px solid var(--border-secondary);
   overflow: hidden;
-  background: #2a2a2a;
+  background: var(--bg-tertiary);
 }
 
 .player-image-background {
@@ -223,7 +212,7 @@ body {
 .player-name {
   font-size: 1em;
   font-weight: bold;
-  color: #e0e0e0;
+  color: var(--text-primary);
   margin: 0;
   line-height: 1.2;
   white-space: nowrap;
@@ -237,7 +226,7 @@ body {
 
 .player-position {
   display: inline-block;
-  background: #4a90e2;
+  background: var(--accent-primary);
   color: white;
   padding: 2px 6px;
   border-radius: 10px;
@@ -265,7 +254,7 @@ body {
 .player-price {
   font-size: 1em;
   font-weight: bold;
-  color: #4caf50;
+  color: var(--success);
   text-align: right;
   min-width: 45px;
   flex-shrink: 0;
@@ -283,7 +272,7 @@ body {
   background-repeat: no-repeat;
   background-position: center top;
   border-radius: 6px;
-  border: 1px solid #4a4a4a;
+  border: 1px solid var(--border-secondary);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   position: relative;
   overflow: hidden;
@@ -332,8 +321,8 @@ body {
 
 /* Player Stats */
 .player-stats {
-  background: linear-gradient(135deg, #2a2a2a 0%, #1f1f1f 100%);
-  border: 1px solid #404040;
+  background: linear-gradient(135deg, var(--bg-tertiary) 0%, #1f1f1f 100%);
+  border: 1px solid var(--border-primary);
   border-radius: 8px;
   padding: 6px 8px;
   font-size: 0.85em;
@@ -471,26 +460,22 @@ body {
 
 /* Team Summary */
 .team-summary {
-  background: #2d2d2d;
+  background: var(--bg-secondary);
   padding: 15px;
-  border-radius: 12px;
-  border: 1px solid #404040;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border-radius: var(--radius-panel);
+  border: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-panel);
   height: 100%;
   overflow-y: auto;
 }
 
 .team-summary h2 {
   margin: 0 0 15px 0;
-  color: #4a90e2;
-  font-size: 1.5em;
-  border-bottom: 2px solid #404040;
-  padding-bottom: 8px;
 }
 
 .team-summary-heading {
   margin: 25px 0 15px 0;
-  color: #4a90e2;
+  color: var(--accent-primary);
 }
 
 .summary-item {
@@ -498,7 +483,7 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 12px 0;
-  border-bottom: 1px solid #404040;
+  border-bottom: 1px solid var(--border-primary);
 }
 
 .summary-item:last-child {
@@ -507,7 +492,7 @@ body {
 
 .summary-label {
   font-weight: 600;
-  color: #b0b0b0;
+  color: var(--text-muted);
 }
 
 .summary-value {
@@ -516,15 +501,15 @@ body {
 }
 
 .budget-value {
-  color: #4caf50;
+  color: var(--success);
 }
 
 .summary-progress {
   height: 8px;
-  background: #1a1a1a;
+  background: var(--bg-primary);
   border-radius: 4px;
   overflow: hidden;
-  border: 1px solid #404040;
+  border: 1px solid var(--border-primary);
   margin: -8px 0 12px 0;
 }
 
@@ -544,10 +529,10 @@ body {
 }
 
 .position-item {
-  background: #1a1a1a;
+  background: var(--bg-primary);
   padding: 10px;
   border-radius: 8px;
-  border: 1px solid #404040;
+  border: 1px solid var(--border-primary);
 }
 
 .position-header {
@@ -563,16 +548,16 @@ body {
 }
 
 .position-count.at-max {
-  color: #ff6b6b;
+  color: var(--error);
 }
 
 .position-count.under-max {
-  color: #b0b0b0;
+  color: var(--text-muted);
 }
 
 .position-progress {
   height: 6px;
-  background: #2a2a2a;
+  background: var(--bg-tertiary);
   border-radius: 3px;
   overflow: hidden;
   border: 1px solid #3a3a3a;
@@ -585,7 +570,7 @@ body {
 }
 
 .progress-bar-normal {
-  background: linear-gradient(90deg, #4a90e2 0%, #5a9ff2 100%);
+  background: linear-gradient(90deg, var(--accent-primary) 0%, #5a9ff2 100%);
 }
 
 .progress-bar-warning {
@@ -600,7 +585,7 @@ body {
 .no-players {
   text-align: center;
   padding: 40px;
-  color: #b0b0b0;
+  color: var(--text-muted);
   font-style: italic;
 }
 
@@ -610,12 +595,12 @@ body {
 }
 
 .player-list::-webkit-scrollbar-track {
-  background: #1a1a1a;
+  background: var(--bg-primary);
   border-radius: 4px;
 }
 
 .player-list::-webkit-scrollbar-thumb {
-  background: #4a4a4a;
+  background: var(--border-secondary);
   border-radius: 4px;
 }
 
