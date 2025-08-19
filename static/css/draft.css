@@ -89,7 +89,7 @@ body {
 
 .players-grid > .nomination-panel {
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .players-grid > .status-panel {
@@ -137,7 +137,7 @@ body {
   align-items: center;
   gap: 20px;
   justify-content: space-between;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .nomination-panel .button {
@@ -149,7 +149,8 @@ body {
   display: flex;
   align-items: center;
   gap: 20px;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
 }
 
 .nomination-inputs {
