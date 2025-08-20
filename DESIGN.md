@@ -6,25 +6,33 @@ A local fantasy football auction draft tracking tool with a web-based interface 
 ## Architecture
 
 ### Application Structure
-**Technology Stack:** FastAPI (Python) serving both API and frontend  
-**Architecture:** Dual-port application with stateless API design  
-**Deployment:** Single Python process via command-line execution serving both applications  
+**Technology Stack:** FastAPI (Python) serving dual applications with shared business logic
+**Architecture:** Dual-port application with stateless API design and DRY principles
+**Deployment:** Single Python process via command-line execution serving both applications
 
-**Main Draft Application:**
-- **Port:** 8175 (localhost only)
+**Main Draft Application (Admin Interface):**
+- **Port:** 8175 (all network interfaces - 0.0.0.0)
 - **Purpose:** Interactive draft management with full admin capabilities
-- **Access:** Draft administrator interface
+- **Access:** Draft administrator interface (typically localhost access)
+- **API Endpoints:** Full read/write access to all endpoints
 
-**Team Viewer Application:**
+**Team Viewer Application (Remote Interface):**
 - **Port:** 8176 (all network interfaces - 0.0.0.0)
 - **Purpose:** Read-only team viewing for network participants
-- **Access:** External network viewing interface
+- **Access:** External network viewing interface for remote participants
+- **API Endpoints:** Read-only access only (no write operations)
+
+**Shared Business Logic:**
+- All read operations utilize shared private functions (`_get_*_data()`)
+- Single source of truth for business logic eliminates code duplication
+- Both applications call identical data retrieval functions
+- Write operations remain exclusive to the main application
 
 ### Frontend Applications
 
 #### Main Draft Interface (Port 8175)
 **Technology Stack:** HTML/CSS/JavaScript with vanilla JS  
-**Served By:** FastAPI using Jinja2 templates and static files  
+**Served By:** FastAPI using Jinja2 templates and static files
 **Access:** Browser-based interface at localhost:8175  
 **Security:** Localhost only for admin control  
 
@@ -43,7 +51,7 @@ A local fantasy football auction draft tracking tool with a web-based interface 
 
 #### Team Viewer Interface (Port 8176)
 **Technology Stack:** HTML/CSS/JavaScript with vanilla JS  
-**Served By:** Separate FastAPI application instance  
+**Served By:** Separate FastAPI application instance with shared business logic
 **Access:** Browser-based interface at [network-ip]:8176  
 **Security:** Read-only, no modification capabilities  
 
@@ -55,7 +63,8 @@ A local fantasy football auction draft tracking tool with a web-based interface 
 - Dark theme with color differentiation for easy reading
 - Auto-refresh every 5 seconds for real-time updates
 - Responsive design optimized for 17-player rosters
-- Fetches all data from main application API (port 8175)
+- Uses relative URLs for cross-network compatibility
+- Fetches all data from local read-only API endpoints (same port)
 
 ### Backend
 **Framework:** FastAPI with Pydantic models  
@@ -79,7 +88,11 @@ A local fantasy football auction draft tracking tool with a web-based interface 
 
 ## API Architecture
 
-All API endpoints are served from the same FastAPI application at `/api/v1/*`. For complete endpoint documentation, see the [live API documentation](https://abottchen.github.io/ffdrafttracker/).
+**Dual-Port API Design:**
+- **Port 8175 (Main App):** Full API access - read and write endpoints at `/api/v1/*`
+- **Port 8176 (Viewer App):** Read-only API access - only GET endpoints at `/api/v1/*`
+- **Shared Business Logic:** Both ports use identical private functions for data operations
+- **Security Separation:** Write operations (POST/DELETE) only available on main application port
 
 ### Optimistic Locking for Concurrency Control
 

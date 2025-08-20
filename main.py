@@ -284,21 +284,19 @@ async def root(request: Request):
     )
 
 
-@app.get("/api/v1/draft-state", response_model=DraftState)
-async def get_draft_state():
-    """Get complete current draft state."""
+# Shared business logic functions
+async def _get_draft_state_data():
+    """Shared logic for getting draft state."""
     return load_draft_state()
 
 
-@app.get("/api/v1/players", response_model=list[Player])
-async def get_all_players():
-    """Get all player information."""
+async def _get_players_data():
+    """Shared logic for getting all players."""
     return load_players()
 
 
-@app.get("/api/v1/players/available", response_model=list[Player])
-async def get_available_players():
-    """Get available players with details."""
+async def _get_available_players_data():
+    """Shared logic for getting available players."""
     draft_state = load_draft_state()
     all_players = load_players()
 
@@ -314,9 +312,8 @@ async def get_available_players():
     return available
 
 
-@app.get("/api/v1/player/stats", response_model=PlayerStatsCollection)
-async def get_player_stats():
-    """Get player statistics and bye weeks. Returns empty collection if not found."""
+async def _get_player_stats_data():
+    """Shared logic for getting player stats."""
     if not PLAYER_STATS_FILE.exists():
         logger.info("Player stats file not found, returning empty collection")
         return PlayerStatsCollection({})
@@ -330,9 +327,8 @@ async def get_player_stats():
         return PlayerStatsCollection({})
 
 
-@app.get("/api/v1/owners", response_model=list[Owner])
-async def get_all_owners():
-    """Get all owner information."""
+async def _get_owners_data():
+    """Shared logic for getting all owners."""
     owners_dict = load_owners()
     # Convert dict back to list format for API compatibility
     return [
@@ -340,43 +336,22 @@ async def get_all_owners():
     ]
 
 
-@app.get("/api/v1/config", response_model=Configuration)
-async def get_config():
-    """Get draft configuration."""
+async def _get_config_data():
+    """Shared logic for getting configuration."""
     config = load_configuration()
     return config
 
 
-@app.get("/api/v1/export/csv")
-async def export_draft_csv():
-    """Export current draft state as CSV file."""
-    try:
-        csv_content = generate_draft_csv()
-
-        # Return as streaming response with appropriate headers
-        return StreamingResponse(
-            io.BytesIO(csv_content.encode("utf-8")),
-            media_type="text/csv",
-            headers={"Content-Disposition": "attachment; filename=draft_export.csv"},
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to generate CSV export: {str(e)}"
-        )
-
-
-@app.get("/api/v1/owners/{owner_id}", response_model=Owner)
-async def get_owner(owner_id: int):
-    """Get specific owner information."""
+async def _get_owner_data(owner_id: int):
+    """Shared logic for getting specific owner."""
     owners = load_owners()
     if owner_id not in owners:
         raise HTTPException(status_code=404, detail=f"Owner {owner_id} not found")
     return {"id": owner_id, **owners[owner_id]}
 
 
-@app.get("/api/v1/teams/{owner_id}")
-async def get_team(owner_id: int):
-    """Get specific team roster with player details."""
+async def _get_team_data(owner_id: int):
+    """Shared logic for getting team roster."""
     draft_state = load_draft_state()
 
     # Find team for owner
@@ -407,6 +382,73 @@ async def get_team(owner_id: int):
         "budget_remaining": team.budget_remaining,
         "picks": picks_with_details,
     }
+
+
+# Read-only API endpoints for main app (admin interface)
+@app.get("/api/v1/draft-state", response_model=DraftState)
+async def get_draft_state():
+    """Get complete current draft state."""
+    return await _get_draft_state_data()
+
+
+@app.get("/api/v1/players", response_model=list[Player])
+async def get_all_players():
+    """Get all player information."""
+    return await _get_players_data()
+
+
+@app.get("/api/v1/players/available", response_model=list[Player])
+async def get_available_players():
+    """Get available players with details."""
+    return await _get_available_players_data()
+
+
+@app.get("/api/v1/player/stats", response_model=PlayerStatsCollection)
+async def get_player_stats():
+    """Get player statistics and bye weeks. Returns empty collection if not found."""
+    return await _get_player_stats_data()
+
+
+@app.get("/api/v1/owners", response_model=list[Owner])
+async def get_all_owners():
+    """Get all owner information."""
+    return await _get_owners_data()
+
+
+@app.get("/api/v1/config", response_model=Configuration)
+async def get_config():
+    """Get draft configuration."""
+    return await _get_config_data()
+
+
+@app.get("/api/v1/owners/{owner_id}", response_model=Owner)
+async def get_owner(owner_id: int):
+    """Get specific owner information."""
+    return await _get_owner_data(owner_id)
+
+
+@app.get("/api/v1/teams/{owner_id}")
+async def get_team(owner_id: int):
+    """Get specific team roster with player details."""
+    return await _get_team_data(owner_id)
+
+
+@app.get("/api/v1/export/csv")
+async def export_draft_csv():
+    """Export current draft state as CSV file (admin only)."""
+    try:
+        csv_content = generate_draft_csv()
+
+        # Return as streaming response with appropriate headers
+        return StreamingResponse(
+            io.BytesIO(csv_content.encode("utf-8")),
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=draft_export.csv"},
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to generate CSV export: {str(e)}"
+        )
 
 
 @app.post("/api/v1/nominate")
@@ -1026,8 +1068,7 @@ async def team_viewer(request: Request, team_id: int = 1):
 font-family: Arial, sans-serif; padding: 20px;">
                     <h1>Team Viewer</h1>
                     <p>Template not yet created.</p>
-                    <p>This page will fetch data from the main application \
-API at port 8175.</p>
+                    <p>This page now has its own read-only API endpoints.</p>
                 </body>
             </html>
             """,
@@ -1039,9 +1080,57 @@ API at port 8175.</p>
         {
             "request": request,
             "selected_team_id": team_id,
-            "main_api_url": "http://localhost:8175",
         },
     )
+
+
+# Read-only API endpoints for viewer app
+@viewer_app.get("/api/v1/draft-state", response_model=DraftState)
+async def viewer_get_draft_state():
+    """Get complete current draft state."""
+    return await _get_draft_state_data()
+
+
+@viewer_app.get("/api/v1/players", response_model=list[Player])
+async def viewer_get_all_players():
+    """Get all player information."""
+    return await _get_players_data()
+
+
+@viewer_app.get("/api/v1/players/available", response_model=list[Player])
+async def viewer_get_available_players():
+    """Get available players with details."""
+    return await _get_available_players_data()
+
+
+@viewer_app.get("/api/v1/player/stats", response_model=PlayerStatsCollection)
+async def viewer_get_player_stats():
+    """Get player statistics and bye weeks. Returns empty collection if not found."""
+    return await _get_player_stats_data()
+
+
+@viewer_app.get("/api/v1/owners", response_model=list[Owner])
+async def viewer_get_all_owners():
+    """Get all owner information."""
+    return await _get_owners_data()
+
+
+@viewer_app.get("/api/v1/config", response_model=Configuration)
+async def viewer_get_config():
+    """Get draft configuration."""
+    return await _get_config_data()
+
+
+@viewer_app.get("/api/v1/owners/{owner_id}", response_model=Owner)
+async def viewer_get_owner(owner_id: int):
+    """Get specific owner information."""
+    return await _get_owner_data(owner_id)
+
+
+@viewer_app.get("/api/v1/teams/{owner_id}")
+async def viewer_get_team(owner_id: int):
+    """Get specific team roster with player details."""
+    return await _get_team_data(owner_id)
 
 
 # Run the application

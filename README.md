@@ -10,8 +10,8 @@ A live auction draft tracking tool for fantasy football leagues. Features a web-
 ## Features
 
 ### **Dual Interface Design**
-- **Admin Interface** (localhost:8175) - Full draft management controls
-- **Team Viewer** (network:8176) - Read-only team viewing for participants
+- **Admin Interface** (port 8175) - Full draft management controls with read/write API access
+- **Team Viewer** (port 8176) - Read-only team viewing for remote participants with secure API separation
 
 ### **Live Draft Management**
 - Real-time nomination and bidding system
@@ -73,8 +73,8 @@ A live auction draft tracking tool for fantasy football leagues. Features a web-
    ```
 
 6. **Access the interfaces**
-   - **Draft Admin**: http://localhost:8175
-   - **Team Viewer**: http://[your-ip]:8176
+   - **Draft Admin**: http://localhost:8175 (local admin access)
+   - **Team Viewer**: http://[your-ip]:8176 (remote participant access)
 
 ## Configuration
 
@@ -153,9 +153,9 @@ ruff format src/ tests/
 ```
 
 ### API Documentation
-- **Swagger UI**: http://localhost:8175/docs
-- **ReDoc**: http://localhost:8175/redoc
-- **OpenAPI JSON**: http://localhost:8175/openapi.json
+- **Admin API (Full Access)**: http://localhost:8175/docs
+- **Viewer API (Read-Only)**: http://localhost:8176/docs
+- **OpenAPI Schemas**: Available at `/openapi.json` on each port
 
 ## Architecture
 
@@ -169,6 +169,8 @@ Built with FastAPI and Pydantic for type safety and automatic API documentation.
 
 ### Design Principles
 - **Stateless API** - All state loaded from files on each request
+- **Shared Business Logic** - DRY principles with common data functions
+- **Security Separation** - Write operations isolated to admin interface
 - **Atomic Operations** - Crash-safe file writes with validation
 - **Type Safety** - Pydantic models prevent runtime errors
 - **Zero Build** - No compilation or bundling required
@@ -210,13 +212,16 @@ All draft data is stored in human-readable JSON files in the `data/` directory:
 
 ## Network Setup
 
-The team viewer runs on all network interfaces (0.0.0.0:8176) to allow league members to view team rosters in real-time. The admin interface remains localhost-only for security.
+Both applications run on all network interfaces (0.0.0.0) but serve different purposes:
+- **Port 8175**: Admin interface with full read/write capabilities
+- **Port 8176**: Team viewer with read-only access for remote participants
 
 ### Firewall Configuration
-Ensure port 8176 is accessible to your network participants:
+Ensure ports are accessible to your network participants:
 ```bash
 # Windows Firewall example
-netsh advfirewall firewall add rule name="FFDraftTracker" dir=in action=allow protocol=TCP localport=8176
+netsh advfirewall firewall add rule name="FFDraftTracker-Viewer" dir=in action=allow protocol=TCP localport=8176
+netsh advfirewall firewall add rule name="FFDraftTracker-Admin" dir=in action=allow protocol=TCP localport=8175
 ```
 
 ## Contributing
