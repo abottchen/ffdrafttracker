@@ -93,7 +93,7 @@
     "/api/v1/player/stats": {
       "get": {
         "summary": "Get Player Stats",
-        "description": "Get player statistics and bye weeks. Returns empty collection if file doesn't exist.",
+        "description": "Get player statistics and bye weeks. Returns empty collection if not found.",
         "operationId": "get_player_stats_api_v1_player_stats_get",
         "responses": {
           "200": {
@@ -145,23 +145,6 @@
                 "schema": {
                   "$ref": "#/components/schemas/Configuration"
                 }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/export/csv": {
-      "get": {
-        "summary": "Export Draft Csv",
-        "description": "Export current draft state as CSV file.",
-        "operationId": "export_draft_csv_api_v1_export_csv_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
               }
             }
           }
@@ -240,6 +223,23 @@
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/export/csv": {
+      "get": {
+        "summary": "Export Draft Csv",
+        "description": "Export current draft state as CSV file (admin only).",
+        "operationId": "export_draft_csv_api_v1_export_csv_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           }
