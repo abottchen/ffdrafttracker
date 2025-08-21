@@ -125,37 +125,18 @@ def fetch_team_roster(team_abbr: str, url: str) -> list[dict]:
         position = None
 
         if row:
-            # Get all text content from this row
-            row_text = row.get_text()
-
-            # Look for position patterns in the text using regex
-            # Look for positions clearly separated from names by numbers (jersey#)
-            # Pattern: number + position + number (jersey# + position + age)
-            for pos_key in ['QB', 'RB', 'WR', 'TE', 'PK']:
-                # Look for position pattern: digit + position + digit (like 15QB29)
-                pattern = f'\\d{pos_key}\\d'
-                if re.search(pattern, row_text.upper()):
-                    position = POSITION_MAP[pos_key].value
-                    break
-
-            # Special case for single-letter position "K" - need to be extra careful
-            if not position:
-                # For K, look for patterns like "7PK30" first (prefer PK over K)
-                # If no PK found, then look for K pattern but be more strict
-                k_pattern = r'\d+K\d+'  # digit(s) + K + digit(s)
-                if re.search(k_pattern, row_text.upper()):
-                    # Additional validation: make sure this isn't part of a name
-                    # Check if the K is preceded by a name character
-                    k_match = re.search(r'(\w)K\d', row_text.upper())
-                    if k_match:
-                        preceding_char = k_match.group(1)
-                        # If preceded by a letter that could be part of a name, skip
-                        if preceding_char.isalpha():
-                            pass  # Skip - K is likely part of a name, not a position
-                        else:
-                            position = POSITION_MAP['K'].value
-                    else:
+            # Look for position in table cells - much more reliable than regex on flattened text
+            cells = row.find_all('td')
+            for cell in cells:
+                cell_text = cell.get_text().strip().upper()
+                # Look for exact position matches in cells
+                if cell_text in ['QB', 'RB', 'WR', 'TE', 'PK', 'K']:
+                    if cell_text in POSITION_MAP:
+                        position = POSITION_MAP[cell_text].value
+                        break
+                    elif cell_text == 'K':  # Handle K -> PK mapping
                         position = POSITION_MAP['K'].value
+                        break
 
         # If no position found in table row, skip this player
         if not position:
@@ -311,11 +292,12 @@ def main():
         print("No players fetched")
         return
 
-    # Combine defenses and players
+    # Sort defenses by ID and regular players by name
+    defenses.sort(key=lambda p: p['id'])
+    players.sort(key=lambda p: (p['last_name'], p['first_name']))
+    
+    # Combine with defenses first
     all_players = defenses + players
-
-    # Sort players by last name, then first name (defenses sort to top alphabetically)
-    all_players.sort(key=lambda p: (p['last_name'], p['first_name']))
 
     # Write to players.json
     output_path = Path(__file__).parent.parent / 'data' / 'players.json'
