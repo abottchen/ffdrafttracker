@@ -13,6 +13,7 @@ import argparse
 import json
 import re
 import time
+from datetime import datetime
 from pathlib import Path
 
 import requests
@@ -91,7 +92,7 @@ def fetch_player_stats(player_id: int, player_name: str, position: str) -> dict 
         def get_stat(header_keywords):
             for keyword in header_keywords:
                 idx = next((i for i, h in enumerate(headers) if keyword in h), None)
-                if idx and idx < len(cell_values):
+                if idx is not None and idx < len(cell_values):
                     return cell_values[idx]
             return "0"
 
@@ -211,6 +212,13 @@ def fetch_player_stats(player_id: int, player_name: str, position: str) -> dict 
 
 def fetch_team_bye_weeks() -> dict[str, int]:
     """Fetch bye weeks for all NFL teams."""
+    current_year = datetime.now().year
+    if current_year != 2025:
+        raise ValueError(
+            f"Bye weeks are hardcoded for 2025 but current year is {current_year}. "
+            "Please update the bye weeks data for the current NFL season."
+        )
+    
     # 2025 NFL bye weeks
     bye_weeks = {
         "ARI": 8,   # Week 8
@@ -343,15 +351,15 @@ def main():
     )
 
     # Print summary
-    teams_with_bye = len(
-        set(s['bye_week'] for s in player_stats.values() if s['bye_week'])
+    players_with_bye = len(
+        [s for s in player_stats.values() if s.get('bye_week')]
     )
     players_with_stats = len(
-        [s for s in player_stats.values() if s.get('last_year_stats')]
+        [s for s in player_stats.values() if s.get('stats_summary')]
     )
 
     print("\nSummary:")
-    print(f"  Players with bye weeks: {teams_with_bye}")
+    print(f"  Players with bye weeks: {players_with_bye}")
     print(f"  Players with stats: {players_with_stats}")
 
 

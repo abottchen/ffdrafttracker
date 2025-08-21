@@ -5,29 +5,6 @@
     "team": "GB",
     "stats_summary": null
   },
-  "2576336": {
-    "bye_week": 14,
-    "position": "RB",
-    "team": "SF",
-    "rushing": {
-      "carries": "66",
-      "yards": "311",
-      "avg": "4.7",
-      "tds": "2",
-      "long": "40",
-      "fumbles": "1"
-    },
-    "receiving": {
-      "receptions": "40",
-      "targets": "47",
-      "yards": "261",
-      "avg": "6.5",
-      "tds": "3",
-      "long": "24",
-      "fumbles": "0"
-    },
-    "stats_summary": "Rush: 66att 311yds 2TD | Rec: 40rec 261yds 3TD"
-  },
   "4429160": {
     "bye_week": 12,
     "position": "RB",
@@ -88,6 +65,12 @@
       "fumbles": "0"
     },
     "stats_summary": "Rec: 63rec 875yds 9TD | Rush: 3att 20yds 1TD"
+  },
+  "4426528": {
+    "bye_week": 9,
+    "position": "WR",
+    "team": "PHI",
+    "stats_summary": null
   },
   "4383440": {
     "bye_week": 12,
@@ -159,12 +142,6 @@
       "fumbles": "0"
     },
     "stats_summary": "Rush: 40att 147yds 1TD | Rec: 4rec 16yds 1TD"
-  },
-  "5082289": {
-    "bye_week": 8,
-    "position": "WR",
-    "team": "ARI",
-    "stats_summary": null
   },
   "3914307": {
     "bye_week": 5,
@@ -850,6 +827,12 @@
     "team": "SF",
     "stats_summary": null
   },
+  "4426696": {
+    "bye_week": 14,
+    "position": "RB",
+    "team": "NE",
+    "stats_summary": null
+  },
   "3123075": {
     "bye_week": 6,
     "position": "WR",
@@ -887,12 +870,6 @@
       "fumbles": "0"
     },
     "stats_summary": "Rush: 168att 766yds 7TD | Rec: 7rec 54yds 0TD"
-  },
-  "4258170": {
-    "bye_week": 12,
-    "position": "WR",
-    "team": "MIA",
-    "stats_summary": null
   },
   "4259308": {
     "bye_week": 14,
@@ -954,6 +931,12 @@
     "bye_week": 6,
     "position": "WR",
     "team": "MIN",
+    "stats_summary": null
+  },
+  "4808839": {
+    "bye_week": 9,
+    "position": "WR",
+    "team": "CLE",
     "stats_summary": null
   },
   "3139033": {
@@ -1339,12 +1322,6 @@
     },
     "stats_summary": "8rec 65yds 0TD"
   },
-  "4587977": {
-    "bye_week": 5,
-    "position": "WR",
-    "team": "GB",
-    "stats_summary": null
-  },
   "3886812": {
     "bye_week": 10,
     "position": "QB",
@@ -1377,9 +1354,9 @@
     "stats_summary": null
   },
   "4040774": {
-    "bye_week": 9,
+    "bye_week": 6,
     "position": "TE",
-    "team": "PHI",
+    "team": "HOU",
     "receiving": {
       "receptions": "9",
       "targets": "12",
@@ -1684,21 +1661,6 @@
       "fumbles": "0"
     },
     "stats_summary": "Rush: 135att 569yds 8TD | Rec: 42rec 340yds 1TD"
-  },
-  "3115394": {
-    "bye_week": 5,
-    "position": "WR",
-    "team": "ATL",
-    "receiving": {
-      "receptions": "4",
-      "targets": "10",
-      "yards": "31",
-      "avg": "7.8",
-      "tds": "1",
-      "long": "12",
-      "fumbles": "0"
-    },
-    "stats_summary": "Rec: 4rec 31yds 1TD"
   },
   "3929636": {
     "bye_week": 9,
@@ -2143,6 +2105,21 @@
     },
     "stats_summary": "Rec: 4rec 80yds 0TD | Rush: 1att 7yds 0TD"
   },
+  "3052056": {
+    "bye_week": 12,
+    "position": "WR",
+    "team": "WAS",
+    "receiving": {
+      "receptions": "7",
+      "targets": "9",
+      "yards": "66",
+      "avg": "9.4",
+      "tds": "0",
+      "long": "16",
+      "fumbles": "0"
+    },
+    "stats_summary": "Rec: 7rec 66yds 0TD"
+  },
   "4426990": {
     "bye_week": 10,
     "position": "WR",
@@ -2281,6 +2258,12 @@
       "fumbles": "3"
     },
     "stats_summary": "331/480 3,568yds 25TD 9INT"
+  },
+  "4594446": {
+    "bye_week": 11,
+    "position": "WR",
+    "team": "NO",
+    "stats_summary": null
   },
   "3912547": {
     "bye_week": 8,
@@ -2514,6 +2497,12 @@
       "fumbles": "0"
     },
     "stats_summary": "Rush: 24att 223yds 1TD | Rec: 16rec 104yds 0TD"
+  },
+  "3895785": {
+    "bye_week": 5,
+    "position": "QB",
+    "team": "ATL",
+    "stats_summary": null
   },
   "4362081": {
     "bye_week": 12,
@@ -2788,6 +2777,21 @@
     "team": "ATL",
     "stats_summary": null
   },
+  "4879650": {
+    "bye_week": 7,
+    "position": "WR",
+    "team": "BUF",
+    "receiving": {
+      "receptions": "2",
+      "targets": "4",
+      "yards": "11",
+      "avg": "5.5",
+      "tds": "0",
+      "long": "13",
+      "fumbles": "0"
+    },
+    "stats_summary": "Rec: 2rec 11yds 0TD"
+  },
   "4367209": {
     "bye_week": 14,
     "position": "TE",
@@ -2863,21 +2867,6 @@
       "fumbles": "0"
     },
     "stats_summary": "Rec: 11rec 79yds 0TD | Rush: 4att 3yds 0TD"
-  },
-  "3120303": {
-    "bye_week": 14,
-    "position": "TE",
-    "team": "SF",
-    "receiving": {
-      "receptions": "1",
-      "targets": "1",
-      "yards": "5",
-      "avg": "5.0",
-      "tds": "0",
-      "long": "5",
-      "fumbles": "0"
-    },
-    "stats_summary": "1rec 5yds 0TD"
   },
   "4431536": {
     "bye_week": 9,
@@ -3476,6 +3465,12 @@
     },
     "stats_summary": "1rec 12yds 0TD"
   },
+  "3122672": {
+    "bye_week": 5,
+    "position": "RB",
+    "team": "CHI",
+    "stats_summary": null
+  },
   "4361411": {
     "bye_week": 5,
     "position": "TE",
@@ -3819,6 +3814,12 @@
     },
     "stats_summary": "Rush: 32att 153yds 1TD | Rec: 11rec 61yds 1TD"
   },
+  "4569615": {
+    "bye_week": 5,
+    "position": "TE",
+    "team": "CHI",
+    "stats_summary": null
+  },
   "4711533": {
     "bye_week": 12,
     "position": "RB",
@@ -4087,6 +4088,12 @@
     "bye_week": 9,
     "position": "WR",
     "team": "TB",
+    "stats_summary": null
+  },
+  "4570674": {
+    "bye_week": 8,
+    "position": "RB",
+    "team": "JAX",
     "stats_summary": null
   },
   "4241457": {
@@ -4713,6 +4720,12 @@
     "team": "TB",
     "stats_summary": null
   },
+  "4361945": {
+    "bye_week": 7,
+    "position": "RB",
+    "team": "BUF",
+    "stats_summary": null
+  },
   "4429955": {
     "bye_week": 5,
     "position": "QB",
@@ -5033,12 +5046,6 @@
     "bye_week": 8,
     "position": "RB",
     "team": "DET",
-    "stats_summary": null
-  },
-  "4427569": {
-    "bye_week": 9,
-    "position": "WR",
-    "team": "PHI",
     "stats_summary": null
   },
   "4690972": {
@@ -5591,12 +5598,6 @@
     "team": "HOU",
     "stats_summary": null
   },
-  "4242504": {
-    "bye_week": 6,
-    "position": "WR",
-    "team": "HOU",
-    "stats_summary": null
-  },
   "4684625": {
     "bye_week": 9,
     "position": "RB",
@@ -6027,6 +6028,12 @@
     "team": "ARI",
     "stats_summary": null
   },
+  "4373077": {
+    "bye_week": 14,
+    "position": "WR",
+    "team": "SF",
+    "stats_summary": null
+  },
   "3930086": {
     "bye_week": 7,
     "position": "TE",
@@ -6240,12 +6247,6 @@
     "bye_week": 9,
     "position": "WR",
     "team": "CLE",
-    "stats_summary": null
-  },
-  "5083198": {
-    "bye_week": 8,
-    "position": "WR",
-    "team": "JAX",
     "stats_summary": null
   },
   "4372026": {
@@ -6602,6 +6603,12 @@
     "bye_week": 14,
     "position": "WR",
     "team": "CAR",
+    "stats_summary": null
+  },
+  "5153868": {
+    "bye_week": 14,
+    "position": "WR",
+    "team": "NE",
     "stats_summary": null
   },
   "2985659": {
@@ -7004,6 +7011,20 @@
     "team": "MIN",
     "stats_summary": null
   },
+  "4429001": {
+    "bye_week": 9,
+    "position": "RB",
+    "team": "TB",
+    "rushing": {
+      "carries": "13",
+      "yards": "32",
+      "avg": "2.5",
+      "tds": "0",
+      "long": "8",
+      "fumbles": "0"
+    },
+    "stats_summary": "Rush: 13att 32yds 0TD"
+  },
   "3728262": {
     "bye_week": 5,
     "position": "WR",
@@ -7347,9 +7368,9 @@
     "stats_summary": "Rec: 66rec 992yds 5TD"
   },
   "4567096": {
-    "bye_week": 6,
+    "bye_week": 9,
     "position": "WR",
-    "team": "HOU",
+    "team": "PHI",
     "receiving": {
       "receptions": "24",
       "targets": "37",
@@ -7894,9 +7915,9 @@
     "stats_summary": null
   },
   "4430191": {
-    "bye_week": 10,
+    "bye_week": 14,
     "position": "WR",
-    "team": "KC",
+    "team": "SF",
     "receiving": {
       "receptions": "0",
       "targets": "3",
@@ -8018,12 +8039,6 @@
       "fumbles": "0"
     },
     "stats_summary": "19rec 142yds 2TD"
-  },
-  "4368172": {
-    "bye_week": 5,
-    "position": "TE",
-    "team": "CHI",
-    "stats_summary": null
   },
   "3917315": {
     "bye_week": 8,
@@ -8191,6 +8206,12 @@
     "team": "DEN",
     "stats_summary": null
   },
+  "4428116": {
+    "bye_week": 5,
+    "position": "WR",
+    "team": "GB",
+    "stats_summary": null
+  },
   "4428119": {
     "bye_week": 5,
     "position": "RB",
@@ -8252,6 +8273,12 @@
     "team": "HOU",
     "stats_summary": null
   },
+  "4613032": {
+    "bye_week": 11,
+    "position": "RB",
+    "team": "IND",
+    "stats_summary": null
+  },
   "4035537": {
     "bye_week": 9,
     "position": "RB",
@@ -8290,6 +8317,12 @@
       "fumbles": "2"
     },
     "stats_summary": "154/243 1,612yds 8TD 4INT"
+  },
+  "4244834": {
+    "bye_week": 8,
+    "position": "TE",
+    "team": "DET",
+    "stats_summary": null
   },
   "4363554": {
     "bye_week": 10,
@@ -8715,16 +8748,16 @@
     },
     "stats_summary": "Rush: 20att 92yds 1TD | Rec: 28rec 322yds 1TD"
   },
+  "3675812": {
+    "bye_week": 14,
+    "position": "QB",
+    "team": "CAR",
+    "stats_summary": null
+  },
   "4362019": {
     "bye_week": 12,
     "position": "WR",
     "team": "DEN",
-    "stats_summary": null
-  },
-  "5278091": {
-    "bye_week": 12,
-    "position": "TE",
-    "team": "LAC",
     "stats_summary": null
   },
   "3127306": {
@@ -8922,6 +8955,12 @@
     },
     "stats_summary": "Rush: 260att 1,079yds 5TD | Rec: 41rec 238yds 0TD"
   },
+  "4035465": {
+    "bye_week": 6,
+    "position": "WR",
+    "team": "HOU",
+    "stats_summary": null
+  },
   "4876907": {
     "bye_week": 9,
     "position": "RB",
@@ -8971,6 +9010,12 @@
     "team": "LAR",
     "stats_summary": null
   },
+  "4879189": {
+    "bye_week": 10,
+    "position": "WR",
+    "team": "KC",
+    "stats_summary": null
+  },
   "4430656": {
     "bye_week": 6,
     "position": "WR",
@@ -8981,6 +9026,12 @@
     "bye_week": 12,
     "position": "TE",
     "team": "DEN",
+    "stats_summary": null
+  },
+  "4372526": {
+    "bye_week": 14,
+    "position": "RB",
+    "team": "NE",
     "stats_summary": null
   },
   "4892576": {
@@ -10445,6 +10496,12 @@
     },
     "stats_summary": "407/578 4,320yds 21TD 15INT"
   },
+  "4581750": {
+    "bye_week": 9,
+    "position": "WR",
+    "team": "TB",
+    "stats_summary": null
+  },
   "3054212": {
     "bye_week": 5,
     "position": "TE",
@@ -10560,6 +10617,12 @@
     },
     "stats_summary": "9rec 53yds 0TD"
   },
+  "3121378": {
+    "bye_week": 7,
+    "position": "TE",
+    "team": "BUF",
+    "stats_summary": null
+  },
   "4360967": {
     "bye_week": 10,
     "position": "TE",
@@ -10626,12 +10689,6 @@
       "fumbles": "1"
     },
     "stats_summary": "Rec: 115rec 1,263yds 12TD | Rush: 2att 6yds 0TD"
-  },
-  "3932442": {
-    "bye_week": 14,
-    "position": "WR",
-    "team": "SF",
-    "stats_summary": null
   },
   "12483": {
     "bye_week": 8,
@@ -10766,12 +10823,6 @@
     },
     "stats_summary": "15rec 133yds 1TD"
   },
-  "4589245": {
-    "bye_week": 12,
-    "position": "WR",
-    "team": "WAS",
-    "stats_summary": null
-  },
   "4430539": {
     "bye_week": 8,
     "position": "TE",
@@ -10843,6 +10894,12 @@
       "fumbles": "0"
     },
     "stats_summary": "336/532 3,727yds 20TD 12INT"
+  },
+  "2979501": {
+    "bye_week": 14,
+    "position": "QB",
+    "team": "SF",
+    "stats_summary": null
   },
   "3128429": {
     "bye_week": 12,
@@ -10937,29 +10994,6 @@
     "team": "IND",
     "stats_summary": null
   },
-  "4039607": {
-    "bye_week": 6,
-    "position": "RB",
-    "team": "HOU",
-    "rushing": {
-      "carries": "10",
-      "yards": "44",
-      "avg": "4.4",
-      "tds": "0",
-      "long": "9",
-      "fumbles": "0"
-    },
-    "receiving": {
-      "receptions": "2",
-      "targets": "3",
-      "yards": "0",
-      "avg": "0.0",
-      "tds": "0",
-      "long": "2",
-      "fumbles": "0"
-    },
-    "stats_summary": "Rush: 10att 44yds 0TD | Rec: 2rec 0yds 0TD"
-  },
   "4242335": {
     "bye_week": 11,
     "position": "RB",
@@ -10993,12 +11027,6 @@
     "bye_week": 9,
     "position": "TE",
     "team": "NYJ",
-    "stats_summary": null
-  },
-  "4431597": {
-    "bye_week": 5,
-    "position": "WR",
-    "team": "PIT",
     "stats_summary": null
   },
   "3040569": {
@@ -11271,6 +11299,12 @@
     },
     "stats_summary": "Rec: 14rec 99yds 0TD"
   },
+  "4429072": {
+    "bye_week": 9,
+    "position": "RB",
+    "team": "NYJ",
+    "stats_summary": null
+  },
   "4249417": {
     "bye_week": 10,
     "position": "WR",
@@ -11296,12 +11330,6 @@
     "bye_week": 10,
     "position": "TE",
     "team": "KC",
-    "stats_summary": null
-  },
-  "4362248": {
-    "bye_week": 8,
-    "position": "TE",
-    "team": "LAR",
     "stats_summary": null
   },
   "4027873": {
@@ -11625,6 +11653,12 @@
     },
     "stats_summary": "Rec: 2rec 26yds 0TD | Rush: 1att 4yds 0TD"
   },
+  "4240350": {
+    "bye_week": 6,
+    "position": "RB",
+    "team": "MIN",
+    "stats_summary": null
+  },
   "5289897": {
     "bye_week": 9,
     "position": "TE",
@@ -11684,9 +11718,9 @@
     "stats_summary": "Rush: 2att 4yds 0TD"
   },
   "4569559": {
-    "bye_week": 12,
+    "bye_week": 11,
     "position": "WR",
-    "team": "DEN",
+    "team": "NO",
     "receiving": {
       "receptions": "41",
       "targets": "55",
@@ -12070,6 +12104,12 @@
     "bye_week": 10,
     "position": "TE",
     "team": "KC",
+    "stats_summary": null
+  },
+  "5299008": {
+    "bye_week": 14,
+    "position": "RB",
+    "team": "NE",
     "stats_summary": null
   },
   "4426535": {
@@ -12708,6 +12748,12 @@
     },
     "stats_summary": "Rush: 16att 57yds 0TD | Rec: 3rec 19yds 0TD"
   },
+  "3128317": {
+    "bye_week": 6,
+    "position": "WR",
+    "team": "HOU",
+    "stats_summary": null
+  },
   "4250970": {
     "bye_week": 8,
     "position": "QB",
@@ -12875,6 +12921,12 @@
     },
     "stats_summary": "3/3FG 3/3XP 12pts"
   },
+  "4567400": {
+    "bye_week": 11,
+    "position": "RB",
+    "team": "IND",
+    "stats_summary": null
+  },
   "4249616": {
     "bye_week": 9,
     "position": "RB",
@@ -12898,21 +12950,6 @@
     "position": "TE",
     "team": "LAC",
     "stats_summary": null
-  },
-  "4044144": {
-    "bye_week": 8,
-    "position": "TE",
-    "team": "DET",
-    "receiving": {
-      "receptions": "5",
-      "targets": "8",
-      "yards": "47",
-      "avg": "9.4",
-      "tds": "1",
-      "long": "13",
-      "fumbles": "0"
-    },
-    "stats_summary": "5rec 47yds 1TD"
   },
   "4685720": {
     "bye_week": 14,
@@ -12955,9 +12992,9 @@
     "stats_summary": "Rec: 0rec 0yds 0TD"
   },
   "4433945": {
-    "bye_week": 10,
+    "bye_week": 7,
     "position": "RB",
-    "team": "KC",
+    "team": "BUF",
     "stats_summary": null
   },
   "4433959": {
@@ -13013,20 +13050,5 @@
       "fumbles": "0"
     },
     "stats_summary": "16/31 170yds 1TD 2INT"
-  },
-  "4608362": {
-    "bye_week": 8,
-    "position": "TE",
-    "team": "DET",
-    "receiving": {
-      "receptions": "1",
-      "targets": "1",
-      "yards": "22",
-      "avg": "22.0",
-      "tds": "0",
-      "long": "22",
-      "fumbles": "0"
-    },
-    "stats_summary": "1rec 22yds 0TD"
   }
 }
