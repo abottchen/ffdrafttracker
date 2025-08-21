@@ -231,13 +231,6 @@
     "position": "RB"
   },
   {
-    "id": 2576336,
-    "first_name": "Ameer",
-    "last_name": "Abdullah",
-    "team": "SF",
-    "position": "RB"
-  },
-  {
     "id": 4429160,
     "first_name": "De'Von",
     "last_name": "Achane",
@@ -256,6 +249,13 @@
     "first_name": "Jordan",
     "last_name": "Addison",
     "team": "MIN",
+    "position": "WR"
+  },
+  {
+    "id": 4426528,
+    "first_name": "Ife",
+    "last_name": "Adeyi",
+    "team": "PHI",
     "position": "WR"
   },
   {
@@ -299,13 +299,6 @@
     "last_name": "Akers",
     "team": "NO",
     "position": "RB"
-  },
-  {
-    "id": 5082289,
-    "first_name": "Kelly",
-    "last_name": "Akharaiyi",
-    "team": "ARI",
-    "position": "WR"
   },
   {
     "id": 3914307,
@@ -658,6 +651,13 @@
     "position": "WR"
   },
   {
+    "id": 4426696,
+    "first_name": "Micah",
+    "last_name": "Bernard",
+    "team": "NE",
+    "position": "RB"
+  },
+  {
     "id": 3123075,
     "first_name": "Braxton",
     "last_name": "Berrios",
@@ -670,13 +670,6 @@
     "last_name": "Bigsby",
     "team": "JAX",
     "position": "RB"
-  },
-  {
-    "id": 4258170,
-    "first_name": "Tarik",
-    "last_name": "Black",
-    "team": "MIA",
-    "position": "WR"
   },
   {
     "id": 4259308,
@@ -718,6 +711,13 @@
     "first_name": "Silas",
     "last_name": "Bolden",
     "team": "MIN",
+    "position": "WR"
+  },
+  {
+    "id": 4808839,
+    "first_name": "Isaiah",
+    "last_name": "Bond",
+    "team": "CLE",
     "position": "WR"
   },
   {
@@ -924,13 +924,6 @@
     "position": "TE"
   },
   {
-    "id": 4587977,
-    "first_name": "Sam",
-    "last_name": "Brown Jr.",
-    "team": "GB",
-    "position": "WR"
-  },
-  {
     "id": 3886812,
     "first_name": "Jake",
     "last_name": "Browning",
@@ -948,7 +941,7 @@
     "id": 4040774,
     "first_name": "Harrison",
     "last_name": "Bryant",
-    "team": "PHI",
+    "team": "HOU",
     "position": "TE"
   },
   {
@@ -1139,13 +1132,6 @@
     "last_name": "Charbonnet",
     "team": "SEA",
     "position": "RB"
-  },
-  {
-    "id": 3115394,
-    "first_name": "DJ",
-    "last_name": "Chark",
-    "team": "ATL",
-    "position": "WR"
   },
   {
     "id": 3929636,
@@ -1351,6 +1337,13 @@
     "position": "WR"
   },
   {
+    "id": 3052056,
+    "first_name": "River",
+    "last_name": "Cracraft",
+    "team": "WAS",
+    "position": "WR"
+  },
+  {
     "id": 4426990,
     "first_name": "Jalen",
     "last_name": "Cropper",
@@ -1426,6 +1419,13 @@
     "last_name": "Daniels",
     "team": "WAS",
     "position": "QB"
+  },
+  {
+    "id": 4594446,
+    "first_name": "Roderick",
+    "last_name": "Daniels Jr.",
+    "team": "NO",
+    "position": "WR"
   },
   {
     "id": 3912547,
@@ -1524,6 +1524,13 @@
     "last_name": "Demercado",
     "team": "ARI",
     "position": "RB"
+  },
+  {
+    "id": 3895785,
+    "first_name": "Ben",
+    "last_name": "DiNucci",
+    "team": "ATL",
+    "position": "QB"
   },
   {
     "id": 4362081,
@@ -1652,6 +1659,13 @@
     "position": "WR"
   },
   {
+    "id": 4879650,
+    "first_name": "Grant",
+    "last_name": "DuBose",
+    "team": "BUF",
+    "position": "WR"
+  },
+  {
     "id": 4367209,
     "first_name": "Greg",
     "last_name": "Dulcich",
@@ -1678,13 +1692,6 @@
     "last_name": "Duvernay",
     "team": "CHI",
     "position": "WR"
-  },
-  {
-    "id": 3120303,
-    "first_name": "Ross",
-    "last_name": "Dwelley",
-    "team": "SF",
-    "position": "TE"
   },
   {
     "id": 4431536,
@@ -2023,6 +2030,13 @@
     "position": "TE"
   },
   {
+    "id": 3122672,
+    "first_name": "Royce",
+    "last_name": "Freeman",
+    "team": "CHI",
+    "position": "RB"
+  },
+  {
     "id": 4361411,
     "first_name": "Pat",
     "last_name": "Freiermuth",
@@ -2175,6 +2189,13 @@
     "last_name": "Goodson",
     "team": "IND",
     "position": "RB"
+  },
+  {
+    "id": 4569615,
+    "first_name": "Thomas",
+    "last_name": "Gordon",
+    "team": "CHI",
+    "position": "TE"
   },
   {
     "id": 4711533,
@@ -2336,6 +2357,13 @@
     "last_name": "Harris",
     "team": "TB",
     "position": "WR"
+  },
+  {
+    "id": 4570674,
+    "first_name": "Kevin",
+    "last_name": "Harris",
+    "team": "JAX",
+    "position": "RB"
   },
   {
     "id": 4241457,
@@ -2653,6 +2681,13 @@
     "position": "WR"
   },
   {
+    "id": 4361945,
+    "first_name": "Jarveon",
+    "last_name": "Howard",
+    "team": "BUF",
+    "position": "RB"
+  },
+  {
     "id": 4429955,
     "first_name": "Will",
     "last_name": "Howard",
@@ -2819,13 +2854,6 @@
     "last_name": "Jackson",
     "team": "DET",
     "position": "RB"
-  },
-  {
-    "id": 4427569,
-    "first_name": "Giles",
-    "last_name": "Jackson",
-    "team": "PHI",
-    "position": "WR"
   },
   {
     "id": 4690972,
@@ -3122,13 +3150,6 @@
     "position": "WR"
   },
   {
-    "id": 4242504,
-    "first_name": "Johnny",
-    "last_name": "Johnson III",
-    "team": "HOU",
-    "position": "WR"
-  },
-  {
     "id": 4684625,
     "first_name": "Montrell",
     "last_name": "Johnson Jr.",
@@ -3381,6 +3402,13 @@
     "position": "RB"
   },
   {
+    "id": 4373077,
+    "first_name": "Malik",
+    "last_name": "Knowles",
+    "team": "SF",
+    "position": "WR"
+  },
+  {
     "id": 3930086,
     "first_name": "Dawson",
     "last_name": "Knox",
@@ -3504,13 +3532,6 @@
     "first_name": "Gage",
     "last_name": "Larvadain",
     "team": "CLE",
-    "position": "WR"
-  },
-  {
-    "id": 5083198,
-    "first_name": "Darius",
-    "last_name": "Lassiter",
-    "team": "JAX",
     "position": "WR"
   },
   {
@@ -3686,6 +3707,13 @@
     "first_name": "T.J.",
     "last_name": "Luther",
     "team": "CAR",
+    "position": "WR"
+  },
+  {
+    "id": 5153868,
+    "first_name": "Phil",
+    "last_name": "Lutz",
+    "team": "NE",
     "position": "WR"
   },
   {
@@ -3892,6 +3920,13 @@
     "position": "QB"
   },
   {
+    "id": 4429001,
+    "first_name": "Jase",
+    "last_name": "McClellan",
+    "team": "TB",
+    "position": "RB"
+  },
+  {
     "id": 3728262,
     "first_name": "Ray-Ray",
     "last_name": "McCloud III",
@@ -4070,7 +4105,7 @@
     "id": 4567096,
     "first_name": "John",
     "last_name": "Metchie III",
-    "team": "HOU",
+    "team": "PHI",
     "position": "WR"
   },
   {
@@ -4322,7 +4357,7 @@
     "id": 4430191,
     "first_name": "Skyy",
     "last_name": "Moore",
-    "team": "KC",
+    "team": "SF",
     "position": "WR"
   },
   {
@@ -4379,13 +4414,6 @@
     "first_name": "Johnny",
     "last_name": "Mundt",
     "team": "JAX",
-    "position": "TE"
-  },
-  {
-    "id": 4368172,
-    "first_name": "Jordan",
-    "last_name": "Murray",
-    "team": "CHI",
     "position": "TE"
   },
   {
@@ -4480,6 +4508,13 @@
     "position": "WR"
   },
   {
+    "id": 4428116,
+    "first_name": "Isaiah",
+    "last_name": "Neyor",
+    "team": "GB",
+    "position": "WR"
+  },
+  {
     "id": 4428119,
     "first_name": "Lew",
     "last_name": "Nichols",
@@ -4508,6 +4543,13 @@
     "position": "WR"
   },
   {
+    "id": 4613032,
+    "first_name": "Nate",
+    "last_name": "Noel",
+    "team": "IND",
+    "position": "RB"
+  },
+  {
     "id": 4035537,
     "first_name": "Kene",
     "last_name": "Nwangwu",
@@ -4520,6 +4562,13 @@
     "last_name": "O'Connell",
     "team": "LV",
     "position": "QB"
+  },
+  {
+    "id": 4244834,
+    "first_name": "Gunnar",
+    "last_name": "Oakes",
+    "team": "DET",
+    "position": "TE"
   },
   {
     "id": 4363554,
@@ -4739,18 +4788,18 @@
     "position": "RB"
   },
   {
+    "id": 3675812,
+    "first_name": "Bryce",
+    "last_name": "Perkins",
+    "team": "CAR",
+    "position": "QB"
+  },
+  {
     "id": 4362019,
     "first_name": "A.T.",
     "last_name": "Perry",
     "team": "DEN",
     "position": "WR"
-  },
-  {
-    "id": 5278091,
-    "first_name": "Jordan",
-    "last_name": "Petaia",
-    "team": "LAC",
-    "position": "TE"
   },
   {
     "id": 3127306,
@@ -4837,6 +4886,13 @@
     "position": "RB"
   },
   {
+    "id": 4035465,
+    "first_name": "Cornell",
+    "last_name": "Powell",
+    "team": "HOU",
+    "position": "WR"
+  },
+  {
     "id": 4876907,
     "first_name": "ShunDerrick",
     "last_name": "Powell",
@@ -4872,6 +4928,13 @@
     "position": "WR"
   },
   {
+    "id": 4879189,
+    "first_name": "Hal",
+    "last_name": "Presley",
+    "team": "KC",
+    "position": "WR"
+  },
+  {
     "id": 4430656,
     "first_name": "Myles",
     "last_name": "Price",
@@ -4884,6 +4947,13 @@
     "last_name": "Prieskorn",
     "team": "DEN",
     "position": "TE"
+  },
+  {
+    "id": 4372526,
+    "first_name": "Deneric",
+    "last_name": "Prince",
+    "team": "NE",
+    "position": "RB"
   },
   {
     "id": 4892576,
@@ -5607,6 +5677,13 @@
     "position": "QB"
   },
   {
+    "id": 4581750,
+    "first_name": "Jaden",
+    "last_name": "Smith",
+    "team": "TB",
+    "position": "WR"
+  },
+  {
     "id": 3054212,
     "first_name": "Jonnu",
     "last_name": "Smith",
@@ -5670,6 +5747,13 @@
     "position": "TE"
   },
   {
+    "id": 3121378,
+    "first_name": "Matt",
+    "last_name": "Sokol",
+    "team": "BUF",
+    "position": "TE"
+  },
+  {
     "id": 4360967,
     "first_name": "Brevyn",
     "last_name": "Spann-Ford",
@@ -5695,13 +5779,6 @@
     "first_name": "Amon-Ra",
     "last_name": "St. Brown",
     "team": "DET",
-    "position": "WR"
-  },
-  {
-    "id": 3932442,
-    "first_name": "Equanimeous",
-    "last_name": "St. Brown",
-    "team": "SF",
     "position": "WR"
   },
   {
@@ -5775,13 +5852,6 @@
     "position": "TE"
   },
   {
-    "id": 4589245,
-    "first_name": "Michael",
-    "last_name": "Strachan",
-    "team": "WAS",
-    "position": "WR"
-  },
-  {
     "id": 4430539,
     "first_name": "Brenton",
     "last_name": "Strange",
@@ -5800,6 +5870,13 @@
     "first_name": "C.J.",
     "last_name": "Stroud",
     "team": "HOU",
+    "position": "QB"
+  },
+  {
+    "id": 2979501,
+    "first_name": "Nate",
+    "last_name": "Sudfeld",
+    "team": "SF",
     "position": "QB"
   },
   {
@@ -5859,13 +5936,6 @@
     "position": "WR"
   },
   {
-    "id": 4039607,
-    "first_name": "J.J.",
-    "last_name": "Taylor",
-    "team": "HOU",
-    "position": "RB"
-  },
-  {
     "id": 4242335,
     "first_name": "Jonathan",
     "last_name": "Taylor",
@@ -5885,13 +5955,6 @@
     "last_name": "Taylor",
     "team": "NYJ",
     "position": "TE"
-  },
-  {
-    "id": 4431597,
-    "first_name": "Roc",
-    "last_name": "Taylor",
-    "team": "PIT",
-    "position": "WR"
   },
   {
     "id": 3040569,
@@ -6020,6 +6083,13 @@
     "position": "WR"
   },
   {
+    "id": 4429072,
+    "first_name": "Lawrance",
+    "last_name": "Toafili",
+    "team": "NYJ",
+    "position": "RB"
+  },
+  {
     "id": 4249417,
     "first_name": "Jalen",
     "last_name": "Tolbert",
@@ -6038,13 +6108,6 @@
     "first_name": "Robert",
     "last_name": "Tonyan",
     "team": "KC",
-    "position": "TE"
-  },
-  {
-    "id": 4362248,
-    "first_name": "Anthony",
-    "last_name": "Torres",
-    "team": "LAR",
     "position": "TE"
   },
   {
@@ -6195,6 +6258,13 @@
     "position": "WR"
   },
   {
+    "id": 4240350,
+    "first_name": "Xazavian",
+    "last_name": "Valladay",
+    "team": "MIN",
+    "position": "RB"
+  },
+  {
     "id": 5289897,
     "first_name": "Mitch",
     "last_name": "Van Vooren",
@@ -6226,7 +6296,7 @@
     "id": 4569559,
     "first_name": "Devaughn",
     "last_name": "Vele",
-    "team": "DEN",
+    "team": "NO",
     "position": "WR"
   },
   {
@@ -6301,7 +6371,7 @@
   },
   {
     "id": 4688380,
-    "first_name": "Cameron",
+    "first_name": "Cam",
     "last_name": "Ward",
     "team": "TEN",
     "position": "QB"
@@ -6431,6 +6501,13 @@
     "last_name": "Watson",
     "team": "KC",
     "position": "TE"
+  },
+  {
+    "id": 5299008,
+    "first_name": "Shane",
+    "last_name": "Watts",
+    "team": "NE",
+    "position": "RB"
   },
   {
     "id": 4426535,
@@ -6762,6 +6839,13 @@
     "position": "RB"
   },
   {
+    "id": 3128317,
+    "first_name": "Juwann",
+    "last_name": "Winfree",
+    "team": "HOU",
+    "position": "WR"
+  },
+  {
     "id": 4250970,
     "first_name": "Dresser",
     "last_name": "Winn",
@@ -6853,6 +6937,13 @@
     "position": "K"
   },
   {
+    "id": 4567400,
+    "first_name": "Nay'Quan",
+    "last_name": "Wright",
+    "team": "IND",
+    "position": "RB"
+  },
+  {
     "id": 4249616,
     "first_name": "Owen",
     "last_name": "Wright",
@@ -6881,13 +6972,6 @@
     "position": "TE"
   },
   {
-    "id": 4044144,
-    "first_name": "Kenny",
-    "last_name": "Yeboah",
-    "team": "DET",
-    "position": "TE"
-  },
-  {
     "id": 4685720,
     "first_name": "Bryce",
     "last_name": "Young",
@@ -6905,7 +6989,7 @@
     "id": 4433945,
     "first_name": "Elijah",
     "last_name": "Young",
-    "team": "KC",
+    "team": "BUF",
     "position": "RB"
   },
   {
@@ -6928,12 +7012,5 @@
     "last_name": "Zappe",
     "team": "KC",
     "position": "QB"
-  },
-  {
-    "id": 4608362,
-    "first_name": "Shane",
-    "last_name": "Zylstra",
-    "team": "DET",
-    "position": "TE"
   }
 ]
