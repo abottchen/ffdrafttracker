@@ -204,6 +204,7 @@ def generate_html(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="darkreader-lock" />
     <title>{YEAR} Fantasy Football Draft Recap</title>
     <style>
         :root {{
@@ -267,11 +268,9 @@ def generate_html(
         
         .header h1 {{
             font-size: 3em;
-            color: var(--text-primary);
             background: linear-gradient(135deg, var(--header-gradient-start) 0%, var(--header-gradient-end) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
             margin-bottom: 10px;
         }}
         
@@ -496,11 +495,9 @@ def generate_html(
         .summary-value {{
             font-size: 2em;
             font-weight: bold;
-            color: var(--text-primary);
             background: linear-gradient(135deg, var(--header-gradient-start) 0%, var(--header-gradient-end) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
         }}
         
         .summary-label {{
@@ -607,11 +604,9 @@ def generate_html(
         .summary-value {{
             font-size: 2.5em;
             font-weight: 900;
-            color: var(--text-primary);
             background: linear-gradient(135deg, var(--header-gradient-start), var(--header-gradient-end));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
             margin-bottom: 8px;
             line-height: 1;
         }}
