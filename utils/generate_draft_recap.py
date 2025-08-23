@@ -8,19 +8,32 @@ a beautiful static HTML page with all team rosters, prices, and stats.
 
 import json
 import shutil
+import sys
 from datetime import datetime
 from pathlib import Path
 
 import requests
+from requests.exceptions import ConnectionError, RequestException
 
 API_BASE = "http://localhost:8175/api/v1"
 YEAR = datetime.now().year
 
 def fetch_api_data(endpoint: str) -> dict:
     """Fetch data from API endpoint."""
-    response = requests.get(f"{API_BASE}{endpoint}")
-    response.raise_for_status()
-    return response.json()
+    try:
+        response = requests.get(f"{API_BASE}{endpoint}")
+        response.raise_for_status()
+        return response.json()
+    except ConnectionError:
+        print(f"\nERROR: Cannot connect to API server at {API_BASE}")
+        print("\nPlease start the API server first:")
+        print("  python main.py")
+        print("\nThen run this script again.")
+        sys.exit(1)
+    except RequestException as e:
+        print(f"\nERROR: Failed to fetch data from {API_BASE}{endpoint}")
+        print(f"Request error: {e}")
+        sys.exit(1)
 
 def download_image(url: str, output_path: Path) -> bool:
     """Download an image from URL to local path."""
@@ -149,7 +162,7 @@ def get_position_color(position: str) -> str:
 
 def generate_html(
     draft_state: dict,
-    owners: list[dict], 
+    owners: list[dict],
     players: list[dict],
     config: dict,
     player_stats: dict,
@@ -198,6 +211,210 @@ def generate_html(
 
     # Sort teams by owner name
     teams_data.sort(key=lambda x: x['owner'].get('owner_name', ''))
+
+    # Calculate draft summary stats before HTML generation
+    total_money = sum(team['total_spent'] for team in teams_data)
+    total_players = sum(len(team['players']) for team in teams_data)
+    avg_price = total_money / total_players if total_players > 0 else 0
+
+    # Calculate additional interesting stats
+    all_picks = []
+    nfl_team_counts = {}
+    position_stats = {}
+
+    for team_data in teams_data:
+        owner = team_data['owner']
+        for player_data in team_data['players']:
+            player = player_data['player']
+            pick = player_data['pick']
+
+            pick_info = {
+                'owner_name': owner.get('owner_name', 'Unknown'),
+                'team_name': owner.get('team_name', 'Unknown'),
+                'player_name': f"{player.get('first_name', '')} "
+                              f"{player.get('last_name', '')}".strip(),
+                'position': player.get('position', 'Unknown'),
+                'nfl_team': player.get('team', ''),
+                'price': pick['price']
+            }
+            all_picks.append(pick_info)
+
+            # Track NFL team counts per owner
+            owner_key = owner.get('owner_name', 'Unknown')
+            nfl_team = player.get('team', '')
+            if nfl_team:
+                if owner_key not in nfl_team_counts:
+                    nfl_team_counts[owner_key] = {}
+                nfl_team_counts[owner_key][nfl_team] = (
+                    nfl_team_counts[owner_key].get(nfl_team, 0) + 1
+                )
+
+            # Track position stats
+            position = player.get('position', 'Unknown')
+            if position not in position_stats:
+                position_stats[position] = []
+            position_stats[position].append(pick['price'])
+
+    # Find highest paid player at each position
+    highest_by_position = {}
+    for position, prices in position_stats.items():
+        max_price = max(prices)
+        highest_pick = next(pick for pick in all_picks if pick['position'] == position and pick['price'] == max_price)
+        highest_by_position[position] = {
+            'player': highest_pick['player_name'],
+            'price': max_price,
+            'owner': highest_pick['team_name']
+        }
+
+    # Calculate average price per position
+    avg_by_position = {}
+    for position, prices in position_stats.items():
+        avg_by_position[position] = sum(prices) / len(prices) if prices else 0
+
+    # Find owner with highest priced player
+    highest_pick = max(all_picks, key=lambda x: x['price'])
+
+    # Find owner with most players from same NFL team
+    max_same_team = 0
+    most_loyal_owner = None
+    most_loyal_team = None
+
+    for owner_name, teams in nfl_team_counts.items():
+        for nfl_team, count in teams.items():
+            if count > max_same_team:
+                max_same_team = count
+                most_loyal_owner = owner_name
+                most_loyal_team = nfl_team
+
+    # Additional interesting facts
+    # Most expensive pick overall
+    most_expensive = max(all_picks, key=lambda x: x['price'])
+
+    # Calculate bargains based on fantasy value vs price
+    def calculate_fantasy_points(player_id, stats):
+        """Calculate approximate fantasy points from player stats"""
+        if not stats:
+            return 0
+
+        points = 0
+        # Stats are at the root level, not in stats_summary
+        stats_data = stats
+
+        if not stats_data:
+            return 0
+
+        try:
+            # Passing stats (QB)
+            if 'passing' in stats_data:
+                passing = stats_data['passing']
+                if isinstance(passing, dict):
+                    yards = int(passing.get('yards', '0').replace(',', ''))
+                    tds = int(passing.get('tds', '0'))
+                    ints = int(passing.get('ints', '0'))
+                    points += yards * 0.04 + tds * 4 - ints * 2
+
+            # Rushing stats
+            if 'rushing' in stats_data:
+                rushing = stats_data['rushing']
+                if isinstance(rushing, dict):
+                    yards = int(rushing.get('yards', '0').replace(',', ''))
+                    tds = int(rushing.get('tds', '0'))
+                    points += yards * 0.1 + tds * 6
+
+            # Receiving stats
+            if 'receiving' in stats_data:
+                receiving = stats_data['receiving']
+                if isinstance(receiving, dict):
+                    receptions = int(receiving.get('receptions', '0'))
+                    yards = int(receiving.get('yards', '0').replace(',', ''))
+                    tds = int(receiving.get('tds', '0'))
+                    points += receptions * 0.5 + yards * 0.1 + tds * 6
+
+            # Kicking stats
+            if 'kicking' in stats_data:
+                kicking = stats_data['kicking']
+                if isinstance(kicking, dict):
+                    fg_made = int(kicking.get('fg_made', '0'))
+                    xp_made = int(kicking.get('xp_made', '0'))
+                    points += fg_made * 3 + xp_made * 1
+
+            # Defense stats
+            if 'defense' in stats_data:
+                defense = stats_data['defense']
+                if isinstance(defense, dict):
+                    sacks = float(defense.get('sacks', '0'))
+                    ints = int(defense.get('ints', '0'))
+                    fumbles = int(defense.get('fumble_recoveries', '0'))
+                    tds = int(defense.get('tds', '0'))
+                    points += sacks * 1 + ints * 2 + fumbles * 2 + tds * 6
+
+        except (ValueError, TypeError, KeyError):
+            pass
+
+        return max(0, points)
+
+    # Calculate value picks (fantasy points per dollar)
+    bargain_picks = []
+    debug_count = 0
+
+    for pick in all_picks:
+        if pick['price'] > 0:  # Only consider picks that cost money
+            player_id = str(next((p['id'] for p in players if f"{p.get('first_name', '')} {p.get('last_name', '')}".strip() == pick['player_name']), 0))
+            player_stats_data = player_stats.get(player_id, {})
+            fantasy_points = calculate_fantasy_points(player_id, player_stats_data)
+
+            if fantasy_points > 0:  # Only include players who have actual stats (excludes rookies/no data)
+                value_ratio = fantasy_points / pick['price']
+                bargain_picks.append({
+                    **pick,
+                    'fantasy_points': fantasy_points,
+                    'value_ratio': value_ratio
+                })
+
+    print(f"  Found {len(bargain_picks)} players with stats for value analysis")
+
+    # Find best bargain (highest fantasy points per dollar)
+    best_bargain = max(bargain_picks, key=lambda x: x['value_ratio']) if bargain_picks else None
+
+    # Find biggest bounce-back bet (lowest fantasy points per dollar, but only for expensive picks with stats)
+    expensive_picks = [pick for pick in bargain_picks if pick['price'] >= 15]  # Only picks $15+ to avoid cheap flyers
+    bounce_back_pick = min(expensive_picks, key=lambda x: x['value_ratio']) if expensive_picks else None
+
+    if best_bargain:
+        print(f"  Best bargain: {best_bargain['player_name']} - {best_bargain['fantasy_points']:.1f} pts for ${best_bargain['price']} ({best_bargain['value_ratio']:.2f} pts/$)")
+    if bounce_back_pick:
+        print(f"  Bounce-back bet: {bounce_back_pick['player_name']} - {bounce_back_pick['fantasy_points']:.1f} pts for ${bounce_back_pick['price']} ({bounce_back_pick['value_ratio']:.2f} pts/$)")
+
+    # Still keep cheapest pick as backup
+    cheapest_picks = [pick for pick in all_picks if pick['price'] > 0]
+    cheapest = min(cheapest_picks, key=lambda x: x['price']) if cheapest_picks else None
+
+    # Owner with most expensive average per player
+    owner_averages = {}
+    for team_data in teams_data:
+        owner_name = team_data['owner'].get('team_name', 'Unknown')
+        if team_data['players']:
+            owner_averages[owner_name] = team_data['total_spent'] / len(team_data['players'])
+
+    highest_avg_owner = max(owner_averages.items(), key=lambda x: x[1]) if owner_averages else None
+
+    # Most popular NFL team (most players drafted from)
+    all_nfl_teams = {}
+    for pick in all_picks:
+        if pick['nfl_team']:
+            all_nfl_teams[pick['nfl_team']] = all_nfl_teams.get(pick['nfl_team'], 0) + 1
+
+    most_popular_nfl_team = max(all_nfl_teams.items(), key=lambda x: x[1]) if all_nfl_teams else None
+
+    # Position with highest total spending
+    position_totals = {}
+    for position, prices in position_stats.items():
+        position_totals[position] = sum(prices)
+
+    biggest_position_spend = max(position_totals.items(), key=lambda x: x[1]) if position_totals else None
+
+    # Bargain hunter (owner who spent least on average)
+    bargain_hunter = min(owner_averages.items(), key=lambda x: x[1]) if owner_averages else None
 
     html = f'''<!DOCTYPE html>
 <html lang="en">
@@ -755,6 +972,156 @@ def generate_html(
             <p>Auction Draft Results</p>
         </div>
         
+        <div class="draft-summary">
+            <h2>Draft Summary & Analysis</h2>
+            
+            <!-- Tab Navigation -->
+            <div class="summary-tabs">
+                <button class="tab-btn active" data-tab="overview">📊 Overview</button>
+                <button class="tab-btn" data-tab="highlights">🏆 Draft Highlights</button>
+                <button class="tab-btn" data-tab="positions">💰 Position Analysis</button>
+            </div>
+            
+            <!-- Overview Tab -->
+            <div class="tab-content active" id="overview">
+                <div class="summary-stats">
+                    <div class="summary-stat">
+                        <div class="summary-value">{len(teams_data)}</div>
+                        <div class="summary-label">Teams</div>
+                        <div class="summary-context">{len(teams_data)} teams competing</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-value">{total_players}</div>
+                        <div class="summary-label">Players Drafted</div>
+                        <div class="summary-context">From available player pool</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-value">${total_money:,}</div>
+                        <div class="summary-label">Total Spent</div>
+                        <div class="summary-context">Across all teams</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-value">${avg_price:.1f}</div>
+                        <div class="summary-label">Average Price</div>
+                        <div class="summary-context">Per player drafted</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Draft Highlights Tab -->
+            <div class="tab-content" id="highlights">
+                <div class="facts-grid">
+                    <div class="fact-item">
+                        <div class="fact-icon">💰</div>
+                        <div class="fact-content">
+                            <h4>Most Expensive Pick</h4>
+                            <div class="fact-details">
+                                <span class="fact-highlight">{most_expensive['player_name']}</span> (${most_expensive['price']}) to {most_expensive['team_name']}
+                            </div>
+                        </div>
+                    </div>
+                    {f'''<div class="fact-item">
+                        <div class="fact-icon">⭐</div>
+                        <div class="fact-content">
+                            <h4>Best Value Pick</h4>
+                            <div class="fact-details">
+                                <span class="fact-highlight">{best_bargain['player_name']}</span> ({best_bargain['fantasy_points']:.1f} pts, ${best_bargain['price']}) to {best_bargain['team_name']}<br>
+                                <small>{best_bargain['value_ratio']:.2f} pts/$</small>
+                            </div>
+                        </div>
+                    </div>''' if best_bargain else f'''<div class="fact-item">
+                        <div class="fact-icon">💸</div>
+                        <div class="fact-content">
+                            <h4>Cheapest Pick</h4>
+                            <div class="fact-details">
+                                <span class="fact-highlight">{cheapest['player_name']}</span> (${cheapest['price']}) to {cheapest['team_name']}
+                            </div>
+                        </div>
+                    </div>''' if cheapest else ''}
+                    {f'''<div class="fact-item">
+                        <div class="fact-icon">🔄</div>
+                        <div class="fact-content">
+                            <h4>Bounce-Back Bet</h4>
+                            <div class="fact-details">
+                                <span class="fact-highlight">{bounce_back_pick['player_name']}</span> ({bounce_back_pick['fantasy_points']:.1f} pts, ${bounce_back_pick['price']}) to {bounce_back_pick['team_name']}<br>
+                                <small>{bounce_back_pick['value_ratio']:.2f} pts/$</small>
+                            </div>
+                        </div>
+                    </div>''' if bounce_back_pick else ''}
+                    {f'''<div class="fact-item">
+                        <div class="fact-icon">💳</div>
+                        <div class="fact-content">
+                            <h4>Biggest Spender</h4>
+                            <div class="fact-details">
+                                <span class="fact-highlight">{highest_avg_owner[0]}</span> (${highest_avg_owner[1]:.1f} per player avg)
+                            </div>
+                        </div>
+                    </div>''' if highest_avg_owner else ''}
+                    {f'''<div class="fact-item">
+                        <div class="fact-icon">🎯</div>
+                        <div class="fact-content">
+                            <h4>Bargain Hunter</h4>
+                            <div class="fact-details">
+                                <span class="fact-highlight">{bargain_hunter[0]}</span> (${bargain_hunter[1]:.1f} per player avg)
+                            </div>
+                        </div>
+                    </div>''' if bargain_hunter else ''}
+                    {f'''<div class="fact-item">
+                        <div class="fact-icon">🏈</div>
+                        <div class="fact-content">
+                            <h4>Team Loyalty Award</h4>
+                            <div class="fact-details">
+                                <span class="fact-highlight">{most_loyal_owner}</span> ({max_same_team} {most_loyal_team} players)
+                            </div>
+                        </div>
+                    </div>''' if most_loyal_owner else ''}
+                    {f'''<div class="fact-item">
+                        <div class="fact-icon">🌟</div>
+                        <div class="fact-content">
+                            <h4>Most Popular NFL Team</h4>
+                            <div class="fact-details">
+                                <span class="fact-highlight">{most_popular_nfl_team[0]}</span> ({most_popular_nfl_team[1]} players drafted)
+                            </div>
+                        </div>
+                    </div>''' if most_popular_nfl_team else ''}
+                    {f'''<div class="fact-item">
+                        <div class="fact-icon">📈</div>
+                        <div class="fact-content">
+                            <h4>Biggest Position Investment</h4>
+                            <div class="fact-details">
+                                <span class="fact-highlight">{biggest_position_spend[0]}</span> (${biggest_position_spend[1]:,} total spent)
+                            </div>
+                        </div>
+                    </div>''' if biggest_position_spend else ''}
+                </div>
+            </div>
+            
+            <!-- Position Analysis Tab -->
+            <div class="tab-content" id="positions">
+                <div class="position-stats">'''
+
+    # Add highest paid at each position
+    position_order = ['QB', 'RB', 'WR', 'TE', 'K', 'DST', 'D/ST']
+    for pos in position_order:
+        if pos in highest_by_position:
+            info = highest_by_position[pos]
+            avg = avg_by_position[pos]
+            color = get_position_color(pos)
+            html += f'''
+                    <div class="position-stat">
+                        <div class="position-badge" style="background: {color}; color: {'#2a2a2a' if pos in ['RB', 'WR', 'TE'] else 'white'}">{pos}</div>
+                        <div class="position-info">
+                            <div class="position-detail"><strong>Highest:</strong> <span class="fact-highlight">{info['player']}</span> (${info['price']}) to {info['owner']}</div>
+                            <div class="position-detail"><strong>Average:</strong> ${avg:.1f}</div>
+                        </div>
+                        <div class="position-price-display">${info['price']}</div>
+                    </div>'''
+
+    html += '''
+                </div>
+            </div>
+        </div>
+        
         <div class="layout-controls">
             <button class="layout-toggle" id="layoutToggle" aria-label="Toggle layout">
                 <span class="layout-icon">⊞</span>
@@ -780,7 +1147,7 @@ def generate_html(
                 
                 <div class="team-stats">
                     <div class="stat-item">
-                        <div class="stat-value">{len(players)}</div>
+                        <div class="stat-value">{len(team_players)}</div>
                         <div class="stat-label">Players</div>
                     </div>
                     <div class="stat-item">
@@ -864,7 +1231,8 @@ def generate_html(
             pick_info = {
                 'owner_name': owner.get('owner_name', 'Unknown'),
                 'team_name': owner.get('team_name', 'Unknown'),
-                'player_name': f"{player.get('first_name', '')} {player.get('last_name', '')}".strip(),
+                'player_name': f"{player.get('first_name', '')} "
+                              f"{player.get('last_name', '')}".strip(),
                 'position': player.get('position', 'Unknown'),
                 'nfl_team': player.get('team', ''),
                 'price': pick['price']
@@ -877,7 +1245,9 @@ def generate_html(
             if nfl_team:
                 if owner_key not in nfl_team_counts:
                     nfl_team_counts[owner_key] = {}
-                nfl_team_counts[owner_key][nfl_team] = nfl_team_counts[owner_key].get(nfl_team, 0) + 1
+                nfl_team_counts[owner_key][nfl_team] = (
+                    nfl_team_counts[owner_key].get(nfl_team, 0) + 1
+                )
 
             # Track position stats
             position = player.get('position', 'Unknown')
@@ -1046,157 +1416,7 @@ def generate_html(
     # Bargain hunter (owner who spent least on average)
     bargain_hunter = min(owner_averages.items(), key=lambda x: x[1]) if owner_averages else None
 
-    html += f'''
-        </div>
-        
-        <div class="draft-summary">
-            <h2>Draft Summary & Analysis</h2>
-            
-            <!-- Tab Navigation -->
-            <div class="summary-tabs">
-                <button class="tab-btn active" data-tab="overview">📊 Overview</button>
-                <button class="tab-btn" data-tab="highlights">🏆 Draft Highlights</button>
-                <button class="tab-btn" data-tab="positions">💰 Position Analysis</button>
-            </div>
-            
-            <!-- Overview Tab -->
-            <div class="tab-content active" id="overview">
-                <div class="summary-stats">
-                    <div class="summary-stat">
-                        <div class="summary-value">{len(teams_data)}</div>
-                        <div class="summary-label">Teams</div>
-                        <div class="summary-context">{len(teams_data)} teams competing</div>
-                    </div>
-                    <div class="summary-stat">
-                        <div class="summary-value">{total_players}</div>
-                        <div class="summary-label">Players Drafted</div>
-                        <div class="summary-context">From available player pool</div>
-                    </div>
-                    <div class="summary-stat">
-                        <div class="summary-value">${total_money:,}</div>
-                        <div class="summary-label">Total Spent</div>
-                        <div class="summary-context">Across all teams</div>
-                    </div>
-                    <div class="summary-stat">
-                        <div class="summary-value">${avg_price:.1f}</div>
-                        <div class="summary-label">Average Price</div>
-                        <div class="summary-context">Per player drafted</div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Draft Highlights Tab -->
-            <div class="tab-content" id="highlights">
-                <div class="facts-grid">
-                    <div class="fact-item">
-                        <div class="fact-icon">💰</div>
-                        <div class="fact-content">
-                            <h4>Most Expensive Pick</h4>
-                            <div class="fact-details">
-                                <span class="fact-highlight">{most_expensive['player_name']}</span> (${most_expensive['price']}) to {most_expensive['team_name']}
-                            </div>
-                        </div>
-                    </div>
-                    {f'''<div class="fact-item">
-                        <div class="fact-icon">⭐</div>
-                        <div class="fact-content">
-                            <h4>Best Value Pick</h4>
-                            <div class="fact-details">
-                                <span class="fact-highlight">{best_bargain['player_name']}</span> ({best_bargain['fantasy_points']:.1f} pts, ${best_bargain['price']}) to {best_bargain['team_name']}<br>
-                                <small>{best_bargain['value_ratio']:.2f} pts/$</small>
-                            </div>
-                        </div>
-                    </div>''' if best_bargain else f'''<div class="fact-item">
-                        <div class="fact-icon">💸</div>
-                        <div class="fact-content">
-                            <h4>Cheapest Pick</h4>
-                            <div class="fact-details">
-                                <span class="fact-highlight">{cheapest['player_name']}</span> (${cheapest['price']}) to {cheapest['team_name']}
-                            </div>
-                        </div>
-                    </div>''' if cheapest else ''}
-                    {f'''<div class="fact-item">
-                        <div class="fact-icon">🔄</div>
-                        <div class="fact-content">
-                            <h4>Bounce-Back Bet</h4>
-                            <div class="fact-details">
-                                <span class="fact-highlight">{bounce_back_pick['player_name']}</span> ({bounce_back_pick['fantasy_points']:.1f} pts, ${bounce_back_pick['price']}) to {bounce_back_pick['team_name']}<br>
-                                <small>{bounce_back_pick['value_ratio']:.2f} pts/$</small>
-                            </div>
-                        </div>
-                    </div>''' if bounce_back_pick else ''}
-                    {f'''<div class="fact-item">
-                        <div class="fact-icon">💳</div>
-                        <div class="fact-content">
-                            <h4>Biggest Spender</h4>
-                            <div class="fact-details">
-                                <span class="fact-highlight">{highest_avg_owner[0]}</span> (${highest_avg_owner[1]:.1f} per player avg)
-                            </div>
-                        </div>
-                    </div>''' if highest_avg_owner else ''}
-                    {f'''<div class="fact-item">
-                        <div class="fact-icon">🎯</div>
-                        <div class="fact-content">
-                            <h4>Bargain Hunter</h4>
-                            <div class="fact-details">
-                                <span class="fact-highlight">{bargain_hunter[0]}</span> (${bargain_hunter[1]:.1f} per player avg)
-                            </div>
-                        </div>
-                    </div>''' if bargain_hunter else ''}
-                    {f'''<div class="fact-item">
-                        <div class="fact-icon">🏈</div>
-                        <div class="fact-content">
-                            <h4>Team Loyalty Award</h4>
-                            <div class="fact-details">
-                                <span class="fact-highlight">{most_loyal_owner}</span> ({max_same_team} {most_loyal_team} players)
-                            </div>
-                        </div>
-                    </div>''' if most_loyal_owner else ''}
-                    {f'''<div class="fact-item">
-                        <div class="fact-icon">🌟</div>
-                        <div class="fact-content">
-                            <h4>Most Popular NFL Team</h4>
-                            <div class="fact-details">
-                                <span class="fact-highlight">{most_popular_nfl_team[0]}</span> ({most_popular_nfl_team[1]} players drafted)
-                            </div>
-                        </div>
-                    </div>''' if most_popular_nfl_team else ''}
-                    {f'''<div class="fact-item">
-                        <div class="fact-icon">📈</div>
-                        <div class="fact-content">
-                            <h4>Biggest Position Investment</h4>
-                            <div class="fact-details">
-                                <span class="fact-highlight">{biggest_position_spend[0]}</span> (${biggest_position_spend[1]:,} total spent)
-                            </div>
-                        </div>
-                    </div>''' if biggest_position_spend else ''}
-                </div>
-            </div>
-            
-            <!-- Position Analysis Tab -->
-            <div class="tab-content" id="positions">
-                <div class="position-stats">'''
-
-    # Add highest paid at each position
-    position_order = ['QB', 'RB', 'WR', 'TE', 'K', 'DST', 'D/ST']
-    for pos in position_order:
-        if pos in highest_by_position:
-            info = highest_by_position[pos]
-            avg = avg_by_position[pos]
-            color = get_position_color(pos)
-            html += f'''
-                    <div class="position-stat">
-                        <div class="position-badge" style="background: {color}; color: {'#2a2a2a' if pos in ['RB', 'WR', 'TE'] else 'white'}">{pos}</div>
-                        <div class="position-info">
-                            <div class="position-detail"><strong>Highest:</strong> <span class="fact-highlight">{info['player']}</span> (${info['price']}) to {info['owner']}</div>
-                            <div class="position-detail"><strong>Average:</strong> ${avg:.1f}</div>
-                        </div>
-                        <div class="position-price-display">${info['price']}</div>
-                    </div>'''
-
     html += '''
-                </div>
-            </div>
         </div>
     </div>
     
