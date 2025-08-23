@@ -217,8 +217,6 @@ action_log.json
 data/action_log.json
 
 # Draft state files if they contain real league data
-data/owners.json
-data/draft_state.json
 
 # Temporary files from atomic operations
 *.tmp
