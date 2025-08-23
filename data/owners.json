@@ -1,0 +1,52 @@
+[
+  {
+    "id": 1,
+    "owner_name": "Adam",
+    "team_name": "Call Me The Breece"
+  },
+  {
+    "id": 2,
+    "owner_name": "Jodi",
+    "team_name": "Run CMC"
+  },
+  {
+    "id": 3,
+    "owner_name": "Raman",
+    "team_name": "THE NIGHTMARE"
+  },
+  {
+    "id": 4,
+    "owner_name": "Greg",
+    "team_name": "Like a Good Nabers"
+  },
+  {
+    "id": 5,
+    "owner_name": "Elisa",
+    "team_name": "To Infinity and Bijan!"
+  },
+  {
+    "id": 6,
+    "owner_name": "Lance",
+    "team_name": "Dewey Pest Control"
+  },
+  {
+    "id": 7,
+    "owner_name": "Steve",
+    "team_name": "More than A. Thielen"
+  },
+  {
+    "id": 8,
+    "owner_name": "Jackie",
+    "team_name": "Blood Sweat Beers"
+  },
+  {
+    "id": 9,
+    "owner_name": "Mitch",
+    "team_name": "Don't Cook the Lamb"
+  },
+  {
+    "id": 10,
+    "owner_name": "Sanjay",
+    "team_name": "Sanjay's Team"
+  }
+]

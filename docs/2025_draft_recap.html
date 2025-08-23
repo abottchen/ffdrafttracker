@@ -1,0 +1,2091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2025 Fantasy Football Draft Recap</title>
+    <style>
+        :root {
+            /* Light theme (default) */
+            --bg-gradient-start: #667eea;
+            --bg-gradient-end: #764ba2;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --text-primary: #333;
+            --text-secondary: #666;
+            --text-muted: #999;
+            --border-color: #f0f0f0;
+            --hover-bg: #f8f9fa;
+            --alt-bg: #e9ecef;
+            --header-gradient-start: #667eea;
+            --header-gradient-end: #764ba2;
+        }
+        
+        [data-theme="dark"] {
+            /* Dark theme */
+            --bg-gradient-start: #1a1a2e;
+            --bg-gradient-end: #16213e;
+            --card-bg: rgba(30, 30, 45, 0.95);
+            --text-primary: #f0f0f0;
+            --text-secondary: #b0b0b0;
+            --text-muted: #808080;
+            --border-color: #404050;
+            --hover-bg: #2a2a3e;
+            --alt-bg: #252538;
+            --header-gradient-start: #4a5568;
+            --header-gradient-end: #2d3748;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+            min-height: 100vh;
+            padding: 20px;
+            transition: background 0.3s ease;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+        
+        .header h1 {
+            font-size: 3em;
+            background: linear-gradient(135deg, var(--header-gradient-start) 0%, var(--header-gradient-end) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.2em;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: transparent;
+            border: 2px solid var(--text-secondary);
+            border-radius: 20px;
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: all 0.3s ease;
+        }
+        
+        .theme-toggle:hover {
+            background: var(--text-secondary);
+            color: var(--card-bg);
+        }
+        
+        .layout-controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .layout-toggle {
+            background: var(--card-bg);
+            border: 2px solid var(--text-secondary);
+            border-radius: 8px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-primary);
+        }
+        
+        .layout-toggle:hover {
+            background: var(--text-secondary);
+            color: var(--card-bg);
+        }
+        
+        .layout-icon {
+            font-size: 1.2em;
+        }
+        
+        .teams-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .teams-grid.list-layout {
+            display: flex;
+            flex-direction: column;
+            max-width: 800px;
+            margin: 0 auto 30px;
+        }
+        
+        .team-card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .team-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .team-header {
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .team-name {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--text-primary);
+            margin-bottom: 5px;
+        }
+        
+        .owner-name {
+            color: var(--text-secondary);
+            font-size: 1.1em;
+        }
+        
+        .team-stats {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 10px;
+            background: var(--hover-bg);
+            border-radius: 8px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+        
+        .position-badges {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 5px;
+            margin: 15px 0;
+        }
+        
+        .position-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .player-list {
+            margin-top: 20px;
+        }
+        
+        .player-item {
+            display: grid;
+            grid-template-columns: 30px 1fr 45px 60px;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            margin: 5px 0;
+            background: var(--hover-bg);
+            border-radius: 8px;
+            transition: background 0.2s ease;
+        }
+        
+        .player-item:hover {
+            background: var(--alt-bg);
+        }
+        
+        .team-logo {
+            width: 30px;
+            height: 30px;
+            object-fit: contain;
+        }
+        
+        .player-name {
+            font-weight: bold;
+            color: var(--text-primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .player-position {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: bold;
+            color: white;
+            text-align: center;
+            white-space: nowrap;
+            justify-self: center;
+        }
+        
+        
+        .player-price {
+            font-weight: bold;
+            color: var(--text-primary);
+            font-size: 1.1em;
+            text-align: right;
+        }
+        
+        .draft-summary {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 30px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            min-height: 800px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .draft-summary h2 {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .summary-stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+        
+        .summary-stat {
+            text-align: center;
+        }
+        
+        .summary-value {
+            font-size: 2em;
+            font-weight: bold;
+            background: linear-gradient(135deg, var(--header-gradient-start) 0%, var(--header-gradient-end) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .summary-label {
+            color: var(--text-secondary);
+            margin-top: 5px;
+        }
+        
+        .summary-context {
+            font-size: 0.85em;
+            color: var(--text-muted);
+            margin-top: 3px;
+        }
+        
+        /* Tab Interface Styles */
+        .summary-tabs {
+            display: flex;
+            background: var(--hover-bg);
+            border-radius: 12px;
+            padding: 6px;
+            margin-bottom: 30px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .tab-btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .tab-btn:hover {
+            background: var(--alt-bg);
+            color: var(--text-primary);
+        }
+        
+        .tab-btn.active {
+            background: linear-gradient(135deg, var(--header-gradient-start), var(--header-gradient-end));
+            color: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .tab-content {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Enhanced Summary Stats */
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 0;
+        }
+        
+        .summary-stat {
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 15px;
+            padding: 25px 20px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .summary-stat::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--header-gradient-start), var(--header-gradient-end));
+        }
+        
+        .summary-stat:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border-color: var(--header-gradient-start);
+        }
+        
+        .summary-value {
+            font-size: 2.5em;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--header-gradient-start), var(--header-gradient-end));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+            line-height: 1;
+        }
+        
+        .fun-facts {
+            margin-top: 40px;
+        }
+        
+        .fun-facts h3 {
+            text-align: center;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+        }
+        
+        .facts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            flex: 1;
+            align-content: start;
+        }
+        
+        .fact-item {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .fact-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border-color: var(--header-gradient-start);
+        }
+        
+        .fact-icon {
+            font-size: 2.2em;
+            line-height: 1;
+            flex-shrink: 0;
+            opacity: 0.8;
+        }
+        
+        .fact-content {
+            flex: 1;
+        }
+        
+        .fact-content h4 {
+            font-size: 1.1em;
+            margin: 0 0 8px 0;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        
+        .fact-details {
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        
+        .fact-highlight {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        
+        .position-breakdown-section {
+            margin-top: 30px;
+        }
+        
+        .position-breakdown-section h3 {
+            text-align: center;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+        }
+        
+        .position-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            flex: 1;
+        }
+        
+        .position-stat {
+            display: grid;
+            grid-template-columns: 80px 1fr auto;
+            gap: 20px;
+            align-items: center;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .position-stat:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            border-color: var(--header-gradient-start);
+        }
+        
+        .position-badge {
+            border-radius: 8px;
+            padding: 12px 8px;
+            font-weight: bold;
+            text-align: center;
+            font-size: 1em;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .position-info {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .position-detail {
+            color: var(--text-primary);
+            line-height: 1.4;
+        }
+        
+        .position-price-display {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--text-primary);
+            text-align: right;
+        }
+        
+        @media (max-width: 768px) {
+            .teams-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">🌙</button>
+            <h1>2025 Fantasy Football Draft Recap</h1>
+            <p>Auction Draft Results</p>
+        </div>
+        
+        <div class="layout-controls">
+            <button class="layout-toggle" id="layoutToggle" aria-label="Toggle layout">
+                <span class="layout-icon">⊞</span>
+                <span class="layout-text">Grid View</span>
+            </button>
+        </div>
+        
+        <div class="teams-grid" id="teamsGrid">
+
+            <div class="team-card">
+                <div class="team-header">
+                    <div class="team-name">Call Me The Breece</div>
+                    <div class="owner-name">Adam</div>
+                </div>
+                
+                <div class="team-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">1002</div>
+                        <div class="stat-label">Players</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">$195</div>
+                        <div class="stat-label">Spent</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">$5</div>
+                        <div class="stat-label">Remaining</div>
+                    </div>
+                </div>
+                
+                <div class="position-badges">
+                    <span class="position-badge" style="background: #7b6bb5; color: white">QB (2)</span>
+                    <span class="position-badge" style="background: #5fb572; color: #2a2a2a">RB (5)</span>
+                    <span class="position-badge" style="background: #b5a55f; color: #2a2a2a">WR (6)</span>
+                    <span class="position-badge" style="background: #b5725f; color: #2a2a2a">TE (2)</span>
+                    <span class="position-badge" style="background: #5f82b5; color: white">K (1)</span>
+                    <span class="position-badge" style="background: #9f5f75; color: white">D/ST (1)</span>
+                </div>
+                
+                <div class="player-list">
+                    <div class="player-item">
+                        <img src="2025/assets/logos/lar.png" class="team-logo" alt="LAR" onerror="this.style.display='none'">
+                        <span class="player-name">Kyren Williams</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$8</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/nyj.png" class="team-logo" alt="NYJ" onerror="this.style.display='none'">
+                        <span class="player-name">Breece Hall</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$14</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/lar.png" class="team-logo" alt="LAR" onerror="this.style.display='none'">
+                        <span class="player-name">Puka Nacua</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$13</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/kc.png" class="team-logo" alt="KC" onerror="this.style.display='none'">
+                        <span class="player-name">Patrick Mahomes</span>
+                        <span class="player-position" style="background: #7b6bb5; color: white">QB</span>
+                        <span class="player-price">$31</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/sea.png" class="team-logo" alt="SEA" onerror="this.style.display='none'">
+                        <span class="player-name">Jaxon Smith-Njigba</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$26</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/kc.png" class="team-logo" alt="KC" onerror="this.style.display='none'">
+                        <span class="player-name">Travis Kelce</span>
+                        <span class="player-position" style="background: #b5725f; color: #2a2a2a">TE</span>
+                        <span class="player-price">$19</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/mia.png" class="team-logo" alt="MIA" onerror="this.style.display='none'">
+                        <span class="player-name">Tyreek Hill</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$30</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/nyg.png" class="team-logo" alt="NYG" onerror="this.style.display='none'">
+                        <span class="player-name">Tyrone Tracy Jr.</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$7</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/ari.png" class="team-logo" alt="ARI" onerror="this.style.display='none'">
+                        <span class="player-name">Kyler Murray</span>
+                        <span class="player-position" style="background: #7b6bb5; color: white">QB</span>
+                        <span class="player-price">$5</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/phi.png" class="team-logo" alt="PHI" onerror="this.style.display='none'">
+                        <span class="player-name">Philadelphia Eagles</span>
+                        <span class="player-position" style="background: #9f5f75; color: white">D/ST</span>
+                        <span class="player-price">$9</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/cle.png" class="team-logo" alt="CLE" onerror="this.style.display='none'">
+                        <span class="player-name">Jerry Jeudy</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$7</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/gb.png" class="team-logo" alt="GB" onerror="this.style.display='none'">
+                        <span class="player-name">Matthew Golden</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$11</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/ten.png" class="team-logo" alt="TEN" onerror="this.style.display='none'">
+                        <span class="player-name">Tyjae Spears</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$5</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/atl.png" class="team-logo" alt="ATL" onerror="this.style.display='none'">
+                        <span class="player-name">Kyle Pitts Sr.</span>
+                        <span class="player-position" style="background: #b5725f; color: #2a2a2a">TE</span>
+                        <span class="player-price">$6</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/ind.png" class="team-logo" alt="IND" onerror="this.style.display='none'">
+                        <span class="player-name">Michael Pittman Jr.</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$2</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/buf.png" class="team-logo" alt="BUF" onerror="this.style.display='none'">
+                        <span class="player-name">Ray Davis</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/min.png" class="team-logo" alt="MIN" onerror="this.style.display='none'">
+                        <span class="player-name">Will Reichard</span>
+                        <span class="player-position" style="background: #5f82b5; color: white">K</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                </div>
+            </div>
+            <div class="team-card">
+                <div class="team-header">
+                    <div class="team-name">To Infinity and Bijan!</div>
+                    <div class="owner-name">Elisa</div>
+                </div>
+                
+                <div class="team-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">1002</div>
+                        <div class="stat-label">Players</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">$200</div>
+                        <div class="stat-label">Spent</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">$0</div>
+                        <div class="stat-label">Remaining</div>
+                    </div>
+                </div>
+                
+                <div class="position-badges">
+                    <span class="position-badge" style="background: #7b6bb5; color: white">QB (2)</span>
+                    <span class="position-badge" style="background: #5fb572; color: #2a2a2a">RB (7)</span>
+                    <span class="position-badge" style="background: #b5a55f; color: #2a2a2a">WR (4)</span>
+                    <span class="position-badge" style="background: #b5725f; color: #2a2a2a">TE (2)</span>
+                    <span class="position-badge" style="background: #5f82b5; color: white">K (1)</span>
+                    <span class="position-badge" style="background: #9f5f75; color: white">D/ST (1)</span>
+                </div>
+                
+                <div class="player-list">
+                    <div class="player-item">
+                        <img src="2025/assets/logos/kc.png" class="team-logo" alt="KC" onerror="this.style.display='none'">
+                        <span class="player-name">Xavier Worthy</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$11</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/atl.png" class="team-logo" alt="ATL" onerror="this.style.display='none'">
+                        <span class="player-name">Bijan Robinson</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$61</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/det.png" class="team-logo" alt="DET" onerror="this.style.display='none'">
+                        <span class="player-name">Amon-Ra St. Brown</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$61</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/lac.png" class="team-logo" alt="LAC" onerror="this.style.display='none'">
+                        <span class="player-name">Omarion Hampton</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$19</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/den.png" class="team-logo" alt="DEN" onerror="this.style.display='none'">
+                        <span class="player-name">Bo Nix</span>
+                        <span class="player-position" style="background: #7b6bb5; color: white">QB</span>
+                        <span class="player-price">$9</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/ten.png" class="team-logo" alt="TEN" onerror="this.style.display='none'">
+                        <span class="player-name">Tony Pollard</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$15</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/cle.png" class="team-logo" alt="CLE" onerror="this.style.display='none'">
+                        <span class="player-name">David Njoku</span>
+                        <span class="player-position" style="background: #b5725f; color: #2a2a2a">TE</span>
+                        <span class="player-price">$4</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/lac.png" class="team-logo" alt="LAC" onerror="this.style.display='none'">
+                        <span class="player-name">Cameron Dicker</span>
+                        <span class="player-position" style="background: #5f82b5; color: white">K</span>
+                        <span class="player-price">$3</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/hou.png" class="team-logo" alt="HOU" onerror="this.style.display='none'">
+                        <span class="player-name">Houston Texans</span>
+                        <span class="player-position" style="background: #9f5f75; color: white">D/ST</span>
+                        <span class="player-price">$4</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/nyj.png" class="team-logo" alt="NYJ" onerror="this.style.display='none'">
+                        <span class="player-name">Justin Fields</span>
+                        <span class="player-position" style="background: #7b6bb5; color: white">QB</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/nyg.png" class="team-logo" alt="NYG" onerror="this.style.display='none'">
+                        <span class="player-name">Cam Skattebo</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/no.png" class="team-logo" alt="NO" onerror="this.style.display='none'">
+                        <span class="player-name">Chris Olave</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$6</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/bal.png" class="team-logo" alt="BAL" onerror="this.style.display='none'">
+                        <span class="player-name">Isaiah Likely</span>
+                        <span class="player-position" style="background: #b5725f; color: #2a2a2a">TE</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/dal.png" class="team-logo" alt="DAL" onerror="this.style.display='none'">
+                        <span class="player-name">Jaydon Blue</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/hou.png" class="team-logo" alt="HOU" onerror="this.style.display='none'">
+                        <span class="player-name">Woody Marks</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/was.png" class="team-logo" alt="WAS" onerror="this.style.display='none'">
+                        <span class="player-name">Jacory Croskey-Merritt</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/lac.png" class="team-logo" alt="LAC" onerror="this.style.display='none'">
+                        <span class="player-name">Keenan Allen</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                </div>
+            </div>
+            <div class="team-card">
+                <div class="team-header">
+                    <div class="team-name">Like a Good Nabers</div>
+                    <div class="owner-name">Greg</div>
+                </div>
+                
+                <div class="team-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">1002</div>
+                        <div class="stat-label">Players</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">$192</div>
+                        <div class="stat-label">Spent</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">$8</div>
+                        <div class="stat-label">Remaining</div>
+                    </div>
+                </div>
+                
+                <div class="position-badges">
+                    <span class="position-badge" style="background: #7b6bb5; color: white">QB (2)</span>
+                    <span class="position-badge" style="background: #5fb572; color: #2a2a2a">RB (5)</span>
+                    <span class="position-badge" style="background: #b5a55f; color: #2a2a2a">WR (6)</span>
+                    <span class="position-badge" style="background: #b5725f; color: #2a2a2a">TE (2)</span>
+                    <span class="position-badge" style="background: #5f82b5; color: white">K (1)</span>
+                    <span class="position-badge" style="background: #9f5f75; color: white">D/ST (1)</span>
+                </div>
+                
+                <div class="player-list">
+                    <div class="player-item">
+                        <img src="2025/assets/logos/cin.png" class="team-logo" alt="CIN" onerror="this.style.display='none'">
+                        <span class="player-name">Ja'Marr Chase</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$11</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/nyg.png" class="team-logo" alt="NYG" onerror="this.style.display='none'">
+                        <span class="player-name">Malik Nabers</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$25</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/det.png" class="team-logo" alt="DET" onerror="this.style.display='none'">
+                        <span class="player-name">Jahmyr Gibbs</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$43</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/buf.png" class="team-logo" alt="BUF" onerror="this.style.display='none'">
+                        <span class="player-name">Josh Allen</span>
+                        <span class="player-position" style="background: #7b6bb5; color: white">QB</span>
+                        <span class="player-price">$40</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/mia.png" class="team-logo" alt="MIA" onerror="this.style.display='none'">
+                        <span class="player-name">De'Von Achane</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$40</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/cle.png" class="team-logo" alt="CLE" onerror="this.style.display='none'">
+                        <span class="player-name">Quinshon Judkins</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$7</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/buf.png" class="team-logo" alt="BUF" onerror="this.style.display='none'">
+                        <span class="player-name">Dalton Kincaid</span>
+                        <span class="player-position" style="background: #b5725f; color: #2a2a2a">TE</span>
+                        <span class="player-price">$3</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/chi.png" class="team-logo" alt="CHI" onerror="this.style.display='none'">
+                        <span class="player-name">Rome Odunze</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$8</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/bal.png" class="team-logo" alt="BAL" onerror="this.style.display='none'">
+                        <span class="player-name">Tyler Loop</span>
+                        <span class="player-position" style="background: #5f82b5; color: white">K</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/jax.png" class="team-logo" alt="JAX" onerror="this.style.display='none'">
+                        <span class="player-name">Tank Bigsby</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$4</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/det.png" class="team-logo" alt="DET" onerror="this.style.display='none'">
+                        <span class="player-name">Detroit Lions</span>
+                        <span class="player-position" style="background: #9f5f75; color: white">D/ST</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/sf.png" class="team-logo" alt="SF" onerror="this.style.display='none'">
+                        <span class="player-name">Ricky Pearsall</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$2</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/ne.png" class="team-logo" alt="NE" onerror="this.style.display='none'">
+                        <span class="player-name">Rhamondre Stevenson</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$3</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/tb.png" class="team-logo" alt="TB" onerror="this.style.display='none'">
+                        <span class="player-name">Chris Godwin</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/gb.png" class="team-logo" alt="GB" onerror="this.style.display='none'">
+                        <span class="player-name">Tucker Kraft</span>
+                        <span class="player-position" style="background: #b5725f; color: #2a2a2a">TE</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/gb.png" class="team-logo" alt="GB" onerror="this.style.display='none'">
+                        <span class="player-name">Jordan Love</span>
+                        <span class="player-position" style="background: #7b6bb5; color: white">QB</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/atl.png" class="team-logo" alt="ATL" onerror="this.style.display='none'">
+                        <span class="player-name">Darnell Mooney</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                </div>
+            </div>
+            <div class="team-card">
+                <div class="team-header">
+                    <div class="team-name">Blood Sweat Beers</div>
+                    <div class="owner-name">Jackie</div>
+                </div>
+                
+                <div class="team-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">1002</div>
+                        <div class="stat-label">Players</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">$195</div>
+                        <div class="stat-label">Spent</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">$5</div>
+                        <div class="stat-label">Remaining</div>
+                    </div>
+                </div>
+                
+                <div class="position-badges">
+                    <span class="position-badge" style="background: #7b6bb5; color: white">QB (1)</span>
+                    <span class="position-badge" style="background: #5fb572; color: #2a2a2a">RB (4)</span>
+                    <span class="position-badge" style="background: #b5a55f; color: #2a2a2a">WR (5)</span>
+                    <span class="position-badge" style="background: #b5725f; color: #2a2a2a">TE (1)</span>
+                    <span class="position-badge" style="background: #5f82b5; color: white">K (1)</span>
+                    <span class="position-badge" style="background: #9f5f75; color: white">D/ST (1)</span>
+                </div>
+                
+                <div class="player-list">
+                    <div class="player-item">
+                        <img src="2025/assets/logos/phi.png" class="team-logo" alt="PHI" onerror="this.style.display='none'">
+                        <span class="player-name">Saquon Barkley</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$51</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/nyj.png" class="team-logo" alt="NYJ" onerror="this.style.display='none'">
+                        <span class="player-name">Garrett Wilson</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$6</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/atl.png" class="team-logo" alt="ATL" onerror="this.style.display='none'">
+                        <span class="player-name">Drake London</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$20</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/phi.png" class="team-logo" alt="PHI" onerror="this.style.display='none'">
+                        <span class="player-name">Jalen Hurts</span>
+                        <span class="player-position" style="background: #7b6bb5; color: white">QB</span>
+                        <span class="player-price">$25</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/lv.png" class="team-logo" alt="LV" onerror="this.style.display='none'">
+                        <span class="player-name">Ashton Jeanty</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$50</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/chi.png" class="team-logo" alt="CHI" onerror="this.style.display='none'">
+                        <span class="player-name">DJ Moore</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$17</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/den.png" class="team-logo" alt="DEN" onerror="this.style.display='none'">
+                        <span class="player-name">Evan Engram</span>
+                        <span class="player-position" style="background: #b5725f; color: #2a2a2a">TE</span>
+                        <span class="player-price">$3</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/min.png" class="team-logo" alt="MIN" onerror="this.style.display='none'">
+                        <span class="player-name">Minnesota Vikings</span>
+                        <span class="player-position" style="background: #9f5f75; color: white">D/ST</span>
+                        <span class="player-price">$6</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/sea.png" class="team-logo" alt="SEA" onerror="this.style.display='none'">
+                        <span class="player-name">Zach Charbonnet</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$5</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/pit.png" class="team-logo" alt="PIT" onerror="this.style.display='none'">
+                        <span class="player-name">Kaleb Johnson</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$5</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/buf.png" class="team-logo" alt="BUF" onerror="this.style.display='none'">
+                        <span class="player-name">Khalil Shakir</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$5</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/sf.png" class="team-logo" alt="SF" onerror="this.style.display='none'">
+                        <span class="player-name">Jauan Jennings</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/hou.png" class="team-logo" alt="HOU" onerror="this.style.display='none'">
+                        <span class="player-name">Ka'imi Fairbairn</span>
+                        <span class="player-position" style="background: #5f82b5; color: white">K</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                </div>
+            </div>
+            <div class="team-card">
+                <div class="team-header">
+                    <div class="team-name">Run CMC</div>
+                    <div class="owner-name">Jodi</div>
+                </div>
+                
+                <div class="team-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">1002</div>
+                        <div class="stat-label">Players</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">$200</div>
+                        <div class="stat-label">Spent</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">$0</div>
+                        <div class="stat-label">Remaining</div>
+                    </div>
+                </div>
+                
+                <div class="position-badges">
+                    <span class="position-badge" style="background: #7b6bb5; color: white">QB (2)</span>
+                    <span class="position-badge" style="background: #5fb572; color: #2a2a2a">RB (5)</span>
+                    <span class="position-badge" style="background: #b5a55f; color: #2a2a2a">WR (6)</span>
+                    <span class="position-badge" style="background: #b5725f; color: #2a2a2a">TE (2)</span>
+                    <span class="position-badge" style="background: #5f82b5; color: white">K (1)</span>
+                    <span class="position-badge" style="background: #9f5f75; color: white">D/ST (1)</span>
+                </div>
+                
+                <div class="player-list">
+                    <div class="player-item">
+                        <img src="2025/assets/logos/cin.png" class="team-logo" alt="CIN" onerror="this.style.display='none'">
+                        <span class="player-name">Chase Brown</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$3</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/ari.png" class="team-logo" alt="ARI" onerror="this.style.display='none'">
+                        <span class="player-name">Trey McBride</span>
+                        <span class="player-position" style="background: #b5725f; color: #2a2a2a">TE</span>
+                        <span class="player-price">$14</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/cin.png" class="team-logo" alt="CIN" onerror="this.style.display='none'">
+                        <span class="player-name">Tee Higgins</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$6</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/cin.png" class="team-logo" alt="CIN" onerror="this.style.display='none'">
+                        <span class="player-name">Joe Burrow</span>
+                        <span class="player-position" style="background: #7b6bb5; color: white">QB</span>
+                        <span class="player-price">$40</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/chi.png" class="team-logo" alt="CHI" onerror="this.style.display='none'">
+                        <span class="player-name">Caleb Williams</span>
+                        <span class="player-position" style="background: #7b6bb5; color: white">QB</span>
+                        <span class="player-price">$8</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/ne.png" class="team-logo" alt="NE" onerror="this.style.display='none'">
+                        <span class="player-name">TreVeyon Henderson</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$20</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/tb.png" class="team-logo" alt="TB" onerror="this.style.display='none'">
+                        <span class="player-name">Mike Evans</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$33</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/ari.png" class="team-logo" alt="ARI" onerror="this.style.display='none'">
+                        <span class="player-name">James Conner</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$20</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/den.png" class="team-logo" alt="DEN" onerror="this.style.display='none'">
+                        <span class="player-name">RJ Harvey</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$7</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/den.png" class="team-logo" alt="DEN" onerror="this.style.display='none'">
+                        <span class="player-name">Denver Broncos</span>
+                        <span class="player-position" style="background: #9f5f75; color: white">D/ST</span>
+                        <span class="player-price">$9</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/chi.png" class="team-logo" alt="CHI" onerror="this.style.display='none'">
+                        <span class="player-name">Colston Loveland</span>
+                        <span class="player-position" style="background: #b5725f; color: #2a2a2a">TE</span>
+                        <span class="player-price">$6</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/ten.png" class="team-logo" alt="TEN" onerror="this.style.display='none'">
+                        <span class="player-name">Calvin Ridley</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$14</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/jax.png" class="team-logo" alt="JAX" onerror="this.style.display='none'">
+                        <span class="player-name">Travis Hunter</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$5</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/tb.png" class="team-logo" alt="TB" onerror="this.style.display='none'">
+                        <span class="player-name">Emeka Egbuka</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$5</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/den.png" class="team-logo" alt="DEN" onerror="this.style.display='none'">
+                        <span class="player-name">Wil Lutz</span>
+                        <span class="player-position" style="background: #5f82b5; color: white">K</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/dal.png" class="team-logo" alt="DAL" onerror="this.style.display='none'">
+                        <span class="player-name">Javonte Williams</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$7</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/ne.png" class="team-logo" alt="NE" onerror="this.style.display='none'">
+                        <span class="player-name">Stefon Diggs</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$2</span>
+                    </div>
+                </div>
+            </div>
+            <div class="team-card">
+                <div class="team-header">
+                    <div class="team-name">Dewey Pest Control</div>
+                    <div class="owner-name">Lance</div>
+                </div>
+                
+                <div class="team-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">1002</div>
+                        <div class="stat-label">Players</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">$200</div>
+                        <div class="stat-label">Spent</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">$0</div>
+                        <div class="stat-label">Remaining</div>
+                    </div>
+                </div>
+                
+                <div class="position-badges">
+                    <span class="position-badge" style="background: #7b6bb5; color: white">QB (2)</span>
+                    <span class="position-badge" style="background: #5fb572; color: #2a2a2a">RB (4)</span>
+                    <span class="position-badge" style="background: #b5a55f; color: #2a2a2a">WR (7)</span>
+                    <span class="position-badge" style="background: #b5725f; color: #2a2a2a">TE (2)</span>
+                    <span class="position-badge" style="background: #5f82b5; color: white">K (1)</span>
+                    <span class="position-badge" style="background: #9f5f75; color: white">D/ST (1)</span>
+                </div>
+                
+                <div class="player-list">
+                    <div class="player-item">
+                        <img src="2025/assets/logos/det.png" class="team-logo" alt="DET" onerror="this.style.display='none'">
+                        <span class="player-name">David Montgomery</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$10</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/bal.png" class="team-logo" alt="BAL" onerror="this.style.display='none'">
+                        <span class="player-name">Zay Flowers</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$21</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/was.png" class="team-logo" alt="WAS" onerror="this.style.display='none'">
+                        <span class="player-name">Jayden Daniels</span>
+                        <span class="player-position" style="background: #7b6bb5; color: white">QB</span>
+                        <span class="player-price">$10</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/jax.png" class="team-logo" alt="JAX" onerror="this.style.display='none'">
+                        <span class="player-name">Brian Thomas Jr.</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$41</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/bal.png" class="team-logo" alt="BAL" onerror="this.style.display='none'">
+                        <span class="player-name">Derrick Henry</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$46</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/phi.png" class="team-logo" alt="PHI" onerror="this.style.display='none'">
+                        <span class="player-name">A.J. Brown</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$32</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/det.png" class="team-logo" alt="DET" onerror="this.style.display='none'">
+                        <span class="player-name">Sam LaPorta</span>
+                        <span class="player-position" style="background: #b5725f; color: #2a2a2a">TE</span>
+                        <span class="player-price">$21</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/pit.png" class="team-logo" alt="PIT" onerror="this.style.display='none'">
+                        <span class="player-name">Pittsburgh Steelers</span>
+                        <span class="player-position" style="background: #9f5f75; color: white">D/ST</span>
+                        <span class="player-price">$5</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/dal.png" class="team-logo" alt="DAL" onerror="this.style.display='none'">
+                        <span class="player-name">Brandon Aubrey</span>
+                        <span class="player-position" style="background: #5f82b5; color: white">K</span>
+                        <span class="player-price">$6</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/min.png" class="team-logo" alt="MIN" onerror="this.style.display='none'">
+                        <span class="player-name">Jordan Mason</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/ten.png" class="team-logo" alt="TEN" onerror="this.style.display='none'">
+                        <span class="player-name">Cam Ward</span>
+                        <span class="player-position" style="background: #7b6bb5; color: white">QB</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/dal.png" class="team-logo" alt="DAL" onerror="this.style.display='none'">
+                        <span class="player-name">George Pickens</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/bal.png" class="team-logo" alt="BAL" onerror="this.style.display='none'">
+                        <span class="player-name">Rashod Bateman</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/ind.png" class="team-logo" alt="IND" onerror="this.style.display='none'">
+                        <span class="player-name">Josh Downs</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/cle.png" class="team-logo" alt="CLE" onerror="this.style.display='none'">
+                        <span class="player-name">Jerome Ford</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/gb.png" class="team-logo" alt="GB" onerror="this.style.display='none'">
+                        <span class="player-name">Jayden Reed</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/dal.png" class="team-logo" alt="DAL" onerror="this.style.display='none'">
+                        <span class="player-name">Jake Ferguson</span>
+                        <span class="player-position" style="background: #b5725f; color: #2a2a2a">TE</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                </div>
+            </div>
+            <div class="team-card">
+                <div class="team-header">
+                    <div class="team-name">Don't Cook the Lamb</div>
+                    <div class="owner-name">Mitch</div>
+                </div>
+                
+                <div class="team-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">1002</div>
+                        <div class="stat-label">Players</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">$200</div>
+                        <div class="stat-label">Spent</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">$0</div>
+                        <div class="stat-label">Remaining</div>
+                    </div>
+                </div>
+                
+                <div class="position-badges">
+                    <span class="position-badge" style="background: #7b6bb5; color: white">QB (2)</span>
+                    <span class="position-badge" style="background: #5fb572; color: #2a2a2a">RB (5)</span>
+                    <span class="position-badge" style="background: #b5a55f; color: #2a2a2a">WR (6)</span>
+                    <span class="position-badge" style="background: #b5725f; color: #2a2a2a">TE (2)</span>
+                    <span class="position-badge" style="background: #5f82b5; color: white">K (1)</span>
+                    <span class="position-badge" style="background: #9f5f75; color: white">D/ST (1)</span>
+                </div>
+                
+                <div class="player-list">
+                    <div class="player-item">
+                        <img src="2025/assets/logos/hou.png" class="team-logo" alt="HOU" onerror="this.style.display='none'">
+                        <span class="player-name">C.J. Stroud</span>
+                        <span class="player-position" style="background: #7b6bb5; color: white">QB</span>
+                        <span class="player-price">$3</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/lv.png" class="team-logo" alt="LV" onerror="this.style.display='none'">
+                        <span class="player-name">Brock Bowers</span>
+                        <span class="player-position" style="background: #b5725f; color: #2a2a2a">TE</span>
+                        <span class="player-price">$9</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/car.png" class="team-logo" alt="CAR" onerror="this.style.display='none'">
+                        <span class="player-name">Chuba Hubbard</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$3</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/sea.png" class="team-logo" alt="SEA" onerror="this.style.display='none'">
+                        <span class="player-name">Cooper Kupp</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$15</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/den.png" class="team-logo" alt="DEN" onerror="this.style.display='none'">
+                        <span class="player-name">Courtland Sutton</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$25</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/sea.png" class="team-logo" alt="SEA" onerror="this.style.display='none'">
+                        <span class="player-name">Kenneth Walker III</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$28</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/pit.png" class="team-logo" alt="PIT" onerror="this.style.display='none'">
+                        <span class="player-name">DK Metcalf</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$15</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/min.png" class="team-logo" alt="MIN" onerror="this.style.display='none'">
+                        <span class="player-name">Aaron Jones Sr.</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$12</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/was.png" class="team-logo" alt="WAS" onerror="this.style.display='none'">
+                        <span class="player-name">Austin Ekeler</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$8</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/det.png" class="team-logo" alt="DET" onerror="this.style.display='none'">
+                        <span class="player-name">Jameson Williams</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$12</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/was.png" class="team-logo" alt="WAS" onerror="this.style.display='none'">
+                        <span class="player-name">Deebo Samuel</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$8</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/den.png" class="team-logo" alt="DEN" onerror="this.style.display='none'">
+                        <span class="player-name">J.K. Dobbins</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$10</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/pit.png" class="team-logo" alt="PIT" onerror="this.style.display='none'">
+                        <span class="player-name">Chris Boswell</span>
+                        <span class="player-position" style="background: #5f82b5; color: white">K</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/mia.png" class="team-logo" alt="MIA" onerror="this.style.display='none'">
+                        <span class="player-name">Jaylen Waddle</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$12</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/pit.png" class="team-logo" alt="PIT" onerror="this.style.display='none'">
+                        <span class="player-name">Pat Freiermuth</span>
+                        <span class="player-position" style="background: #b5725f; color: #2a2a2a">TE</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/mia.png" class="team-logo" alt="MIA" onerror="this.style.display='none'">
+                        <span class="player-name">Tua Tagovailoa</span>
+                        <span class="player-position" style="background: #7b6bb5; color: white">QB</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/jax.png" class="team-logo" alt="JAX" onerror="this.style.display='none'">
+                        <span class="player-name">Jacksonville Jaguars</span>
+                        <span class="player-position" style="background: #9f5f75; color: white">D/ST</span>
+                        <span class="player-price">$37</span>
+                    </div>
+                </div>
+            </div>
+            <div class="team-card">
+                <div class="team-header">
+                    <div class="team-name">THE NIGHTMARE</div>
+                    <div class="owner-name">Raman</div>
+                </div>
+                
+                <div class="team-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">1002</div>
+                        <div class="stat-label">Players</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">$195</div>
+                        <div class="stat-label">Spent</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">$5</div>
+                        <div class="stat-label">Remaining</div>
+                    </div>
+                </div>
+                
+                <div class="position-badges">
+                    <span class="position-badge" style="background: #7b6bb5; color: white">QB (3)</span>
+                    <span class="position-badge" style="background: #5fb572; color: #2a2a2a">RB (5)</span>
+                    <span class="position-badge" style="background: #b5a55f; color: #2a2a2a">WR (5)</span>
+                    <span class="position-badge" style="background: #b5725f; color: #2a2a2a">TE (2)</span>
+                    <span class="position-badge" style="background: #5f82b5; color: white">K (1)</span>
+                    <span class="position-badge" style="background: #9f5f75; color: white">D/ST (1)</span>
+                </div>
+                
+                <div class="player-list">
+                    <div class="player-item">
+                        <img src="2025/assets/logos/buf.png" class="team-logo" alt="BUF" onerror="this.style.display='none'">
+                        <span class="player-name">James Cook</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$33</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/lac.png" class="team-logo" alt="LAC" onerror="this.style.display='none'">
+                        <span class="player-name">Ladd McConkey</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$2</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/sf.png" class="team-logo" alt="SF" onerror="this.style.display='none'">
+                        <span class="player-name">George Kittle</span>
+                        <span class="player-position" style="background: #b5725f; color: #2a2a2a">TE</span>
+                        <span class="player-price">$23</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/sf.png" class="team-logo" alt="SF" onerror="this.style.display='none'">
+                        <span class="player-name">Christian McCaffrey</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$42</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/chi.png" class="team-logo" alt="CHI" onerror="this.style.display='none'">
+                        <span class="player-name">Luther Burden III</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$4</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/ari.png" class="team-logo" alt="ARI" onerror="this.style.display='none'">
+                        <span class="player-name">Marvin Harrison Jr.</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$26</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/dal.png" class="team-logo" alt="DAL" onerror="this.style.display='none'">
+                        <span class="player-name">Dak Prescott</span>
+                        <span class="player-position" style="background: #7b6bb5; color: white">QB</span>
+                        <span class="player-price">$4</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/lar.png" class="team-logo" alt="LAR" onerror="this.style.display='none'">
+                        <span class="player-name">Davante Adams</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$27</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/tb.png" class="team-logo" alt="TB" onerror="this.style.display='none'">
+                        <span class="player-name">Baker Mayfield</span>
+                        <span class="player-position" style="background: #7b6bb5; color: white">QB</span>
+                        <span class="player-price">$13</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/jax.png" class="team-logo" alt="JAX" onerror="this.style.display='none'">
+                        <span class="player-name">Travis Etienne Jr.</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$10</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/lar.png" class="team-logo" alt="LAR" onerror="this.style.display='none'">
+                        <span class="player-name">Matthew Stafford</span>
+                        <span class="player-position" style="background: #7b6bb5; color: white">QB</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/buf.png" class="team-logo" alt="BUF" onerror="this.style.display='none'">
+                        <span class="player-name">Buffalo Bills</span>
+                        <span class="player-position" style="background: #9f5f75; color: white">D/ST</span>
+                        <span class="player-price">$3</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/phi.png" class="team-logo" alt="PHI" onerror="this.style.display='none'">
+                        <span class="player-name">Dallas Goedert</span>
+                        <span class="player-position" style="background: #b5725f; color: #2a2a2a">TE</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/kc.png" class="team-logo" alt="KC" onerror="this.style.display='none'">
+                        <span class="player-name">Harrison Butker</span>
+                        <span class="player-position" style="background: #5f82b5; color: white">K</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/kc.png" class="team-logo" alt="KC" onerror="this.style.display='none'">
+                        <span class="player-name">Kareem Hunt</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/buf.png" class="team-logo" alt="BUF" onerror="this.style.display='none'">
+                        <span class="player-name">Keon Coleman</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$3</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/was.png" class="team-logo" alt="WAS" onerror="this.style.display='none'">
+                        <span class="player-name">Brian Robinson Jr.</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                </div>
+            </div>
+            <div class="team-card">
+                <div class="team-header">
+                    <div class="team-name">Sanjay's Team</div>
+                    <div class="owner-name">Sanjay</div>
+                </div>
+                
+                <div class="team-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">1002</div>
+                        <div class="stat-label">Players</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">$168</div>
+                        <div class="stat-label">Spent</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">$32</div>
+                        <div class="stat-label">Remaining</div>
+                    </div>
+                </div>
+                
+                <div class="position-badges">
+                    <span class="position-badge" style="background: #7b6bb5; color: white">QB (2)</span>
+                    <span class="position-badge" style="background: #5fb572; color: #2a2a2a">RB (5)</span>
+                    <span class="position-badge" style="background: #b5a55f; color: #2a2a2a">WR (6)</span>
+                    <span class="position-badge" style="background: #b5725f; color: #2a2a2a">TE (2)</span>
+                    <span class="position-badge" style="background: #5f82b5; color: white">K (1)</span>
+                    <span class="position-badge" style="background: #9f5f75; color: white">D/ST (1)</span>
+                </div>
+                
+                <div class="player-list">
+                    <div class="player-item">
+                        <img src="2025/assets/logos/gb.png" class="team-logo" alt="GB" onerror="this.style.display='none'">
+                        <span class="player-name">Josh Jacobs</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$33</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/kc.png" class="team-logo" alt="KC" onerror="this.style.display='none'">
+                        <span class="player-name">Isiah Pacheco</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$9</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/min.png" class="team-logo" alt="MIN" onerror="this.style.display='none'">
+                        <span class="player-name">Jordan Addison</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$2</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/pit.png" class="team-logo" alt="PIT" onerror="this.style.display='none'">
+                        <span class="player-name">Jaylen Warren</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$9</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/no.png" class="team-logo" alt="NO" onerror="this.style.display='none'">
+                        <span class="player-name">Alvin Kamara</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$18</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/was.png" class="team-logo" alt="WAS" onerror="this.style.display='none'">
+                        <span class="player-name">Terry McLaurin</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$20</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/det.png" class="team-logo" alt="DET" onerror="this.style.display='none'">
+                        <span class="player-name">Jake Bates</span>
+                        <span class="player-position" style="background: #5f82b5; color: white">K</span>
+                        <span class="player-price">$2</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/lac.png" class="team-logo" alt="LAC" onerror="this.style.display='none'">
+                        <span class="player-name">Justin Herbert</span>
+                        <span class="player-position" style="background: #7b6bb5; color: white">QB</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/bal.png" class="team-logo" alt="BAL" onerror="this.style.display='none'">
+                        <span class="player-name">Mark Andrews</span>
+                        <span class="player-position" style="background: #b5725f; color: #2a2a2a">TE</span>
+                        <span class="player-price">$10</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/phi.png" class="team-logo" alt="PHI" onerror="this.style.display='none'">
+                        <span class="player-name">DeVonta Smith</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$14</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/ind.png" class="team-logo" alt="IND" onerror="this.style.display='none'">
+                        <span class="player-name">Tyler Warren</span>
+                        <span class="player-position" style="background: #b5725f; color: #2a2a2a">TE</span>
+                        <span class="player-price">$10</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/kc.png" class="team-logo" alt="KC" onerror="this.style.display='none'">
+                        <span class="player-name">Rashee Rice</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$8</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/car.png" class="team-logo" alt="CAR" onerror="this.style.display='none'">
+                        <span class="player-name">Tetairoa McMillan</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$12</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/min.png" class="team-logo" alt="MIN" onerror="this.style.display='none'">
+                        <span class="player-name">J.J. McCarthy</span>
+                        <span class="player-position" style="background: #7b6bb5; color: white">QB</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/chi.png" class="team-logo" alt="CHI" onerror="this.style.display='none'">
+                        <span class="player-name">D'Andre Swift</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$13</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/lv.png" class="team-logo" alt="LV" onerror="this.style.display='none'">
+                        <span class="player-name">Jakobi Meyers</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$5</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/ne.png" class="team-logo" alt="NE" onerror="this.style.display='none'">
+                        <span class="player-name">New England Patriots</span>
+                        <span class="player-position" style="background: #9f5f75; color: white">D/ST</span>
+                        <span class="player-price">$1</span>
+                    </div>
+                </div>
+            </div>
+            <div class="team-card">
+                <div class="team-header">
+                    <div class="team-name">More than A. Thielen</div>
+                    <div class="owner-name">Steve</div>
+                </div>
+                
+                <div class="team-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">1002</div>
+                        <div class="stat-label">Players</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">$186</div>
+                        <div class="stat-label">Spent</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">$14</div>
+                        <div class="stat-label">Remaining</div>
+                    </div>
+                </div>
+                
+                <div class="position-badges">
+                    <span class="position-badge" style="background: #7b6bb5; color: white">QB (1)</span>
+                    <span class="position-badge" style="background: #5fb572; color: #2a2a2a">RB (2)</span>
+                    <span class="position-badge" style="background: #b5a55f; color: #2a2a2a">WR (3)</span>
+                    <span class="position-badge" style="background: #b5725f; color: #2a2a2a">TE (1)</span>
+                    <span class="position-badge" style="background: #9f5f75; color: white">D/ST (1)</span>
+                </div>
+                
+                <div class="player-list">
+                    <div class="player-item">
+                        <img src="2025/assets/logos/ind.png" class="team-logo" alt="IND" onerror="this.style.display='none'">
+                        <span class="player-name">Jonathan Taylor</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$11</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/tb.png" class="team-logo" alt="TB" onerror="this.style.display='none'">
+                        <span class="player-name">Bucky Irving</span>
+                        <span class="player-position" style="background: #5fb572; color: #2a2a2a">RB</span>
+                        <span class="player-price">$2</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/min.png" class="team-logo" alt="MIN" onerror="this.style.display='none'">
+                        <span class="player-name">Justin Jefferson</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$44</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/dal.png" class="team-logo" alt="DAL" onerror="this.style.display='none'">
+                        <span class="player-name">CeeDee Lamb</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$45</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/hou.png" class="team-logo" alt="HOU" onerror="this.style.display='none'">
+                        <span class="player-name">Nico Collins</span>
+                        <span class="player-position" style="background: #b5a55f; color: #2a2a2a">WR</span>
+                        <span class="player-price">$41</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/bal.png" class="team-logo" alt="BAL" onerror="this.style.display='none'">
+                        <span class="player-name">Lamar Jackson</span>
+                        <span class="player-position" style="background: #7b6bb5; color: white">QB</span>
+                        <span class="player-price">$28</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/min.png" class="team-logo" alt="MIN" onerror="this.style.display='none'">
+                        <span class="player-name">T.J. Hockenson</span>
+                        <span class="player-position" style="background: #b5725f; color: #2a2a2a">TE</span>
+                        <span class="player-price">$10</span>
+                    </div>
+                    <div class="player-item">
+                        <img src="2025/assets/logos/bal.png" class="team-logo" alt="BAL" onerror="this.style.display='none'">
+                        <span class="player-name">Baltimore Ravens</span>
+                        <span class="player-position" style="background: #9f5f75; color: white">D/ST</span>
+                        <span class="player-price">$5</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="draft-summary">
+            <h2>Draft Summary & Analysis</h2>
+            
+            <!-- Tab Navigation -->
+            <div class="summary-tabs">
+                <button class="tab-btn active" data-tab="overview">📊 Overview</button>
+                <button class="tab-btn" data-tab="highlights">🏆 Draft Highlights</button>
+                <button class="tab-btn" data-tab="positions">💰 Position Analysis</button>
+            </div>
+            
+            <!-- Overview Tab -->
+            <div class="tab-content active" id="overview">
+                <div class="summary-stats">
+                    <div class="summary-stat">
+                        <div class="summary-value">10</div>
+                        <div class="summary-label">Teams</div>
+                        <div class="summary-context">10 teams competing</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-value">157</div>
+                        <div class="summary-label">Players Drafted</div>
+                        <div class="summary-context">From available player pool</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-value">$1,931</div>
+                        <div class="summary-label">Total Spent</div>
+                        <div class="summary-context">Across all teams</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-value">$12.3</div>
+                        <div class="summary-label">Average Price</div>
+                        <div class="summary-context">Per player drafted</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Draft Highlights Tab -->
+            <div class="tab-content" id="highlights">
+                <div class="facts-grid">
+                    <div class="fact-item">
+                        <div class="fact-icon">💰</div>
+                        <div class="fact-content">
+                            <h4>Most Expensive Pick</h4>
+                            <div class="fact-details">
+                                <span class="fact-highlight">Bijan Robinson</span> ($61) to To Infinity and Bijan!
+                            </div>
+                        </div>
+                    </div>
+                    <div class="fact-item">
+                        <div class="fact-icon">⭐</div>
+                        <div class="fact-content">
+                            <h4>Best Value Pick</h4>
+                            <div class="fact-details">
+                                <span class="fact-highlight">Justin Herbert</span> (283.4 pts, $1) to Sanjay's Team<br>
+                                <small>283.40 pts/$</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="fact-item">
+                        <div class="fact-icon">🔄</div>
+                        <div class="fact-content">
+                            <h4>Bounce-Back Bet</h4>
+                            <div class="fact-details">
+                                <span class="fact-highlight">Christian McCaffrey</span> (42.3 pts, $42) to THE NIGHTMARE<br>
+                                <small>1.01 pts/$</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="fact-item">
+                        <div class="fact-icon">💳</div>
+                        <div class="fact-content">
+                            <h4>Biggest Spender</h4>
+                            <div class="fact-details">
+                                <span class="fact-highlight">More than A. Thielen</span> ($23.2 per player avg)
+                            </div>
+                        </div>
+                    </div>
+                    <div class="fact-item">
+                        <div class="fact-icon">🎯</div>
+                        <div class="fact-content">
+                            <h4>Bargain Hunter</h4>
+                            <div class="fact-details">
+                                <span class="fact-highlight">Sanjay's Team</span> ($9.9 per player avg)
+                            </div>
+                        </div>
+                    </div>
+                    <div class="fact-item">
+                        <div class="fact-icon">🏈</div>
+                        <div class="fact-content">
+                            <h4>Team Loyalty Award</h4>
+                            <div class="fact-details">
+                                <span class="fact-highlight">Elisa</span> (3 LAC players)
+                            </div>
+                        </div>
+                    </div>
+                    <div class="fact-item">
+                        <div class="fact-icon">🌟</div>
+                        <div class="fact-content">
+                            <h4>Most Popular NFL Team</h4>
+                            <div class="fact-details">
+                                <span class="fact-highlight">MIN</span> (8 players drafted)
+                            </div>
+                        </div>
+                    </div>
+                    <div class="fact-item">
+                        <div class="fact-icon">📈</div>
+                        <div class="fact-content">
+                            <h4>Biggest Position Investment</h4>
+                            <div class="fact-details">
+                                <span class="fact-highlight">WR</span> ($768 total spent)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Position Analysis Tab -->
+            <div class="tab-content" id="positions">
+                <div class="position-stats">
+                    <div class="position-stat">
+                        <div class="position-badge" style="background: #7b6bb5; color: white">QB</div>
+                        <div class="position-info">
+                            <div class="position-detail"><strong>Highest:</strong> <span class="fact-highlight">Josh Allen</span> ($40) to Like a Good Nabers</div>
+                            <div class="position-detail"><strong>Average:</strong> $11.7</div>
+                        </div>
+                        <div class="position-price-display">$40</div>
+                    </div>
+                    <div class="position-stat">
+                        <div class="position-badge" style="background: #5fb572; color: #2a2a2a">RB</div>
+                        <div class="position-info">
+                            <div class="position-detail"><strong>Highest:</strong> <span class="fact-highlight">Bijan Robinson</span> ($61) to To Infinity and Bijan!</div>
+                            <div class="position-detail"><strong>Average:</strong> $14.9</div>
+                        </div>
+                        <div class="position-price-display">$61</div>
+                    </div>
+                    <div class="position-stat">
+                        <div class="position-badge" style="background: #b5a55f; color: #2a2a2a">WR</div>
+                        <div class="position-info">
+                            <div class="position-detail"><strong>Highest:</strong> <span class="fact-highlight">Amon-Ra St. Brown</span> ($61) to To Infinity and Bijan!</div>
+                            <div class="position-detail"><strong>Average:</strong> $14.2</div>
+                        </div>
+                        <div class="position-price-display">$61</div>
+                    </div>
+                    <div class="position-stat">
+                        <div class="position-badge" style="background: #b5725f; color: #2a2a2a">TE</div>
+                        <div class="position-info">
+                            <div class="position-detail"><strong>Highest:</strong> <span class="fact-highlight">George Kittle</span> ($23) to THE NIGHTMARE</div>
+                            <div class="position-detail"><strong>Average:</strong> $7.9</div>
+                        </div>
+                        <div class="position-price-display">$23</div>
+                    </div>
+                    <div class="position-stat">
+                        <div class="position-badge" style="background: #5f82b5; color: white">K</div>
+                        <div class="position-info">
+                            <div class="position-detail"><strong>Highest:</strong> <span class="fact-highlight">Brandon Aubrey</span> ($6) to Dewey Pest Control</div>
+                            <div class="position-detail"><strong>Average:</strong> $1.9</div>
+                        </div>
+                        <div class="position-price-display">$6</div>
+                    </div>
+                    <div class="position-stat">
+                        <div class="position-badge" style="background: #9f5f75; color: white">D/ST</div>
+                        <div class="position-info">
+                            <div class="position-detail"><strong>Highest:</strong> <span class="fact-highlight">Jacksonville Jaguars</span> ($37) to Don't Cook the Lamb</div>
+                            <div class="position-detail"><strong>Average:</strong> $8.0</div>
+                        </div>
+                        <div class="position-price-display">$37</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Theme toggle functionality
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+        
+        // Check for saved theme preference or default to light
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        html.setAttribute('data-theme', currentTheme);
+        updateToggleButton(currentTheme);
+        
+        // Toggle theme on button click
+        themeToggle.addEventListener('click', () => {{
+            const theme = html.getAttribute('data-theme');
+            const newTheme = theme === 'light' ? 'dark' : 'light';
+            
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateToggleButton(newTheme);
+        }});
+        
+        function updateToggleButton(theme) {{
+            themeToggle.textContent = theme === 'light' ? '🌙' : '☀️';
+            themeToggle.setAttribute('aria-label', 
+                theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode');
+        }}
+        
+        // Layout toggle functionality
+        const layoutToggle = document.getElementById('layoutToggle');
+        const teamsGrid = document.getElementById('teamsGrid');
+        
+        // Check for saved layout preference or default to grid
+        const currentLayout = localStorage.getItem('layout') || 'grid';
+        if (currentLayout === 'list') {{
+            teamsGrid.classList.add('list-layout');
+            updateLayoutButton('list');
+        }}
+        
+        // Toggle layout on button click
+        layoutToggle.addEventListener('click', () => {{
+            const isListLayout = teamsGrid.classList.contains('list-layout');
+            const newLayout = isListLayout ? 'grid' : 'list';
+            
+            if (newLayout === 'list') {{
+                teamsGrid.classList.add('list-layout');
+            }} else {{
+                teamsGrid.classList.remove('list-layout');
+            }}
+            
+            localStorage.setItem('layout', newLayout);
+            updateLayoutButton(newLayout);
+        }});
+        
+        function updateLayoutButton(layout) {{
+            const icon = layoutToggle.querySelector('.layout-icon');
+            const text = layoutToggle.querySelector('.layout-text');
+            
+            if (layout === 'grid') {{
+                icon.textContent = '⊞';
+                text.textContent = 'Grid View';
+                layoutToggle.setAttribute('aria-label', 'Switch to list view');
+            }} else {{
+                icon.textContent = '☰';
+                text.textContent = 'List View';
+                layoutToggle.setAttribute('aria-label', 'Switch to grid view');
+            }}
+        }}
+        
+        // Tab functionality for draft summary
+        document.querySelectorAll('.tab-btn').forEach(btn => {{
+            btn.addEventListener('click', () => {{
+                // Remove active class from all tabs and content
+                document.querySelectorAll('.tab-btn, .tab-content').forEach(el => 
+                    el.classList.remove('active'));
+                
+                // Add active class to clicked tab and corresponding content
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.tab).classList.add('active');
+            }});
+        }});
+    </script>
+</body>
+</html>
