@@ -19,8 +19,14 @@
             --alt-bg: #e9ecef;
             --header-gradient-start: #667eea;
             --header-gradient-end: #764ba2;
+            --bar-gradient-start: #667eea;
+            --bar-gradient-end: #764ba2;
+            --summary-value-gradient-start: #667eea;
+            --summary-value-gradient-end: #764ba2;
+            --tab-active-gradient-start: #667eea;
+            --tab-active-gradient-end: #764ba2;
         }
-        
+
         [data-theme="dark"] {
             /* Dark theme */
             --bg-gradient-start: #1a1a2e;
@@ -34,14 +40,20 @@
             --alt-bg: #252538;
             --header-gradient-start: #4a5568;
             --header-gradient-end: #2d3748;
+            --bar-gradient-start: #60a5fa;
+            --bar-gradient-end: #3b82f6;
+            --summary-value-gradient-start: #60a5fa;
+            --summary-value-gradient-end: #f59e0b;
+            --tab-active-gradient-start: #60a5fa;
+            --tab-active-gradient-end: #3b82f6;
         }
-        
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
@@ -49,12 +61,12 @@
             padding: 20px;
             transition: background 0.3s ease;
         }
-        
+
         .container {
             max-width: 1400px;
             margin: 0 auto;
         }
-        
+
         .header {
             background: var(--card-bg);
             border-radius: 20px;
@@ -64,7 +76,7 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             position: relative;
         }
-        
+
         .header h1 {
             font-size: 3em;
             background: linear-gradient(135deg, var(--header-gradient-start) 0%, var(--header-gradient-end) 100%);
@@ -72,12 +84,12 @@
             -webkit-text-fill-color: transparent;
             margin-bottom: 10px;
         }
-        
+
         .header p {
             color: var(--text-secondary);
             font-size: 1.2em;
         }
-        
+
         .theme-toggle {
             position: absolute;
             top: 20px;
@@ -90,17 +102,17 @@
             font-size: 1.2em;
             transition: all 0.3s ease;
         }
-        
+
         .theme-toggle:hover {
             background: var(--text-secondary);
             color: var(--card-bg);
         }
-        
+
         .layout-controls {
             text-align: center;
             margin: 20px 0;
         }
-        
+
         .layout-toggle {
             background: var(--card-bg);
             border: 2px solid var(--text-secondary);
@@ -114,30 +126,30 @@
             gap: 8px;
             color: var(--text-primary);
         }
-        
+
         .layout-toggle:hover {
             background: var(--text-secondary);
             color: var(--card-bg);
         }
-        
+
         .layout-icon {
             font-size: 1.2em;
         }
-        
+
         .teams-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
         }
-        
+
         .teams-grid.list-layout {
             display: flex;
             flex-direction: column;
             max-width: 800px;
             margin: 0 auto 30px;
         }
-        
+
         .team-card {
             background: var(--card-bg);
             border-radius: 15px;
@@ -145,30 +157,30 @@
             box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
-        
+
         .team-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
         }
-        
+
         .team-header {
             border-bottom: 2px solid var(--border-color);
             padding-bottom: 15px;
             margin-bottom: 20px;
         }
-        
+
         .team-name {
             font-size: 1.5em;
             font-weight: bold;
             color: var(--text-primary);
             margin-bottom: 5px;
         }
-        
+
         .owner-name {
             color: var(--text-secondary);
             font-size: 1.1em;
         }
-        
+
         .team-stats {
             display: flex;
             justify-content: space-between;
@@ -177,23 +189,23 @@
             background: var(--hover-bg);
             border-radius: 8px;
         }
-        
+
         .stat-item {
             text-align: center;
         }
-        
+
         .stat-value {
             font-size: 1.3em;
             font-weight: bold;
             color: var(--text-primary);
         }
-        
+
         .stat-label {
             font-size: 0.9em;
             color: var(--text-secondary);
             margin-top: 2px;
         }
-        
+
         .position-badges {
             display: flex;
             flex-wrap: wrap;
@@ -201,7 +213,7 @@
             gap: 5px;
             margin: 15px 0;
         }
-        
+
         .position-badge {
             padding: 4px 8px;
             border-radius: 12px;
@@ -209,11 +221,11 @@
             font-weight: bold;
             color: white;
         }
-        
+
         .player-list {
             margin-top: 20px;
         }
-        
+
         .player-item {
             display: grid;
             grid-template-columns: 30px 1fr 45px 60px;
@@ -225,17 +237,17 @@
             border-radius: 8px;
             transition: background 0.2s ease;
         }
-        
+
         .player-item:hover {
             background: var(--alt-bg);
         }
-        
+
         .team-logo {
             width: 30px;
             height: 30px;
             object-fit: contain;
         }
-        
+
         .player-name {
             font-weight: bold;
             color: var(--text-primary);
@@ -243,7 +255,7 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-        
+
         .player-position {
             padding: 2px 6px;
             border-radius: 4px;
@@ -254,15 +266,15 @@
             white-space: nowrap;
             justify-self: center;
         }
-        
-        
+
+
         .player-price {
             font-weight: bold;
             color: var(--text-primary);
             font-size: 1.1em;
             text-align: right;
         }
-        
+
         .draft-summary {
             background: var(--card-bg);
             border-radius: 15px;
@@ -274,23 +286,23 @@
             display: flex;
             flex-direction: column;
         }
-        
+
         .draft-summary h2 {
             margin-bottom: 20px;
             color: var(--text-primary);
         }
-        
+
         .summary-stats {
             display: flex;
             justify-content: center;
             gap: 40px;
             flex-wrap: wrap;
         }
-        
+
         .summary-stat {
             text-align: center;
         }
-        
+
         .summary-value {
             font-size: 2em;
             font-weight: bold;
@@ -298,18 +310,18 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        
+
         .summary-label {
             color: var(--text-secondary);
             margin-top: 5px;
         }
-        
+
         .summary-context {
             font-size: 0.85em;
             color: var(--text-muted);
             margin-top: 3px;
         }
-        
+
         /* Tab Interface Styles */
         .summary-tabs {
             display: flex;
@@ -319,7 +331,7 @@
             margin-bottom: 30px;
             border: 1px solid var(--border-color);
         }
-        
+
         .tab-btn {
             flex: 1;
             padding: 12px 20px;
@@ -336,35 +348,35 @@
             justify-content: center;
             gap: 8px;
         }
-        
+
         .tab-btn:hover {
             background: var(--alt-bg);
             color: var(--text-primary);
         }
-        
+
         .tab-btn.active {
-            background: linear-gradient(135deg, var(--header-gradient-start), var(--header-gradient-end));
+            background: linear-gradient(135deg, var(--tab-active-gradient-start), var(--tab-active-gradient-end));
             color: white;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         }
-        
+
         .tab-content {
             display: none;
             flex: 1;
             overflow-y: auto;
         }
-        
+
         .tab-content.active {
             display: flex;
             flex-direction: column;
             animation: fadeIn 0.3s ease-in-out;
         }
-        
+
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        
+
         /* Enhanced Summary Stats */
         .summary-stats {
             display: grid;
@@ -372,7 +384,7 @@
             gap: 20px;
             margin-bottom: 0;
         }
-        
+
         .summary-stat {
             background: var(--card-bg);
             border: 2px solid var(--border-color);
@@ -383,7 +395,7 @@
             overflow: hidden;
             transition: all 0.3s ease;
         }
-        
+
         .summary-stat::before {
             content: '';
             position: absolute;
@@ -393,33 +405,33 @@
             height: 4px;
             background: linear-gradient(90deg, var(--header-gradient-start), var(--header-gradient-end));
         }
-        
+
         .summary-stat:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
             border-color: var(--header-gradient-start);
         }
-        
+
         .summary-value {
             font-size: 2.5em;
             font-weight: 900;
-            background: linear-gradient(135deg, var(--header-gradient-start), var(--header-gradient-end));
+            background: linear-gradient(135deg, var(--summary-value-gradient-start), var(--summary-value-gradient-end));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 8px;
             line-height: 1;
         }
-        
+
         .fun-facts {
             margin-top: 40px;
         }
-        
+
         .fun-facts h3 {
             text-align: center;
             color: var(--text-primary);
             margin-bottom: 20px;
         }
-        
+
         .facts-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -427,69 +439,67 @@
             flex: 1;
             align-content: start;
         }
-        
+
         .fact-item {
             background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 20px;
-            display: flex;
-            align-items: flex-start;
-            gap: 15px;
+            border-left: 4px solid;
+            border-radius: 8px;
+            padding: 16px 20px;
             transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
-        
+
         .fact-item:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-            border-color: var(--header-gradient-start);
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
-        
-        .fact-icon {
-            font-size: 2.2em;
-            line-height: 1;
-            flex-shrink: 0;
-            opacity: 0.8;
-        }
-        
-        .fact-content {
-            flex: 1;
-        }
-        
+
+        .fact-item.money { border-color: #10b981; }
+        .fact-item.value { border-color: #f59e0b; }
+        .fact-item.bounce { border-color: #8b5cf6; }
+        .fact-item.spender { border-color: #ef4444; }
+        .fact-item.bargain { border-color: #3b82f6; }
+        .fact-item.loyalty { border-color: #ec4899; }
+        .fact-item.popular { border-color: #14b8a6; }
+        .fact-item.position { border-color: #84cc16; }
+
         .fact-content h4 {
-            font-size: 1.1em;
-            margin: 0 0 8px 0;
-            color: var(--text-primary);
-            font-weight: 600;
-        }
-        
-        .fact-details {
+            font-size: 0.9em;
+            margin: 0 0 6px 0;
             color: var(--text-secondary);
-            line-height: 1.5;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
-        
+
+        .fact-details {
+            color: var(--text-primary);
+            line-height: 1.5;
+            font-size: 1.05em;
+        }
+
         .fact-highlight {
             color: var(--text-primary);
-            font-weight: 600;
+            font-weight: 700;
         }
-        
+
         .position-breakdown-section {
             margin-top: 30px;
         }
-        
+
         .position-breakdown-section h3 {
             text-align: center;
             color: var(--text-primary);
             margin-bottom: 20px;
         }
-        
+
         .position-stats {
             display: flex;
             flex-direction: column;
             gap: 15px;
             flex: 1;
         }
-        
+
         .position-stat {
             display: grid;
             grid-template-columns: 80px 1fr auto;
@@ -501,13 +511,13 @@
             padding: 20px;
             transition: all 0.3s ease;
         }
-        
+
         .position-stat:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
             border-color: var(--header-gradient-start);
         }
-        
+
         .position-badge {
             border-radius: 8px;
             padding: 12px 8px;
@@ -516,30 +526,237 @@
             font-size: 1em;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
-        
+
         .position-info {
             display: flex;
             flex-direction: column;
             gap: 6px;
         }
-        
+
         .position-detail {
             color: var(--text-primary);
             line-height: 1.4;
         }
-        
+
         .position-price-display {
             font-size: 1.5em;
             font-weight: bold;
             color: var(--text-primary);
             text-align: right;
         }
-        
+
+        /* Chart Layout Styles */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            padding: 20px;
+        }
+
+        .chart-container {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .chart-container.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .chart-container h3 {
+            text-align: center;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+
+        .chart-subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            font-size: 0.85em;
+        }
+
+        .bar-chart {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .bar-item {
+            display: grid;
+            grid-template-columns: 60px 1fr 40px;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .bar-label {
+            font-weight: 600;
+            color: var(--text-primary);
+            text-align: right;
+            font-size: 0.9em;
+        }
+
+        .bar-container {
+            background: var(--hover-bg);
+            border-radius: 4px;
+            height: 28px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--bar-gradient-start), var(--bar-gradient-end));
+            border-radius: 4px;
+            transition: width 0.6s ease;
+            display: flex;
+            align-items: center;
+            padding-left: 8px;
+        }
+
+        .bar-value {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        /* Scatter Plot Styles */
+        .scatter-plot {
+            position: relative;
+            height: 400px;
+            margin: 20px 0;
+        }
+
+        .scatter-canvas {
+            width: 100%;
+            height: 100%;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        /* Heatmap Styles */
+        .heatmap {
+            display: grid;
+            gap: 2px;
+            margin: 20px 0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .heatmap-row {
+            display: grid;
+            gap: 2px;
+        }
+
+        .heatmap-cell {
+            padding: 8px 4px;
+            text-align: center;
+            font-size: 0.8em;
+            font-weight: 600;
+            border-radius: 3px;
+            min-height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .heatmap-header {
+            background: var(--header-gradient-start);
+            color: white;
+            font-weight: 700;
+        }
+
+        .heatmap-label {
+            background: var(--alt-bg);
+            color: var(--text-primary);
+            font-weight: 700;
+            text-align: right;
+            padding-right: 8px;
+        }
+
+        /* Stacked Bar Chart Styles */
+        .stacked-bar-chart {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin: 20px 0;
+        }
+
+        .stacked-bar-item {
+            display: grid;
+            grid-template-columns: 150px 1fr 80px;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .stacked-bar-label {
+            font-weight: 600;
+            color: var(--text-primary);
+            text-align: right;
+            font-size: 0.9em;
+        }
+
+        .stacked-bar-container {
+            height: 24px;
+            border-radius: 4px;
+            overflow: hidden;
+            display: flex;
+            border: 1px solid var(--border-color);
+        }
+
+        .stacked-bar-segment {
+            height: 100%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75em;
+            font-weight: 600;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .stacked-bar-total {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.9em;
+            text-align: center;
+        }
+
+        .stacked-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            justify-content: center;
+            margin: 20px 0 10px 0;
+            padding: 15px;
+            background: var(--hover-bg);
+            border-radius: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85em;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+        }
+
         @media (max-width: 768px) {
             .teams-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .header h1 {
                 font-size: 2em;
             }
@@ -553,17 +770,19 @@
             <h1>2025 Fantasy Football Draft Recap</h1>
             <p>Auction Draft Results</p>
         </div>
-        
+
         <div class="draft-summary">
             <h2>Draft Summary & Analysis</h2>
-            
+
             <!-- Tab Navigation -->
             <div class="summary-tabs">
-                <button class="tab-btn active" data-tab="overview">📊 Overview</button>
-                <button class="tab-btn" data-tab="highlights">🏆 Draft Highlights</button>
-                <button class="tab-btn" data-tab="positions">💰 Position Analysis</button>
+                <button class="tab-btn active" data-tab="overview">Overview</button>
+                <button class="tab-btn" data-tab="highlights">Highlights</button>
+                <button class="tab-btn" data-tab="market">Market Analysis</button>
+                <button class="tab-btn" data-tab="teams">Team Strategy</button>
+                <button class="tab-btn" data-tab="value">Value Analysis</button>
             </div>
-            
+
             <!-- Overview Tab -->
             <div class="tab-content active" id="overview">
                 <div class="summary-stats">
@@ -589,21 +808,20 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Draft Highlights Tab -->
             <div class="tab-content" id="highlights">
                 <div class="facts-grid">
-                    <div class="fact-item">
-                        <div class="fact-icon">💰</div>
+                    <div class="fact-item money">
                         <div class="fact-content">
-                            <h4>Most Expensive Pick</h4>
+                            <h4>Most Expensive Pick (tie)</h4>
                             <div class="fact-details">
-                                <span class="fact-highlight">Bijan Robinson</span> ($61) to To Infinity and Bijan!
+                                <span class="fact-highlight">Bijan Robinson, Amon-Ra St. Brown</span> ($61)<br>
+                                <small>→ To Infinity and Bijan!</small>
                             </div>
                         </div>
                     </div>
-                    <div class="fact-item">
-                        <div class="fact-icon">⭐</div>
+                    <div class="fact-item value">
                         <div class="fact-content">
                             <h4>Best Value Pick</h4>
                             <div class="fact-details">
@@ -612,8 +830,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="fact-item">
-                        <div class="fact-icon">🔄</div>
+                    <div class="fact-item bounce">
                         <div class="fact-content">
                             <h4>Bounce-Back Bet</h4>
                             <div class="fact-details">
@@ -622,116 +839,111 @@
                             </div>
                         </div>
                     </div>
-                    <div class="fact-item">
-                        <div class="fact-icon">💳</div>
+                    <div class="fact-item spender">
                         <div class="fact-content">
                             <h4>Biggest Spender</h4>
                             <div class="fact-details">
                                 <span class="fact-highlight">More than A. Thielen</span> ($23.2 per player avg)
+                                
                             </div>
                         </div>
                     </div>
-                    <div class="fact-item">
-                        <div class="fact-icon">🎯</div>
+                    <div class="fact-item bargain">
                         <div class="fact-content">
                             <h4>Bargain Hunter</h4>
                             <div class="fact-details">
                                 <span class="fact-highlight">Sanjay's Team</span> ($9.9 per player avg)
+                                
                             </div>
                         </div>
                     </div>
-                    <div class="fact-item">
-                        <div class="fact-icon">🏈</div>
+                    <div class="fact-item loyalty">
                         <div class="fact-content">
-                            <h4>Team Loyalty Award</h4>
+                            <h4>Team Loyalty Award (tie)</h4>
                             <div class="fact-details">
-                                <span class="fact-highlight">Elisa</span> (3 LAC players)
+                                <span class="fact-highlight">Elisa</span> (3 LAC players), <span class="fact-highlight">Jodi</span> (3 CIN players), <span class="fact-highlight">Jodi</span> (3 DEN players)
+                                <br><small>and 4 more...</small>
                             </div>
                         </div>
                     </div>
-                    <div class="fact-item">
-                        <div class="fact-icon">🌟</div>
-                        <div class="fact-content">
-                            <h4>Most Popular NFL Team</h4>
-                            <div class="fact-details">
-                                <span class="fact-highlight">MIN</span> (8 players drafted)
-                            </div>
-                        </div>
-                    </div>
-                    <div class="fact-item">
-                        <div class="fact-icon">📈</div>
+                    <div class="fact-item position">
                         <div class="fact-content">
                             <h4>Biggest Position Investment</h4>
                             <div class="fact-details">
                                 <span class="fact-highlight">WR</span> ($768 total spent)
+                                
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            
-            <!-- Position Analysis Tab -->
-            <div class="tab-content" id="positions">
-                <div class="position-stats">
-                    <div class="position-stat">
-                        <div class="position-badge" style="background: #7b6bb5; color: white">QB</div>
-                        <div class="position-info">
-                            <div class="position-detail"><strong>Highest:</strong> <span class="fact-highlight">Josh Allen</span> ($40) to Like a Good Nabers</div>
-                            <div class="position-detail"><strong>Average:</strong> $11.7</div>
-                        </div>
-                        <div class="position-price-display">$40</div>
+
+            <!-- Market Analysis Tab -->
+            <div class="tab-content" id="market">
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <h3>Budget Distribution by Position</h3>
+                        <p class="chart-subtitle">Total league spending per position</p>
+                        <div class="bar-chart" id="positionBudgetChart"></div>
                     </div>
-                    <div class="position-stat">
-                        <div class="position-badge" style="background: #5fb572; color: #2a2a2a">RB</div>
-                        <div class="position-info">
-                            <div class="position-detail"><strong>Highest:</strong> <span class="fact-highlight">Bijan Robinson</span> ($61) to To Infinity and Bijan!</div>
-                            <div class="position-detail"><strong>Average:</strong> $14.9</div>
-                        </div>
-                        <div class="position-price-display">$61</div>
+                    <div class="chart-container">
+                        <h3>Average Price by Position</h3>
+                        <p class="chart-subtitle">Mean auction price with min/max range</p>
+                        <div class="bar-chart" id="positionAvgChart"></div>
                     </div>
-                    <div class="position-stat">
-                        <div class="position-badge" style="background: #b5a55f; color: #2a2a2a">WR</div>
-                        <div class="position-info">
-                            <div class="position-detail"><strong>Highest:</strong> <span class="fact-highlight">Amon-Ra St. Brown</span> ($61) to To Infinity and Bijan!</div>
-                            <div class="position-detail"><strong>Average:</strong> $14.2</div>
-                        </div>
-                        <div class="position-price-display">$61</div>
+                    <div class="chart-container">
+                        <h3>Top 10 Most Expensive Players</h3>
+                        <p class="chart-subtitle">Highest auction prices paid</p>
+                        <div class="bar-chart" id="topPlayersChart"></div>
                     </div>
-                    <div class="position-stat">
-                        <div class="position-badge" style="background: #b5725f; color: #2a2a2a">TE</div>
-                        <div class="position-info">
-                            <div class="position-detail"><strong>Highest:</strong> <span class="fact-highlight">George Kittle</span> ($23) to THE NIGHTMARE</div>
-                            <div class="position-detail"><strong>Average:</strong> $7.9</div>
-                        </div>
-                        <div class="position-price-display">$23</div>
+                    <div class="chart-container">
+                        <h3>NFL Team Popularity</h3>
+                        <p class="chart-subtitle">Number of players drafted from each team</p>
+                        <div class="bar-chart" id="teamChart"></div>
                     </div>
-                    <div class="position-stat">
-                        <div class="position-badge" style="background: #5f82b5; color: white">K</div>
-                        <div class="position-info">
-                            <div class="position-detail"><strong>Highest:</strong> <span class="fact-highlight">Brandon Aubrey</span> ($6) to Dewey Pest Control</div>
-                            <div class="position-detail"><strong>Average:</strong> $1.9</div>
-                        </div>
-                        <div class="position-price-display">$6</div>
+                </div>
+            </div>
+
+            <!-- Team Strategy Tab -->
+            <div class="tab-content" id="teams">
+                <div class="charts-grid">
+                    <div class="chart-container full-width">
+                        <h3>Team Roster Construction (Heatmap)</h3>
+                        <p class="chart-subtitle">Spending breakdown by position for each team</p>
+                        <div class="heatmap" id="rosterHeatmap"></div>
                     </div>
-                    <div class="position-stat">
-                        <div class="position-badge" style="background: #9f5f75; color: white">D/ST</div>
-                        <div class="position-info">
-                            <div class="position-detail"><strong>Highest:</strong> <span class="fact-highlight">Jacksonville Jaguars</span> ($37) to Don't Cook the Lamb</div>
-                            <div class="position-detail"><strong>Average:</strong> $8.0</div>
-                        </div>
-                        <div class="position-price-display">$37</div>
+                    <div class="chart-container full-width">
+                        <h3>Team Roster Construction (Stacked Bars)</h3>
+                        <p class="chart-subtitle">Visual comparison of roster spending strategies</p>
+                        <div class="stacked-bar-chart" id="rosterStackedChart"></div>
+                    </div>
+                    <div class="chart-container full-width">
+                        <h3>NFL Team Stacking Patterns</h3>
+                        <p class="chart-subtitle">Which fantasy teams drafted players from each NFL team</p>
+                        <div class="stacked-bar-chart" id="nflStackingChart"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Value Analysis Tab -->
+            <div class="tab-content" id="value">
+                <div class="charts-grid">
+                    <div class="chart-container full-width">
+                        <h3>Price vs Fantasy Performance</h3>
+                        <p class="chart-subtitle">Auction price compared to previous year fantasy points</p>
+                        <div class="scatter-plot" id="valueScatter"></div>
                     </div>
                 </div>
             </div>
         </div>
-        
+
         <div class="layout-controls">
             <button class="layout-toggle" id="layoutToggle" aria-label="Toggle layout">
                 <span class="layout-icon">⊞</span>
                 <span class="layout-text">Grid View</span>
             </button>
         </div>
-        
+
         <div class="teams-grid" id="teamsGrid">
 
             <div class="team-card">
@@ -739,7 +951,7 @@
                     <div class="team-name">Call Me The Breece</div>
                     <div class="owner-name">Adam</div>
                 </div>
-                
+
                 <div class="team-stats">
                     <div class="stat-item">
                         <div class="stat-value">17</div>
@@ -754,7 +966,7 @@
                         <div class="stat-label">Remaining</div>
                     </div>
                 </div>
-                
+
                 <div class="position-badges">
                     <span class="position-badge" style="background: #7b6bb5; color: white">QB (2)</span>
                     <span class="position-badge" style="background: #5fb572; color: #2a2a2a">RB (5)</span>
@@ -763,7 +975,7 @@
                     <span class="position-badge" style="background: #5f82b5; color: white">K (1)</span>
                     <span class="position-badge" style="background: #9f5f75; color: white">D/ST (1)</span>
                 </div>
-                
+
                 <div class="player-list">
                     <div class="player-item">
                         <img src="2025/assets/logos/lar.png" class="team-logo" alt="LAR" onerror="this.style.display='none'">
@@ -874,7 +1086,7 @@
                     <div class="team-name">To Infinity and Bijan!</div>
                     <div class="owner-name">Elisa</div>
                 </div>
-                
+
                 <div class="team-stats">
                     <div class="stat-item">
                         <div class="stat-value">17</div>
@@ -889,7 +1101,7 @@
                         <div class="stat-label">Remaining</div>
                     </div>
                 </div>
-                
+
                 <div class="position-badges">
                     <span class="position-badge" style="background: #7b6bb5; color: white">QB (2)</span>
                     <span class="position-badge" style="background: #5fb572; color: #2a2a2a">RB (7)</span>
@@ -898,7 +1110,7 @@
                     <span class="position-badge" style="background: #5f82b5; color: white">K (1)</span>
                     <span class="position-badge" style="background: #9f5f75; color: white">D/ST (1)</span>
                 </div>
-                
+
                 <div class="player-list">
                     <div class="player-item">
                         <img src="2025/assets/logos/kc.png" class="team-logo" alt="KC" onerror="this.style.display='none'">
@@ -1009,7 +1221,7 @@
                     <div class="team-name">Like a Good Nabers</div>
                     <div class="owner-name">Greg</div>
                 </div>
-                
+
                 <div class="team-stats">
                     <div class="stat-item">
                         <div class="stat-value">17</div>
@@ -1024,7 +1236,7 @@
                         <div class="stat-label">Remaining</div>
                     </div>
                 </div>
-                
+
                 <div class="position-badges">
                     <span class="position-badge" style="background: #7b6bb5; color: white">QB (2)</span>
                     <span class="position-badge" style="background: #5fb572; color: #2a2a2a">RB (5)</span>
@@ -1033,7 +1245,7 @@
                     <span class="position-badge" style="background: #5f82b5; color: white">K (1)</span>
                     <span class="position-badge" style="background: #9f5f75; color: white">D/ST (1)</span>
                 </div>
-                
+
                 <div class="player-list">
                     <div class="player-item">
                         <img src="2025/assets/logos/cin.png" class="team-logo" alt="CIN" onerror="this.style.display='none'">
@@ -1144,7 +1356,7 @@
                     <div class="team-name">Blood Sweat Beers</div>
                     <div class="owner-name">Jackie</div>
                 </div>
-                
+
                 <div class="team-stats">
                     <div class="stat-item">
                         <div class="stat-value">13</div>
@@ -1159,7 +1371,7 @@
                         <div class="stat-label">Remaining</div>
                     </div>
                 </div>
-                
+
                 <div class="position-badges">
                     <span class="position-badge" style="background: #7b6bb5; color: white">QB (1)</span>
                     <span class="position-badge" style="background: #5fb572; color: #2a2a2a">RB (4)</span>
@@ -1168,7 +1380,7 @@
                     <span class="position-badge" style="background: #5f82b5; color: white">K (1)</span>
                     <span class="position-badge" style="background: #9f5f75; color: white">D/ST (1)</span>
                 </div>
-                
+
                 <div class="player-list">
                     <div class="player-item">
                         <img src="2025/assets/logos/phi.png" class="team-logo" alt="PHI" onerror="this.style.display='none'">
@@ -1255,7 +1467,7 @@
                     <div class="team-name">Run CMC</div>
                     <div class="owner-name">Jodi</div>
                 </div>
-                
+
                 <div class="team-stats">
                     <div class="stat-item">
                         <div class="stat-value">17</div>
@@ -1270,7 +1482,7 @@
                         <div class="stat-label">Remaining</div>
                     </div>
                 </div>
-                
+
                 <div class="position-badges">
                     <span class="position-badge" style="background: #7b6bb5; color: white">QB (2)</span>
                     <span class="position-badge" style="background: #5fb572; color: #2a2a2a">RB (5)</span>
@@ -1279,7 +1491,7 @@
                     <span class="position-badge" style="background: #5f82b5; color: white">K (1)</span>
                     <span class="position-badge" style="background: #9f5f75; color: white">D/ST (1)</span>
                 </div>
-                
+
                 <div class="player-list">
                     <div class="player-item">
                         <img src="2025/assets/logos/cin.png" class="team-logo" alt="CIN" onerror="this.style.display='none'">
@@ -1390,7 +1602,7 @@
                     <div class="team-name">Dewey Pest Control</div>
                     <div class="owner-name">Lance</div>
                 </div>
-                
+
                 <div class="team-stats">
                     <div class="stat-item">
                         <div class="stat-value">17</div>
@@ -1405,7 +1617,7 @@
                         <div class="stat-label">Remaining</div>
                     </div>
                 </div>
-                
+
                 <div class="position-badges">
                     <span class="position-badge" style="background: #7b6bb5; color: white">QB (2)</span>
                     <span class="position-badge" style="background: #5fb572; color: #2a2a2a">RB (4)</span>
@@ -1414,7 +1626,7 @@
                     <span class="position-badge" style="background: #5f82b5; color: white">K (1)</span>
                     <span class="position-badge" style="background: #9f5f75; color: white">D/ST (1)</span>
                 </div>
-                
+
                 <div class="player-list">
                     <div class="player-item">
                         <img src="2025/assets/logos/det.png" class="team-logo" alt="DET" onerror="this.style.display='none'">
@@ -1525,7 +1737,7 @@
                     <div class="team-name">Don't Cook the Lamb</div>
                     <div class="owner-name">Mitch</div>
                 </div>
-                
+
                 <div class="team-stats">
                     <div class="stat-item">
                         <div class="stat-value">17</div>
@@ -1540,7 +1752,7 @@
                         <div class="stat-label">Remaining</div>
                     </div>
                 </div>
-                
+
                 <div class="position-badges">
                     <span class="position-badge" style="background: #7b6bb5; color: white">QB (2)</span>
                     <span class="position-badge" style="background: #5fb572; color: #2a2a2a">RB (5)</span>
@@ -1549,7 +1761,7 @@
                     <span class="position-badge" style="background: #5f82b5; color: white">K (1)</span>
                     <span class="position-badge" style="background: #9f5f75; color: white">D/ST (1)</span>
                 </div>
-                
+
                 <div class="player-list">
                     <div class="player-item">
                         <img src="2025/assets/logos/hou.png" class="team-logo" alt="HOU" onerror="this.style.display='none'">
@@ -1660,7 +1872,7 @@
                     <div class="team-name">THE NIGHTMARE</div>
                     <div class="owner-name">Raman</div>
                 </div>
-                
+
                 <div class="team-stats">
                     <div class="stat-item">
                         <div class="stat-value">17</div>
@@ -1675,7 +1887,7 @@
                         <div class="stat-label">Remaining</div>
                     </div>
                 </div>
-                
+
                 <div class="position-badges">
                     <span class="position-badge" style="background: #7b6bb5; color: white">QB (3)</span>
                     <span class="position-badge" style="background: #5fb572; color: #2a2a2a">RB (5)</span>
@@ -1684,7 +1896,7 @@
                     <span class="position-badge" style="background: #5f82b5; color: white">K (1)</span>
                     <span class="position-badge" style="background: #9f5f75; color: white">D/ST (1)</span>
                 </div>
-                
+
                 <div class="player-list">
                     <div class="player-item">
                         <img src="2025/assets/logos/buf.png" class="team-logo" alt="BUF" onerror="this.style.display='none'">
@@ -1795,7 +2007,7 @@
                     <div class="team-name">Sanjay's Team</div>
                     <div class="owner-name">Sanjay</div>
                 </div>
-                
+
                 <div class="team-stats">
                     <div class="stat-item">
                         <div class="stat-value">17</div>
@@ -1810,7 +2022,7 @@
                         <div class="stat-label">Remaining</div>
                     </div>
                 </div>
-                
+
                 <div class="position-badges">
                     <span class="position-badge" style="background: #7b6bb5; color: white">QB (2)</span>
                     <span class="position-badge" style="background: #5fb572; color: #2a2a2a">RB (5)</span>
@@ -1819,7 +2031,7 @@
                     <span class="position-badge" style="background: #5f82b5; color: white">K (1)</span>
                     <span class="position-badge" style="background: #9f5f75; color: white">D/ST (1)</span>
                 </div>
-                
+
                 <div class="player-list">
                     <div class="player-item">
                         <img src="2025/assets/logos/gb.png" class="team-logo" alt="GB" onerror="this.style.display='none'">
@@ -1930,7 +2142,7 @@
                     <div class="team-name">More than A. Thielen</div>
                     <div class="owner-name">Steve</div>
                 </div>
-                
+
                 <div class="team-stats">
                     <div class="stat-item">
                         <div class="stat-value">8</div>
@@ -1945,7 +2157,7 @@
                         <div class="stat-label">Remaining</div>
                     </div>
                 </div>
-                
+
                 <div class="position-badges">
                     <span class="position-badge" style="background: #7b6bb5; color: white">QB (1)</span>
                     <span class="position-badge" style="background: #5fb572; color: #2a2a2a">RB (2)</span>
@@ -1953,7 +2165,7 @@
                     <span class="position-badge" style="background: #b5725f; color: #2a2a2a">TE (1)</span>
                     <span class="position-badge" style="background: #9f5f75; color: white">D/ST (1)</span>
                 </div>
-                
+
                 <div class="player-list">
                     <div class="player-item">
                         <img src="2025/assets/logos/ind.png" class="team-logo" alt="IND" onerror="this.style.display='none'">
@@ -2007,86 +2219,515 @@
             </div>
         </div>
     </div>
-    
+
     <script>
         // Theme toggle functionality
         const themeToggle = document.getElementById('themeToggle');
         const html = document.documentElement;
-        
+
         // Check for saved theme preference or default to light
         const currentTheme = localStorage.getItem('theme') || 'light';
         html.setAttribute('data-theme', currentTheme);
         updateToggleButton(currentTheme);
-        
+
         // Toggle theme on button click
-        themeToggle.addEventListener('click', () => {{
+        themeToggle.addEventListener('click', () => {
             const theme = html.getAttribute('data-theme');
             const newTheme = theme === 'light' ? 'dark' : 'light';
-            
+
             html.setAttribute('data-theme', newTheme);
             localStorage.setItem('theme', newTheme);
             updateToggleButton(newTheme);
-        }});
-        
-        function updateToggleButton(theme) {{
+        });
+
+        function updateToggleButton(theme) {
             themeToggle.textContent = theme === 'light' ? '🌙' : '☀️';
-            themeToggle.setAttribute('aria-label', 
+            themeToggle.setAttribute('aria-label',
                 theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode');
-        }}
-        
+        }
+
         // Layout toggle functionality
         const layoutToggle = document.getElementById('layoutToggle');
         const teamsGrid = document.getElementById('teamsGrid');
-        
+
         // Check for saved layout preference or default to grid
         const currentLayout = localStorage.getItem('layout') || 'grid';
-        if (currentLayout === 'list') {{
+        if (currentLayout === 'list') {
             teamsGrid.classList.add('list-layout');
             updateLayoutButton('list');
-        }}
-        
+        }
+
         // Toggle layout on button click
-        layoutToggle.addEventListener('click', () => {{
+        layoutToggle.addEventListener('click', () => {
             const isListLayout = teamsGrid.classList.contains('list-layout');
             const newLayout = isListLayout ? 'grid' : 'list';
-            
-            if (newLayout === 'list') {{
+
+            if (newLayout === 'list') {
                 teamsGrid.classList.add('list-layout');
-            }} else {{
+            } else {
                 teamsGrid.classList.remove('list-layout');
-            }}
-            
+            }
+
             localStorage.setItem('layout', newLayout);
             updateLayoutButton(newLayout);
-        }});
-        
-        function updateLayoutButton(layout) {{
+        });
+
+        function updateLayoutButton(layout) {
             const icon = layoutToggle.querySelector('.layout-icon');
             const text = layoutToggle.querySelector('.layout-text');
-            
-            if (layout === 'grid') {{
+
+            if (layout === 'grid') {
                 icon.textContent = '⊞';
                 text.textContent = 'Grid View';
                 layoutToggle.setAttribute('aria-label', 'Switch to list view');
-            }} else {{
+            } else {
                 icon.textContent = '☰';
                 text.textContent = 'List View';
                 layoutToggle.setAttribute('aria-label', 'Switch to grid view');
-            }}
-        }}
-        
+            }
+        }
+
         // Tab functionality for draft summary
-        document.querySelectorAll('.tab-btn').forEach(btn => {{
-            btn.addEventListener('click', () => {{
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
                 // Remove active class from all tabs and content
-                document.querySelectorAll('.tab-btn, .tab-content').forEach(el => 
+                document.querySelectorAll('.tab-btn, .tab-content').forEach(el =>
                     el.classList.remove('active'));
-                
+
                 // Add active class to clicked tab and corresponding content
                 btn.classList.add('active');
                 document.getElementById(btn.dataset.tab).classList.add('active');
-            }});
-        }});
+
+                // Initialize charts when tabs are opened
+                if (btn.dataset.tab === 'market') {
+                    initializeMarketCharts();
+                } else if (btn.dataset.tab === 'teams') {
+                    initializeTeamCharts();
+                } else if (btn.dataset.tab === 'value') {
+                    initializeValueCharts();
+                }
+            });
+        });
+
+        // Chart data
+        const teamData = [["MIN", 8], ["BAL", 8], ["KC", 7], ["BUF", 7], ["DET", 7], ["DEN", 7], ["DAL", 7], ["PHI", 6], ["WAS", 6], ["CHI", 6]];
+        const positionBudgetData = [["WR", 768], ["RB", 700], ["QB", 223], ["TE", 143], ["D/ST", 80], ["K", 17]];
+        const positionRangeData = [{"position": "RB", "avg": 14.893617021276595, "min": 1, "max": 61, "color": "#5fb572"}, {"position": "WR", "avg": 14.222222222222221, "min": 1, "max": 61, "color": "#b5a55f"}, {"position": "QB", "avg": 11.736842105263158, "min": 1, "max": 40, "color": "#7b6bb5"}, {"position": "D/ST", "avg": 8.0, "min": 1, "max": 37, "color": "#9f5f75"}, {"position": "TE", "avg": 7.944444444444445, "min": 1, "max": 23, "color": "#b5725f"}, {"position": "K", "avg": 1.8888888888888888, "min": 1, "max": 6, "color": "#5f82b5"}];
+        const topPlayersData = [{"owner_name": "Elisa", "team_name": "To Infinity and Bijan!", "player_name": "Bijan Robinson", "position": "RB", "nfl_team": "ATL", "price": 61}, {"owner_name": "Elisa", "team_name": "To Infinity and Bijan!", "player_name": "Amon-Ra St. Brown", "position": "WR", "nfl_team": "DET", "price": 61}, {"owner_name": "Jackie", "team_name": "Blood Sweat Beers", "player_name": "Saquon Barkley", "position": "RB", "nfl_team": "PHI", "price": 51}, {"owner_name": "Jackie", "team_name": "Blood Sweat Beers", "player_name": "Ashton Jeanty", "position": "RB", "nfl_team": "LV", "price": 50}, {"owner_name": "Lance", "team_name": "Dewey Pest Control", "player_name": "Derrick Henry", "position": "RB", "nfl_team": "BAL", "price": 46}, {"owner_name": "Steve", "team_name": "More than A. Thielen", "player_name": "CeeDee Lamb", "position": "WR", "nfl_team": "DAL", "price": 45}, {"owner_name": "Steve", "team_name": "More than A. Thielen", "player_name": "Justin Jefferson", "position": "WR", "nfl_team": "MIN", "price": 44}, {"owner_name": "Greg", "team_name": "Like a Good Nabers", "player_name": "Jahmyr Gibbs", "position": "RB", "nfl_team": "DET", "price": 43}, {"owner_name": "Raman", "team_name": "THE NIGHTMARE", "player_name": "Christian McCaffrey", "position": "RB", "nfl_team": "SF", "price": 42}, {"owner_name": "Lance", "team_name": "Dewey Pest Control", "player_name": "Brian Thomas Jr.", "position": "WR", "nfl_team": "JAX", "price": 41}];
+        const teamBudgetData = [["Sanjay's Team", 32], ["More than A. Thielen", 14], ["Like a Good Nabers", 8], ["Call Me The Breece", 5], ["Blood Sweat Beers", 5], ["THE NIGHTMARE", 5], ["To Infinity and Bijan!", 0], ["Run CMC", 0], ["Dewey Pest Control", 0], ["Don't Cook the Lamb", 0]];
+        const rosterMatrixData = {"Call Me The Breece": {"QB": 36, "RB": 35, "WR": 89, "TE": 25, "K": 1, "DST": 9}, "To Infinity and Bijan!": {"QB": 10, "RB": 99, "WR": 79, "TE": 5, "K": 3, "DST": 4}, "Like a Good Nabers": {"QB": 41, "RB": 97, "WR": 48, "TE": 4, "K": 1, "DST": 1}, "Blood Sweat Beers": {"QB": 25, "RB": 111, "WR": 49, "TE": 3, "K": 1, "DST": 6}, "Run CMC": {"QB": 48, "RB": 57, "WR": 65, "TE": 20, "K": 1, "DST": 9}, "Dewey Pest Control": {"QB": 11, "RB": 58, "WR": 98, "TE": 22, "K": 6, "DST": 5}, "Don't Cook the Lamb": {"QB": 4, "RB": 61, "WR": 87, "TE": 10, "K": 1, "DST": 37}, "THE NIGHTMARE": {"QB": 18, "RB": 87, "WR": 62, "TE": 24, "K": 1, "DST": 3}, "Sanjay's Team": {"QB": 2, "RB": 82, "WR": 61, "TE": 20, "K": 2, "DST": 1}, "More than A. Thielen": {"QB": 28, "RB": 13, "WR": 130, "TE": 10, "K": 0, "DST": 5}};
+        const nflStackingData = {"MIN": {"Call Me The Breece": 1, "Blood Sweat Beers": 1, "Dewey Pest Control": 1, "Don't Cook the Lamb": 1, "Sanjay's Team": 2, "More than A. Thielen": 2}, "BAL": {"To Infinity and Bijan!": 1, "Like a Good Nabers": 1, "Dewey Pest Control": 3, "Sanjay's Team": 1, "More than A. Thielen": 2}, "KC": {"Call Me The Breece": 2, "To Infinity and Bijan!": 1, "THE NIGHTMARE": 2, "Sanjay's Team": 2}, "BUF": {"Call Me The Breece": 1, "Like a Good Nabers": 2, "Blood Sweat Beers": 1, "THE NIGHTMARE": 3}, "DET": {"To Infinity and Bijan!": 1, "Like a Good Nabers": 2, "Dewey Pest Control": 2, "Don't Cook the Lamb": 1, "Sanjay's Team": 1}, "DEN": {"To Infinity and Bijan!": 1, "Blood Sweat Beers": 1, "Run CMC": 3, "Don't Cook the Lamb": 2}, "DAL": {"To Infinity and Bijan!": 1, "Run CMC": 1, "Dewey Pest Control": 3, "THE NIGHTMARE": 1, "More than A. Thielen": 1}, "PHI": {"Call Me The Breece": 1, "Blood Sweat Beers": 2, "Dewey Pest Control": 1, "THE NIGHTMARE": 1, "Sanjay's Team": 1}, "WAS": {"To Infinity and Bijan!": 1, "Dewey Pest Control": 1, "Don't Cook the Lamb": 2, "THE NIGHTMARE": 1, "Sanjay's Team": 1}, "CHI": {"Like a Good Nabers": 1, "Blood Sweat Beers": 1, "Run CMC": 2, "THE NIGHTMARE": 1, "Sanjay's Team": 1}, "PIT": {"Blood Sweat Beers": 1, "Dewey Pest Control": 1, "Don't Cook the Lamb": 3, "Sanjay's Team": 1}, "GB": {"Call Me The Breece": 1, "Like a Good Nabers": 2, "Dewey Pest Control": 1, "Sanjay's Team": 1}, "LAC": {"To Infinity and Bijan!": 3, "THE NIGHTMARE": 1, "Sanjay's Team": 1}, "HOU": {"To Infinity and Bijan!": 2, "Blood Sweat Beers": 1, "Don't Cook the Lamb": 1, "More than A. Thielen": 1}, "JAX": {"Like a Good Nabers": 1, "Run CMC": 1, "Dewey Pest Control": 1, "Don't Cook the Lamb": 1, "THE NIGHTMARE": 1}, "TB": {"Like a Good Nabers": 1, "Run CMC": 2, "THE NIGHTMARE": 1, "More than A. Thielen": 1}, "LAR": {"Call Me The Breece": 2, "THE NIGHTMARE": 2}, "SEA": {"Call Me The Breece": 1, "Blood Sweat Beers": 1, "Don't Cook the Lamb": 2}, "MIA": {"Call Me The Breece": 1, "Like a Good Nabers": 1, "Don't Cook the Lamb": 2}, "ARI": {"Call Me The Breece": 1, "Run CMC": 2, "THE NIGHTMARE": 1}, "CLE": {"Call Me The Breece": 1, "To Infinity and Bijan!": 1, "Like a Good Nabers": 1, "Dewey Pest Control": 1}, "TEN": {"Call Me The Breece": 1, "To Infinity and Bijan!": 1, "Run CMC": 1, "Dewey Pest Control": 1}, "ATL": {"Call Me The Breece": 1, "To Infinity and Bijan!": 1, "Like a Good Nabers": 1, "Blood Sweat Beers": 1}, "IND": {"Call Me The Breece": 1, "Dewey Pest Control": 1, "Sanjay's Team": 1, "More than A. Thielen": 1}, "CIN": {"Like a Good Nabers": 1, "Run CMC": 3}, "SF": {"Like a Good Nabers": 1, "Blood Sweat Beers": 1, "THE NIGHTMARE": 2}, "NE": {"Like a Good Nabers": 1, "Run CMC": 2, "Sanjay's Team": 1}, "NYJ": {"Call Me The Breece": 1, "To Infinity and Bijan!": 1, "Blood Sweat Beers": 1}, "NYG": {"Call Me The Breece": 1, "To Infinity and Bijan!": 1, "Like a Good Nabers": 1}, "LV": {"Blood Sweat Beers": 1, "Don't Cook the Lamb": 1, "Sanjay's Team": 1}};
+        const valueScatterData = [{"name": "Kyren Williams", "price": 8, "points": 261.1, "position": "RB", "team": "Call Me The Breece"}, {"name": "Breece Hall", "price": 14, "points": 212.40000000000003, "position": "RB", "team": "Call Me The Breece"}, {"name": "Puka Nacua", "price": 13, "points": 167.1, "position": "WR", "team": "Call Me The Breece"}, {"name": "Patrick Mahomes", "price": 31, "points": 282.52, "position": "QB", "team": "Call Me The Breece"}, {"name": "Jaxon Smith-Njigba", "price": 26, "points": 201.6, "position": "WR", "team": "Call Me The Breece"}, {"name": "Travis Kelce", "price": 19, "points": 148.8, "position": "TE", "team": "Call Me The Breece"}, {"name": "Tyreek Hill", "price": 30, "points": 177.70000000000002, "position": "WR", "team": "Call Me The Breece"}, {"name": "Tyrone Tracy Jr.", "price": 7, "points": 167.3, "position": "RB", "team": "Call Me The Breece"}, {"name": "Kyler Murray", "price": 5, "points": 303.24, "position": "QB", "team": "Call Me The Breece"}, {"name": "Jerry Jeudy", "price": 7, "points": 191.9, "position": "WR", "team": "Call Me The Breece"}, {"name": "Tyjae Spears", "price": 5, "points": 98.60000000000001, "position": "RB", "team": "Call Me The Breece"}, {"name": "Kyle Pitts Sr.", "price": 6, "points": 107.7, "position": "TE", "team": "Call Me The Breece"}, {"name": "Michael Pittman Jr.", "price": 2, "points": 133.3, "position": "WR", "team": "Call Me The Breece"}, {"name": "Ray Davis", "price": 1, "points": 107.60000000000001, "position": "RB", "team": "Call Me The Breece"}, {"name": "Xavier Worthy", "price": 11, "points": 157.70000000000002, "position": "WR", "team": "To Infinity and Bijan!"}, {"name": "Bijan Robinson", "price": 61, "points": 309.2, "position": "RB", "team": "To Infinity and Bijan!"}, {"name": "Amon-Ra St. Brown", "price": 61, "points": 256.40000000000003, "position": "WR", "team": "To Infinity and Bijan!"}, {"name": "Bo Nix", "price": 9, "points": 316.7, "position": "QB", "team": "To Infinity and Bijan!"}, {"name": "Tony Pollard", "price": 15, "points": 182.2, "position": "RB", "team": "To Infinity and Bijan!"}, {"name": "David Njoku", "price": 4, "points": 112.5, "position": "TE", "team": "To Infinity and Bijan!"}, {"name": "Justin Fields", "price": 1, "points": 121.14000000000001, "position": "QB", "team": "To Infinity and Bijan!"}, {"name": "Chris Olave", "price": 6, "points": 62.7, "position": "WR", "team": "To Infinity and Bijan!"}, {"name": "Isaiah Likely", "price": 1, "points": 104.7, "position": "TE", "team": "To Infinity and Bijan!"}, {"name": "Keenan Allen", "price": 1, "points": 151.4, "position": "WR", "team": "To Infinity and Bijan!"}, {"name": "Ja'Marr Chase", "price": 11, "points": 339.5, "position": "WR", "team": "Like a Good Nabers"}, {"name": "Malik Nabers", "price": 25, "points": 217.1, "position": "WR", "team": "Like a Good Nabers"}, {"name": "Jahmyr Gibbs", "price": 43, "points": 338.90000000000003, "position": "RB", "team": "Like a Good Nabers"}, {"name": "Josh Allen", "price": 40, "points": 381.04, "position": "QB", "team": "Like a Good Nabers"}, {"name": "De'Von Achane", "price": 40, "points": 260.9, "position": "RB", "team": "Like a Good Nabers"}, {"name": "Dalton Kincaid", "price": 3, "points": 78.80000000000001, "position": "TE", "team": "Like a Good Nabers"}, {"name": "Rome Odunze", "price": 8, "points": 119.9, "position": "WR", "team": "Like a Good Nabers"}, {"name": "Tank Bigsby", "price": 4, "points": 127.50000000000001, "position": "RB", "team": "Like a Good Nabers"}, {"name": "Ricky Pearsall", "price": 2, "points": 78.0, "position": "WR", "team": "Like a Good Nabers"}, {"name": "Rhamondre Stevenson", "price": 3, "points": 161.4, "position": "RB", "team": "Like a Good Nabers"}, {"name": "Chris Godwin", "price": 1, "points": 112.8, "position": "WR", "team": "Like a Good Nabers"}, {"name": "Tucker Kraft", "price": 1, "points": 137.7, "position": "TE", "team": "Like a Good Nabers"}, {"name": "Jordan Love", "price": 1, "points": 227.86, "position": "QB", "team": "Like a Good Nabers"}, {"name": "Darnell Mooney", "price": 1, "points": 161.2, "position": "WR", "team": "Like a Good Nabers"}, {"name": "Saquon Barkley", "price": 51, "points": 334.8, "position": "RB", "team": "Blood Sweat Beers"}, {"name": "Garrett Wilson", "price": 6, "points": 203.4, "position": "WR", "team": "Blood Sweat Beers"}, {"name": "Drake London", "price": 20, "points": 230.8, "position": "WR", "team": "Blood Sweat Beers"}, {"name": "Jalen Hurts", "price": 25, "points": 325.12, "position": "QB", "team": "Blood Sweat Beers"}, {"name": "DJ Moore", "price": 17, "points": 189.10000000000002, "position": "WR", "team": "Blood Sweat Beers"}, {"name": "Evan Engram", "price": 3, "points": 66.0, "position": "TE", "team": "Blood Sweat Beers"}, {"name": "Zach Charbonnet", "price": 5, "points": 165.9, "position": "RB", "team": "Blood Sweat Beers"}, {"name": "Khalil Shakir", "price": 5, "points": 144.50000000000003, "position": "WR", "team": "Blood Sweat Beers"}, {"name": "Jauan Jennings", "price": 1, "points": 172.0, "position": "WR", "team": "Blood Sweat Beers"}, {"name": "Chase Brown", "price": 3, "points": 228.0, "position": "RB", "team": "Run CMC"}, {"name": "Trey McBride", "price": 14, "points": 182.10000000000002, "position": "TE", "team": "Run CMC"}, {"name": "Tee Higgins", "price": 6, "points": 187.60000000000002, "position": "WR", "team": "Run CMC"}, {"name": "Joe Burrow", "price": 40, "points": 382.82000000000005, "position": "QB", "team": "Run CMC"}, {"name": "Caleb Williams", "price": 8, "points": 258.54, "position": "QB", "team": "Run CMC"}, {"name": "Mike Evans", "price": 33, "points": 203.4, "position": "WR", "team": "Run CMC"}, {"name": "James Conner", "price": 20, "points": 228.3, "position": "RB", "team": "Run CMC"}, {"name": "Calvin Ridley", "price": 14, "points": 169.2, "position": "WR", "team": "Run CMC"}, {"name": "Javonte Williams", "price": 7, "points": 135.9, "position": "RB", "team": "Run CMC"}, {"name": "Stefon Diggs", "price": 2, "points": 97.89999999999999, "position": "WR", "team": "Run CMC"}, {"name": "David Montgomery", "price": 10, "points": 201.6, "position": "RB", "team": "Dewey Pest Control"}, {"name": "Zay Flowers", "price": 21, "points": 172.5, "position": "WR", "team": "Dewey Pest Control"}, {"name": "Jayden Daniels", "price": 10, "points": 349.82, "position": "QB", "team": "Dewey Pest Control"}, {"name": "Brian Thomas Jr.", "price": 41, "points": 236.50000000000003, "position": "WR", "team": "Dewey Pest Control"}, {"name": "Derrick Henry", "price": 46, "points": 328.90000000000003, "position": "RB", "team": "Dewey Pest Control"}, {"name": "A.J. Brown", "price": 32, "points": 183.4, "position": "WR", "team": "Dewey Pest Control"}, {"name": "Sam LaPorta", "price": 21, "points": 144.60000000000002, "position": "TE", "team": "Dewey Pest Control"}, {"name": "Jordan Mason", "price": 1, "points": 111.5, "position": "RB", "team": "Dewey Pest Control"}, {"name": "George Pickens", "price": 1, "points": 136.9, "position": "WR", "team": "Dewey Pest Control"}, {"name": "Rashod Bateman", "price": 1, "points": 152.10000000000002, "position": "WR", "team": "Dewey Pest Control"}, {"name": "Josh Downs", "price": 1, "points": 147.5, "position": "WR", "team": "Dewey Pest Control"}, {"name": "Jerome Ford", "price": 1, "points": 115.5, "position": "RB", "team": "Dewey Pest Control"}, {"name": "Jayden Reed", "price": 1, "points": 171.5, "position": "WR", "team": "Dewey Pest Control"}, {"name": "Jake Ferguson", "price": 1, "points": 78.9, "position": "TE", "team": "Dewey Pest Control"}, {"name": "C.J. Stroud", "price": 3, "points": 228.38000000000002, "position": "QB", "team": "Don't Cook the Lamb"}, {"name": "Brock Bowers", "price": 9, "points": 205.4, "position": "TE", "team": "Don't Cook the Lamb"}, {"name": "Chuba Hubbard", "price": 3, "points": 224.1, "position": "RB", "team": "Don't Cook the Lamb"}, {"name": "Cooper Kupp", "price": 15, "points": 141.5, "position": "WR", "team": "Don't Cook the Lamb"}, {"name": "Courtland Sutton", "price": 25, "points": 196.60000000000002, "position": "WR", "team": "Don't Cook the Lamb"}, {"name": "Kenneth Walker III", "price": 28, "points": 158.20000000000002, "position": "RB", "team": "Don't Cook the Lamb"}, {"name": "DK Metcalf", "price": 15, "points": 162.2, "position": "WR", "team": "Don't Cook the Lamb"}, {"name": "Aaron Jones Sr.", "price": 12, "points": 222.10000000000002, "position": "RB", "team": "Don't Cook the Lamb"}, {"name": "Austin Ekeler", "price": 8, "points": 114.80000000000001, "position": "RB", "team": "Don't Cook the Lamb"}, {"name": "Jameson Williams", "price": 12, "points": 183.20000000000002, "position": "WR", "team": "Don't Cook the Lamb"}, {"name": "Deebo Samuel", "price": 8, "points": 130.1, "position": "WR", "team": "Don't Cook the Lamb"}, {"name": "J.K. Dobbins", "price": 10, "points": 175.8, "position": "RB", "team": "Don't Cook the Lamb"}, {"name": "Jaylen Waddle", "price": 12, "points": 116.60000000000001, "position": "WR", "team": "Don't Cook the Lamb"}, {"name": "Pat Freiermuth", "price": 1, "points": 139.8, "position": "TE", "team": "Don't Cook the Lamb"}, {"name": "Tua Tagovailoa", "price": 1, "points": 181.58, "position": "QB", "team": "Don't Cook the Lamb"}, {"name": "James Cook", "price": 33, "points": 250.7, "position": "RB", "team": "THE NIGHTMARE"}, {"name": "Ladd McConkey", "price": 2, "points": 197.9, "position": "WR", "team": "THE NIGHTMARE"}, {"name": "George Kittle", "price": 23, "points": 197.60000000000002, "position": "TE", "team": "THE NIGHTMARE"}, {"name": "Christian McCaffrey", "price": 42, "points": 42.300000000000004, "position": "RB", "team": "THE NIGHTMARE"}, {"name": "Marvin Harrison Jr.", "price": 26, "points": 167.5, "position": "WR", "team": "THE NIGHTMARE"}, {"name": "Dak Prescott", "price": 4, "points": 118.52000000000001, "position": "QB", "team": "THE NIGHTMARE"}, {"name": "Davante Adams", "price": 27, "points": 35.900000000000006, "position": "WR", "team": "THE NIGHTMARE"}, {"name": "Baker Mayfield", "price": 13, "points": 367.8, "position": "QB", "team": "THE NIGHTMARE"}, {"name": "Travis Etienne Jr.", "price": 10, "points": 112.70000000000002, "position": "RB", "team": "THE NIGHTMARE"}, {"name": "Matthew Stafford", "price": 1, "points": 218.57999999999998, "position": "QB", "team": "THE NIGHTMARE"}, {"name": "Dallas Goedert", "price": 1, "points": 82.6, "position": "TE", "team": "THE NIGHTMARE"}, {"name": "Kareem Hunt", "price": 1, "points": 143.9, "position": "RB", "team": "THE NIGHTMARE"}, {"name": "Keon Coleman", "price": 3, "points": 95.0, "position": "WR", "team": "THE NIGHTMARE"}, {"name": "Brian Robinson Jr.", "price": 1, "points": 153.8, "position": "RB", "team": "THE NIGHTMARE"}, {"name": "Josh Jacobs", "price": 33, "points": 281.1, "position": "RB", "team": "Sanjay's Team"}, {"name": "Isiah Pacheco", "price": 9, "points": 50.9, "position": "RB", "team": "Sanjay's Team"}, {"name": "Jordan Addison", "price": 2, "points": 181.0, "position": "WR", "team": "Sanjay's Team"}, {"name": "Jaylen Warren", "price": 9, "points": 107.1, "position": "RB", "team": "Sanjay's Team"}, {"name": "Alvin Kamara", "price": 18, "points": 231.3, "position": "RB", "team": "Sanjay's Team"}, {"name": "Terry McLaurin", "price": 20, "points": 228.8, "position": "WR", "team": "Sanjay's Team"}, {"name": "Justin Herbert", "price": 1, "points": 283.40000000000003, "position": "QB", "team": "Sanjay's Team"}, {"name": "Mark Andrews", "price": 10, "points": 160.8, "position": "TE", "team": "Sanjay's Team"}, {"name": "DeVonta Smith", "price": 14, "points": 165.4, "position": "WR", "team": "Sanjay's Team"}, {"name": "Rashee Rice", "price": 8, "points": 52.9, "position": "WR", "team": "Sanjay's Team"}, {"name": "D'Andre Swift", "price": 13, "points": 191.5, "position": "RB", "team": "Sanjay's Team"}, {"name": "Jakobi Meyers", "price": 5, "points": 172.5, "position": "WR", "team": "Sanjay's Team"}, {"name": "Jonathan Taylor", "price": 11, "points": 237.7, "position": "RB", "team": "More than A. Thielen"}, {"name": "Bucky Irving", "price": 2, "points": 222.89999999999998, "position": "RB", "team": "More than A. Thielen"}, {"name": "Justin Jefferson", "price": 44, "points": 265.1, "position": "WR", "team": "More than A. Thielen"}, {"name": "CeeDee Lamb", "price": 45, "points": 212.9, "position": "WR", "team": "More than A. Thielen"}, {"name": "Nico Collins", "price": 41, "points": 176.60000000000002, "position": "WR", "team": "More than A. Thielen"}, {"name": "Lamar Jackson", "price": 28, "points": 438.38, "position": "QB", "team": "More than A. Thielen"}, {"name": "T.J. Hockenson", "price": 10, "points": 66.0, "position": "TE", "team": "More than A. Thielen"}];
+
+        function createBarChart(containerId, data, labelKey, valueKey, title) {
+            const container = document.getElementById(containerId);
+            if (container.children.length > 0) return;
+
+            const maxValue = data.length > 0 ? Math.max(...data.map(item => typeof item === 'object' ? item[valueKey] : item[1])) : 0;
+
+            data.forEach((item, index) => {
+                const label = typeof item === 'object' ? item[labelKey] : item[0];
+                const value = typeof item === 'object' ? item[valueKey] : item[1];
+                const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0;
+
+                const barItem = document.createElement('div');
+                barItem.className = 'bar-item';
+
+                const barHtml = '<div class="bar-label">' + label + '</div>' +
+                    '<div class="bar-container">' +
+                    '<div class="bar-fill" style="width: 0%"></div>' +
+                    '</div>' +
+                    '<div class="bar-value">' + (typeof value === 'number' && value > 100 ? '$' + value.toLocaleString() : value) + '</div>';
+
+                barItem.innerHTML = barHtml;
+                container.appendChild(barItem);
+
+                setTimeout(() => {
+                    barItem.querySelector('.bar-fill').style.width = percentage + '%';
+                }, 100 + index * 50);
+            });
+        }
+
+        function initializeMarketCharts() {
+            createBarChart('positionBudgetChart', positionBudgetData, 0, 1, 'Position Budget');
+            createBarChart('topPlayersChart', topPlayersData.map(p => [p.player_name, p.price]), 0, 1, 'Top Players');
+            createBarChart('teamChart', teamData, 0, 1, 'NFL Teams');
+            initializePositionRangeChart();
+        }
+
+        function initializeTeamCharts() {
+            initializeRosterHeatmap();
+            initializeRosterStackedChart();
+            initializeNFLStackingChart();
+        }
+
+        function initializeValueCharts() {
+            initializeScatterPlot();
+        }
+
+        function initializePositionRangeChart() {
+            const container = document.getElementById('positionAvgChart');
+            if (container.children.length > 0) return;
+
+            const maxValue = Math.max(...positionRangeData.map(p => p.max));
+
+            positionRangeData.forEach((item, index) => {
+                const percentage = maxValue > 0 ? (item.avg / maxValue) * 100 : 0;
+
+                const barItem = document.createElement('div');
+                barItem.className = 'bar-item';
+
+                const barHtml = '<div class="bar-label">' + item.position + '</div>' +
+                    '<div class="bar-container">' +
+                    '<div class="bar-fill" style="width: 0%; background: ' + item.color + '"></div>' +
+                    '</div>' +
+                    '<div class="bar-value">$' + Math.round(item.avg) + '</div>';
+
+                barItem.innerHTML = barHtml;
+                container.appendChild(barItem);
+
+                setTimeout(() => {
+                    barItem.querySelector('.bar-fill').style.width = percentage + '%';
+                }, 100 + index * 50);
+            });
+        }
+
+        function initializeRosterHeatmap() {
+            const container = document.getElementById('rosterHeatmap');
+            if (container.children.length > 0) return;
+
+            const positions = ['QB', 'RB', 'WR', 'TE', 'K', 'DST'];
+            const teams = Object.keys(rosterMatrixData);
+            const maxSpending = Math.max(...teams.flatMap(team => positions.map(pos => rosterMatrixData[team][pos] || 0)));
+
+            // Create header row
+            const headerRow = document.createElement('div');
+            headerRow.className = 'heatmap-row';
+            headerRow.style.gridTemplateColumns = '150px repeat(' + positions.length + ', 1fr)';
+
+            headerRow.innerHTML = '<div class="heatmap-cell heatmap-header">Team</div>' +
+                positions.map(pos => '<div class="heatmap-cell heatmap-header">' + pos + '</div>').join('');
+            container.appendChild(headerRow);
+
+            // Create team rows
+            teams.forEach(team => {
+                const row = document.createElement('div');
+                row.className = 'heatmap-row';
+                row.style.gridTemplateColumns = '150px repeat(' + positions.length + ', 1fr)';
+
+                let rowHtml = '<div class="heatmap-cell heatmap-label">' + team + '</div>';
+                positions.forEach(pos => {
+                    const spending = rosterMatrixData[team][pos] || 0;
+                    const intensity = maxSpending > 0 ? spending / maxSpending : 0;
+                    const color = 'rgba(102, 126, 234, ' + intensity + ')';
+                    rowHtml += '<div class="heatmap-cell" style="background: ' + color + '; color: ' + (intensity > 0.5 ? 'white' : 'var(--text-primary)') + '">$' + spending + '</div>';
+                });
+
+                row.innerHTML = rowHtml;
+                container.appendChild(row);
+            });
+        }
+
+        function initializeRosterStackedChart() {
+            const container = document.getElementById('rosterStackedChart');
+            if (container.children.length > 0) return;
+
+            const positions = ['QB', 'RB', 'WR', 'TE', 'K', 'DST'];
+            const positionColors = {
+                'QB': '#7b6bb5', 'RB': '#5fb572', 'WR': '#b5a55f',
+                'TE': '#b5725f', 'K': '#5f82b5', 'DST': '#9f5f75'
+            };
+
+            // Create legend
+            const legend = document.createElement('div');
+            legend.className = 'stacked-legend';
+            positions.forEach(pos => {
+                const legendItem = document.createElement('div');
+                legendItem.className = 'legend-item';
+                legendItem.innerHTML = `
+                    <div class="legend-color" style="background: ${positionColors[pos]}"></div>
+                    <span>${pos}</span>
+                `;
+                legend.appendChild(legendItem);
+            });
+            container.appendChild(legend);
+
+            const teams = Object.keys(rosterMatrixData);
+            teams.forEach(teamName => {
+                const teamData = rosterMatrixData[teamName];
+                const totalSpending = positions.reduce((sum, pos) => sum + (teamData[pos] || 0), 0);
+
+                if (totalSpending === 0) return;
+
+                const barItem = document.createElement('div');
+                barItem.className = 'stacked-bar-item';
+
+                const label = document.createElement('div');
+                label.className = 'stacked-bar-label';
+                label.textContent = teamName;
+
+                const barContainer = document.createElement('div');
+                barContainer.className = 'stacked-bar-container';
+
+                const total = document.createElement('div');
+                total.className = 'stacked-bar-total';
+                total.textContent = '$' + totalSpending;
+
+                positions.forEach(pos => {
+                    const spending = teamData[pos] || 0;
+                    if (spending > 0) {
+                        const percentage = (spending / totalSpending) * 100;
+                        const segment = document.createElement('div');
+                        segment.className = 'stacked-bar-segment';
+                        segment.style.width = percentage + '%';
+                        segment.style.background = positionColors[pos];
+
+                        // Only show text if segment is wide enough
+                        if (percentage > 8) {
+                            segment.textContent = '$' + spending;
+                        }
+
+                        // Add tooltip
+                        segment.title = `${pos}: $${spending} (${percentage.toFixed(1)}%)`;
+
+                        barContainer.appendChild(segment);
+                    }
+                });
+
+                barItem.appendChild(label);
+                barItem.appendChild(barContainer);
+                barItem.appendChild(total);
+                container.appendChild(barItem);
+            });
+        }
+
+        function initializeNFLStackingChart() {
+            const container = document.getElementById('nflStackingChart');
+            if (container.children.length > 0) return;
+
+            // Generate colors for fantasy teams
+            const fantasyTeams = new Set();
+            Object.values(nflStackingData).forEach(teams => {
+                Object.keys(teams).forEach(team => fantasyTeams.add(team));
+            });
+
+            const teamColors = {};
+            const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#34495e', '#e67e22', '#95a5a6', '#f1c40f'];
+            Array.from(fantasyTeams).forEach((team, i) => {
+                teamColors[team] = colors[i % colors.length];
+            });
+
+            // Create legend
+            const legend = document.createElement('div');
+            legend.className = 'stacked-legend';
+            Array.from(fantasyTeams).forEach(team => {
+                const legendItem = document.createElement('div');
+                legendItem.className = 'legend-item';
+                legendItem.innerHTML = `
+                    <div class="legend-color" style="background: ${teamColors[team]}"></div>
+                    <span>${team}</span>
+                `;
+                legend.appendChild(legendItem);
+            });
+            container.appendChild(legend);
+
+            Object.entries(nflStackingData).forEach(([nflTeam, fantasyTeamCounts]) => {
+                const totalPlayers = Object.values(fantasyTeamCounts).reduce((sum, count) => sum + count, 0);
+
+                const barItem = document.createElement('div');
+                barItem.className = 'stacked-bar-item';
+
+                const label = document.createElement('div');
+                label.className = 'stacked-bar-label';
+                label.textContent = nflTeam;
+
+                const barContainer = document.createElement('div');
+                barContainer.className = 'stacked-bar-container';
+
+                const total = document.createElement('div');
+                total.className = 'stacked-bar-total';
+                total.textContent = totalPlayers + ' players';
+
+                Object.entries(fantasyTeamCounts).forEach(([fantasyTeam, count]) => {
+                    const percentage = (count / totalPlayers) * 100;
+                    const segment = document.createElement('div');
+                    segment.className = 'stacked-bar-segment';
+                    segment.style.width = percentage + '%';
+                    segment.style.background = teamColors[fantasyTeam];
+
+                    // Only show count if segment is wide enough
+                    if (percentage > 15) {
+                        segment.textContent = count;
+                    }
+
+                    // Add tooltip
+                    segment.title = `${fantasyTeam}: ${count} players (${percentage.toFixed(1)}%)`;
+
+                    barContainer.appendChild(segment);
+                });
+
+                barItem.appendChild(label);
+                barItem.appendChild(barContainer);
+                barItem.appendChild(total);
+                container.appendChild(barItem);
+            });
+        }
+
+        function initializeScatterPlot() {
+            const container = document.getElementById('valueScatter');
+            if (container.children.length > 0) return;
+
+            // Create SVG instead of canvas for better interactivity
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('width', '100%');
+            svg.setAttribute('height', '500');
+            svg.style.border = '1px solid var(--border-color)';
+            svg.style.borderRadius = '8px';
+            svg.style.background = 'var(--card-bg)';
+
+            const width = 1200;
+            const height = 500;
+            const padding = 60;
+            const plotWidth = width - 2 * padding;
+            const plotHeight = height - 2 * padding;
+
+            svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+            container.appendChild(svg);
+
+            const maxPrice = Math.max(...valueScatterData.map(d => d.price));
+            const maxPoints = Math.max(...valueScatterData.map(d => d.points));
+
+            // Position colors
+            const positionColors = {
+                'QB': '#7b6bb5', 'RB': '#5fb572', 'WR': '#b5a55f',
+                'TE': '#b5725f', 'K': '#5f82b5'
+            };
+
+            // Create tooltip element
+            const tooltip = document.createElement('div');
+            tooltip.style.position = 'absolute';
+            tooltip.style.background = 'rgba(0, 0, 0, 0.8)';
+            tooltip.style.color = 'white';
+            tooltip.style.padding = '8px 12px';
+            tooltip.style.borderRadius = '4px';
+            tooltip.style.fontSize = '12px';
+            tooltip.style.pointerEvents = 'none';
+            tooltip.style.opacity = '0';
+            tooltip.style.transition = 'opacity 0.2s';
+            tooltip.style.zIndex = '1000';
+            document.body.appendChild(tooltip);
+
+            // Draw axes
+            const axisGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            axisGroup.setAttribute('stroke', 'rgba(100, 100, 100, 0.3)');
+            axisGroup.setAttribute('stroke-width', '2');
+
+            // Y axis
+            const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            yAxis.setAttribute('x1', padding);
+            yAxis.setAttribute('y1', padding);
+            yAxis.setAttribute('x2', padding);
+            yAxis.setAttribute('y2', height - padding);
+            axisGroup.appendChild(yAxis);
+
+            // X axis
+            const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            xAxis.setAttribute('x1', padding);
+            xAxis.setAttribute('y1', height - padding);
+            xAxis.setAttribute('x2', width - padding);
+            xAxis.setAttribute('y2', height - padding);
+            axisGroup.appendChild(xAxis);
+
+            svg.appendChild(axisGroup);
+
+            // Add axis labels
+            const xLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            xLabel.setAttribute('x', width / 2);
+            xLabel.setAttribute('y', height - 10);
+            xLabel.setAttribute('text-anchor', 'middle');
+            xLabel.setAttribute('font-size', '14');
+            xLabel.setAttribute('fill', 'var(--text-primary)');
+            xLabel.textContent = 'Auction Price ($)';
+            svg.appendChild(xLabel);
+
+            const yLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            yLabel.setAttribute('x', 20);
+            yLabel.setAttribute('y', height / 2);
+            yLabel.setAttribute('text-anchor', 'middle');
+            yLabel.setAttribute('font-size', '14');
+            yLabel.setAttribute('fill', 'var(--text-primary)');
+            yLabel.setAttribute('transform', `rotate(-90, 20, ${height / 2})`);
+            yLabel.textContent = 'Fantasy Points';
+            svg.appendChild(yLabel);
+
+            // Draw points
+            valueScatterData.forEach(point => {
+                const x = padding + (point.price / maxPrice) * plotWidth;
+                const y = height - padding - (point.points / maxPoints) * plotHeight;
+
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', x);
+                circle.setAttribute('cy', y);
+                circle.setAttribute('r', 6);
+                circle.setAttribute('fill', positionColors[point.position] || '#666');
+                circle.style.cursor = 'pointer';
+                circle.style.transition = 'r 0.2s';
+
+                // Add hover effects and tooltip
+                circle.addEventListener('mouseenter', (e) => {
+                    circle.setAttribute('r', 8);
+                    tooltip.innerHTML = `
+                        <strong>${point.name}</strong><br>
+                        Position: ${point.position}<br>
+                        Price: $${point.price}<br>
+                        Fantasy Points: ${point.points.toFixed(1)}<br>
+                        Team: ${point.team}
+                    `;
+                    tooltip.style.opacity = '1';
+                });
+
+                circle.addEventListener('mousemove', (e) => {
+                    tooltip.style.left = (e.pageX + 10) + 'px';
+                    tooltip.style.top = (e.pageY - 10) + 'px';
+                });
+
+                circle.addEventListener('mouseleave', () => {
+                    circle.setAttribute('r', 6);
+                    tooltip.style.opacity = '0';
+                });
+
+                svg.appendChild(circle);
+            });
+
+            // Add position legend
+            const legend = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            legend.setAttribute('transform', `translate(${width - 120}, 30)`);
+
+            const positions = Object.keys(positionColors);
+            positions.forEach((pos, i) => {
+                const legendItem = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                legendItem.setAttribute('transform', `translate(0, ${i * 20})`);
+
+                const legendCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                legendCircle.setAttribute('cx', 6);
+                legendCircle.setAttribute('cy', 6);
+                legendCircle.setAttribute('r', 4);
+                legendCircle.setAttribute('fill', positionColors[pos]);
+                legendItem.appendChild(legendCircle);
+
+                const legendText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                legendText.setAttribute('x', 16);
+                legendText.setAttribute('y', 10);
+                legendText.setAttribute('font-size', '12');
+                legendText.setAttribute('fill', 'var(--text-primary)');
+                legendText.textContent = pos;
+                legendItem.appendChild(legendText);
+
+                legend.appendChild(legendItem);
+            });
+
+            svg.appendChild(legend);
+        }
     </script>
 </body>
 </html>
