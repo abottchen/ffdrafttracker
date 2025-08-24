@@ -2074,72 +2074,179 @@ def generate_html(
             const container = document.getElementById('nflStackingChart');
             if (container.children.length > 0) return;
 
-            // Generate colors for fantasy teams
+            // Get all fantasy teams
             const fantasyTeams = new Set();
             Object.values(nflStackingData).forEach(teams => {
                 Object.keys(teams).forEach(team => fantasyTeams.add(team));
             });
-
-            const teamColors = {};
-            const colors = ['#7b6bb5', '#5fb572', '#b5a55f', '#b5725f', '#5f82b5', '#9f5f75', '#8b7355', '#6b8bb5', '#75b55f', '#b58b5f'];
-            Array.from(fantasyTeams).forEach((team, i) => {
-                teamColors[team] = colors[i % colors.length];
+            const fantasyTeamsList = Array.from(fantasyTeams).sort();
+            
+            // Sort NFL teams by conference and division
+            const nflTeamOrder = [
+                // AFC East
+                'BUF', 'MIA', 'NE', 'NYJ',
+                // AFC North  
+                'BAL', 'CIN', 'CLE', 'PIT',
+                // AFC South
+                'HOU', 'IND', 'JAX', 'TEN',
+                // AFC West
+                'DEN', 'KC', 'LV', 'LAC',
+                // NFC East
+                'DAL', 'NYG', 'PHI', 'WAS',
+                // NFC North
+                'CHI', 'DET', 'GB', 'MIN',
+                // NFC South
+                'ATL', 'CAR', 'NO', 'TB',
+                // NFC West
+                'ARI', 'LAR', 'SF', 'SEA'
+            ];
+            
+            const nflTeamsList = Object.keys(nflStackingData).sort((a, b) => {
+                const indexA = nflTeamOrder.indexOf(a);
+                const indexB = nflTeamOrder.indexOf(b);
+                // If team not found in order, put at end
+                if (indexA === -1 && indexB === -1) return a.localeCompare(b);
+                if (indexA === -1) return 1;
+                if (indexB === -1) return -1;
+                return indexA - indexB;
             });
 
-            // Create legend
-            const legend = document.createElement('div');
-            legend.className = 'stacked-legend';
-            Array.from(fantasyTeams).forEach(team => {
-                const legendItem = document.createElement('div');
-                legendItem.className = 'legend-item';
-                legendItem.innerHTML = `
-                    <div class="legend-color" style="background: ${teamColors[team]}"></div>
-                    <span>${team}</span>
-                `;
-                legend.appendChild(legendItem);
-            });
-            container.appendChild(legend);
-
-            Object.entries(nflStackingData).forEach(([nflTeam, fantasyTeamCounts]) => {
-                const totalPlayers = Object.values(fantasyTeamCounts).reduce((sum, count) => sum + count, 0);
-
-                const barItem = document.createElement('div');
-                barItem.className = 'stacked-bar-item';
-
-                const label = document.createElement('div');
-                label.className = 'stacked-bar-label';
-                label.textContent = nflTeam;
-
-                const barContainer = document.createElement('div');
-                barContainer.className = 'stacked-bar-container';
-
-                const total = document.createElement('div');
-                total.className = 'stacked-bar-total';
-                total.textContent = totalPlayers + ' players';
-
-                Object.entries(fantasyTeamCounts).forEach(([fantasyTeam, count]) => {
-                    const percentage = (count / totalPlayers) * 100;
-                    const segment = document.createElement('div');
-                    segment.className = 'stacked-bar-segment';
-                    segment.style.width = percentage + '%';
-                    segment.style.background = teamColors[fantasyTeam];
-
-                    // Only show count if segment is wide enough
-                    if (percentage > 15) {
-                        segment.textContent = count;
-                    }
-
-                    // Add tooltip
-                    segment.title = `${fantasyTeam}: ${count} players (${percentage.toFixed(1)}%)`;
-
-                    barContainer.appendChild(segment);
+            // Find the maximum count for color scaling
+            let maxCount = 0;
+            Object.values(nflStackingData).forEach(fantasyTeamCounts => {
+                Object.values(fantasyTeamCounts).forEach(count => {
+                    if (count > maxCount) maxCount = count;
                 });
-
-                barItem.appendChild(label);
-                barItem.appendChild(barContainer);
-                barItem.appendChild(total);
-                container.appendChild(barItem);
             });
+
+            // Create the heatmap grid
+            const heatmap = document.createElement('div');
+            heatmap.className = 'nfl-stacking-heatmap';
+            heatmap.style.display = 'grid';
+            heatmap.style.gridTemplateColumns = `150px repeat(${fantasyTeamsList.length}, 1fr)`;
+            heatmap.style.gap = '2px';
+            heatmap.style.margin = '20px 0';
+            heatmap.style.borderRadius = '8px';
+            heatmap.style.overflow = 'hidden';
+
+            // Create header row
+            const headerRow = document.createElement('div');
+            headerRow.style.display = 'contents';
+            
+            // Empty corner cell
+            const cornerCell = document.createElement('div');
+            cornerCell.className = 'heatmap-cell heatmap-header';
+            cornerCell.textContent = 'NFL Team';
+            headerRow.appendChild(cornerCell);
+
+            // Fantasy team headers
+            fantasyTeamsList.forEach(team => {
+                const headerCell = document.createElement('div');
+                headerCell.className = 'heatmap-cell heatmap-header';
+                headerCell.textContent = team;
+                headerCell.style.fontSize = '0.75em';
+                headerRow.appendChild(headerCell);
+            });
+            heatmap.appendChild(headerRow);
+
+            // Create NFL team rows with division separators
+            const divisions = [
+                { name: 'AFC East', teams: ['BUF', 'MIA', 'NE', 'NYJ'] },
+                { name: 'AFC North', teams: ['BAL', 'CIN', 'CLE', 'PIT'] },
+                { name: 'AFC South', teams: ['HOU', 'IND', 'JAX', 'TEN'] },
+                { name: 'AFC West', teams: ['DEN', 'KC', 'LV', 'LAC'] },
+                { name: 'NFC East', teams: ['DAL', 'NYG', 'PHI', 'WSH'] },
+                { name: 'NFC North', teams: ['CHI', 'DET', 'GB', 'MIN'] },
+                { name: 'NFC South', teams: ['ATL', 'CAR', 'NO', 'TB'] },
+                { name: 'NFC West', teams: ['ARI', 'LAR', 'SF', 'SEA'] }
+            ];
+
+            divisions.forEach((division, divIndex) => {
+                // Add division header
+                const divisionHeader = document.createElement('div');
+                divisionHeader.style.display = 'contents';
+                
+                const divHeaderCell = document.createElement('div');
+                divHeaderCell.className = 'heatmap-cell';
+                divHeaderCell.style.background = 'var(--alt-bg)';
+                divHeaderCell.style.color = 'var(--text-secondary)';
+                divHeaderCell.style.fontWeight = 'bold';
+                divHeaderCell.style.fontSize = '0.8em';
+                divHeaderCell.style.borderTop = divIndex > 0 ? '2px solid var(--border-color)' : 'none';
+                divHeaderCell.textContent = division.name;
+                divisionHeader.appendChild(divHeaderCell);
+                
+                // Empty cells for fantasy teams
+                fantasyTeamsList.forEach(() => {
+                    const emptyCell = document.createElement('div');
+                    emptyCell.className = 'heatmap-cell';
+                    emptyCell.style.background = 'var(--alt-bg)';
+                    emptyCell.style.borderTop = divIndex > 0 ? '2px solid var(--border-color)' : 'none';
+                    divisionHeader.appendChild(emptyCell);
+                });
+                heatmap.appendChild(divisionHeader);
+
+                // Add team rows for this division
+                division.teams.forEach(nflTeam => {
+                    if (nflStackingData[nflTeam]) { // Only show teams that have data
+                        const row = document.createElement('div');
+                        row.style.display = 'contents';
+
+                        // NFL team label with logo
+                        const labelCell = document.createElement('div');
+                        labelCell.className = 'heatmap-cell heatmap-label';
+                        labelCell.style.display = 'flex';
+                        labelCell.style.alignItems = 'center';
+                        labelCell.style.justifyContent = 'center';
+                        labelCell.style.gap = '8px';
+                        
+                        // Create logo image
+                        const logoImg = document.createElement('img');
+                        logoImg.src = '2025/assets/logos/' + nflTeam.toLowerCase() + '.png';
+                        logoImg.alt = nflTeam;
+                        logoImg.style.width = '24px';
+                        logoImg.style.height = '24px';
+                        logoImg.style.objectFit = 'contain';
+                        logoImg.onerror = function() {
+                            // Fallback to text if logo fails to load
+                            labelCell.textContent = nflTeam;
+                        };
+                        
+                        // Add both logo and text for better accessibility
+                        const textSpan = document.createElement('span');
+                        textSpan.textContent = nflTeam;
+                        textSpan.style.fontSize = '0.8em';
+                        
+                        labelCell.appendChild(logoImg);
+                        labelCell.appendChild(textSpan);
+                        row.appendChild(labelCell);
+
+                        // Fantasy team cells
+                        fantasyTeamsList.forEach(fantasyTeam => {
+                            const count = nflStackingData[nflTeam][fantasyTeam] || 0;
+                            const intensity = maxCount > 0 ? count / maxCount : 0;
+                            
+                            const cell = document.createElement('div');
+                            cell.className = 'heatmap-cell';
+                            cell.style.background = intensity > 0 ? `rgba(102, 126, 234, ${0.2 + intensity * 0.8})` : 'transparent';
+                            cell.style.color = intensity > 0.4 ? 'white' : 'var(--text-primary)';
+                            cell.style.fontWeight = '600';
+                            cell.textContent = count > 0 ? count : '';
+                            
+                            // Add tooltip
+                            if (count > 0) {
+                                cell.title = `${fantasyTeam} drafted ${count} ${nflTeam} player${count > 1 ? 's' : ''}`;
+                            }
+                            
+                            row.appendChild(cell);
+                        });
+
+                        heatmap.appendChild(row);
+                    }
+                });
+            });
+
+            container.appendChild(heatmap);
         }
 
         function initializeScatterPlot() {
