@@ -2081,7 +2081,7 @@ def generate_html(
             });
 
             const teamColors = {};
-            const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#34495e', '#e67e22', '#95a5a6', '#f1c40f'];
+            const colors = ['#7b6bb5', '#5fb572', '#b5a55f', '#b5725f', '#5f82b5', '#9f5f75', '#8b7355', '#6b8bb5', '#75b55f', '#b58b5f'];
             Array.from(fantasyTeams).forEach((team, i) => {
                 teamColors[team] = colors[i % colors.length];
             });
