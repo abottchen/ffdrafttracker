@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="darkreader-lock" />
+    <title>{YEAR} Fantasy Football Draft Recap</title>
+    <style>
+{CSS_CONTENT}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">🌙</button>
+            <h1>{YEAR} Fantasy Football Draft Recap</h1>
+            <p>Auction Draft Results</p>
+        </div>
+
+        <div class="draft-summary">
+            <h2>Draft Summary & Analysis</h2>
+
+            <!-- Tab Navigation -->
+            <div class="summary-tabs">
+                <button class="tab-btn active" data-tab="overview">Overview</button>
+                <button class="tab-btn" data-tab="highlights">Highlights</button>
+                <button class="tab-btn" data-tab="market">Market Analysis</button>
+                <button class="tab-btn" data-tab="teams">Team Strategy</button>
+                <button class="tab-btn" data-tab="value">Value Analysis</button>
+            </div>
+
+            <!-- Overview Tab -->
+            <div class="tab-content active" id="overview">
+                <div class="summary-stats">
+{SUMMARY_STATS_CONTENT}
+                </div>
+{OVERVIEW_CONTENT}
+            </div>
+
+            <!-- Draft Highlights Tab -->
+            <div class="tab-content" id="highlights">
+{HIGHLIGHTS_CONTENT}
+            </div>
+
+            <!-- Market Analysis Tab -->
+            <div class="tab-content" id="market">
+{MARKET_CONTENT}
+            </div>
+
+            <!-- Team Strategy Tab -->
+            <div class="tab-content" id="teams">
+{TEAMS_TAB_CONTENT}
+            </div>
+
+            <!-- Value Analysis Tab -->
+            <div class="tab-content" id="value">
+{VALUE_CONTENT}
+            </div>
+        </div>
+
+        <div class="layout-controls">
+            <button class="layout-toggle" id="layoutToggle" aria-label="Toggle layout">
+                <span class="layout-icon">⊞</span>
+                <span class="layout-text">Grid View</span>
+            </button>
+        </div>
+
+        <div class="teams-grid" id="teamsGrid">
+{TEAMS_CONTENT}
+        </div>
+    </div>
+
+    <script>
+{JS_CONTENT}
+    </script>
+</body>
+</html>
