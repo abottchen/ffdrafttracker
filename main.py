@@ -280,7 +280,7 @@ async def root(request: Request):
     # Load initial data for template
     draft_state = load_draft_state()
     return templates.TemplateResponse(
-        "index.html", {"request": request, "draft_state": draft_state.model_dump()}
+        request, "index.html", {"draft_state": draft_state.model_dump()}
     )
 
 
@@ -1076,9 +1076,9 @@ font-family: Arial, sans-serif; padding: 20px;">
         )
 
     return templates.TemplateResponse(
+        request,
         "team_viewer.html",
         {
-            "request": request,
             "selected_team_id": team_id,
         },
     )

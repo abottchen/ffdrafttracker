@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class NFLTeam(str, Enum):
+class NFLTeam(StrEnum):
     ARI = "ARI"
     ATL = "ATL"
     BAL = "BAL"

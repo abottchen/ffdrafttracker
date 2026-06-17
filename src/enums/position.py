@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class Position(str, Enum):
+class Position(StrEnum):
     QB = "QB"
     RB = "RB"
     WR = "WR"

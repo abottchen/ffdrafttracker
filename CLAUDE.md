@@ -4,6 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
+Dependencies are managed with **uv** (committed `uv.lock`, pinned + hashed). Run the tools below via `uv run <cmd>`, or `source .venv/bin/activate` once and use the bare commands. Plain `python` is not on PATH on Linux — use the venv.
+
 ### Testing
 ```bash
 # Run all tests
@@ -32,16 +34,18 @@ mypy src/
 
 ### Development Setup
 ```bash
-# Install dependencies
-pip install -e .[dev]
-
-# Or manually install dev dependencies
-pip install ruff black pytest pytest-cov
+# Create/sync the virtualenv (.venv) exactly from the lockfile
+uv sync --extra dev
 ```
+
+### Dependency Management
+- `pyproject.toml` holds abstract deps (`>=`); **`uv.lock` is the pinned + hashed source of truth** (including transitive deps).
+- After editing deps in `pyproject.toml`: run `uv lock`, then regenerate the pip fallback with `uv export --extra dev --no-emit-project -o requirements.txt` (generated file — do not hand-edit).
+- CI installs hash-verified via `uv sync --frozen` and runs `pip-audit` for known CVEs.
 
 ## Architecture Overview
 
-This is a **Fantasy Football Auction Draft Tracker** - a FastAPI web application for managing live fantasy football auctions. The codebase is currently **models-only** with the web interface planned for future implementation.
+This is a **Fantasy Football Auction Draft Tracker** - a FastAPI web application for managing live fantasy football auctions. It has a full web UI (routes in `main.py`, Jinja2 `templates/`, `static/` assets) backed by Pydantic models with JSON-file persistence in `data/`.
 
 ### Current Structure (Models Layer)
 
