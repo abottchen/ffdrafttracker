@@ -648,3 +648,52 @@ class TestMainApiIntegration:
         })
         state = self.client.get("/api/v1/draft-state").json()
         assert state["next_to_nominate"] == 2  # owner 1 now full -> advance
+
+    def test_patch_team_marks_done(self):
+        """PATCH sets manually_done and bumps the version."""
+        state = self.client.get("/api/v1/draft-state").json()
+        resp = self.client.patch("/api/v1/teams/1", json={
+            "manually_done": True, "expected_version": state["version"],
+        })
+        assert resp.status_code == 200
+        assert resp.json()["manually_done"] is True
+        new_state = self.client.get("/api/v1/draft-state").json()
+        team1 = next(t for t in new_state["teams"] if t["owner_id"] == 1)
+        assert team1["manually_done"] is True
+
+    def test_patch_team_marking_current_nominator_advances_turn(self):
+        """Marking the current nominator done passes the turn on."""
+        state = self.client.get("/api/v1/draft-state").json()
+        assert state["next_to_nominate"] == 1
+        self.client.patch("/api/v1/teams/1", json={
+            "manually_done": True, "expected_version": state["version"],
+        })
+        state = self.client.get("/api/v1/draft-state").json()
+        assert state["next_to_nominate"] == 2
+
+    def test_patch_team_can_clear_done(self):
+        """manually_done can be toggled back off."""
+        state = self.client.get("/api/v1/draft-state").json()
+        self.client.patch("/api/v1/teams/1", json={
+            "manually_done": True, "expected_version": state["version"],
+        })
+        state = self.client.get("/api/v1/draft-state").json()
+        resp = self.client.patch("/api/v1/teams/1", json={
+            "manually_done": False, "expected_version": state["version"],
+        })
+        assert resp.status_code == 200
+        assert resp.json()["manually_done"] is False
+
+    def test_patch_team_version_conflict(self):
+        """A stale expected_version yields 409."""
+        resp = self.client.patch("/api/v1/teams/1", json={
+            "manually_done": True, "expected_version": 999,
+        })
+        assert resp.status_code == 409
+
+    def test_patch_unknown_team_404(self):
+        state = self.client.get("/api/v1/draft-state").json()
+        resp = self.client.patch("/api/v1/teams/999", json={
+            "manually_done": True, "expected_version": state["version"],
+        })
+        assert resp.status_code == 404

@@ -110,6 +110,11 @@ class AdminDraftRequest(BaseModel):
     expected_version: int
 
 
+class TeamUpdateRequest(BaseModel):
+    manually_done: bool
+    expected_version: int
+
+
 # Helper functions
 def load_draft_state() -> DraftState:
     """Load current draft state from file."""
@@ -870,6 +875,45 @@ async def admin_draft_player(request: AdminDraftRequest):
         "success": True,
         "pick": pick.model_dump(),
         "team": team.model_dump(),
+        "new_version": draft_state.version,
+    }
+
+
+@app.patch("/api/v1/teams/{owner_id}")
+async def update_team(owner_id: int, request: TeamUpdateRequest):
+    """Set or clear a team's manually-done flag (admin action)."""
+    draft_state = load_draft_state()
+    check_version(draft_state.version, request.expected_version)
+
+    team = next((t for t in draft_state.teams if t.owner_id == owner_id), None)
+    if not team:
+        raise HTTPException(
+            status_code=404, detail=f"Team not found for owner {owner_id}"
+        )
+
+    team.manually_done = request.manually_done
+
+    # Repair the nominator pointer in case the current nominator was just marked done.
+    config = load_configuration()
+    nxt = next_eligible_nominator(
+        draft_state, config, from_id=draft_state.next_to_nominate, inclusive=True
+    )
+    if nxt is not None:
+        draft_state.next_to_nominate = nxt
+
+    draft_state.save_to_file(DRAFT_STATE_FILE)
+
+    owners = load_owners()
+    owner_name = owners.get(owner_id, {}).get("owner_name", f"ID:{owner_id}")
+    logger.info(
+        f"Team for {owner_name} manually_done set to {team.manually_done}"
+    )
+
+    return {
+        "success": True,
+        "owner_id": owner_id,
+        "manually_done": team.manually_done,
+        "next_to_nominate": draft_state.next_to_nominate,
         "new_version": draft_state.version,
     }
 
