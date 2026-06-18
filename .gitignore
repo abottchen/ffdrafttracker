@@ -205,6 +205,8 @@ cython_debug/
 #  Claude Code user settings and personal configurations
 .claude/
 CLAUDE.local.md
+#  Project-scoped MCP server config (may contain local/private server definitions)
+.mcp.json
 
 # Marimo
 marimo/_static/
