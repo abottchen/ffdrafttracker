@@ -301,8 +301,11 @@ async def root(request: Request):
 
     # Load initial data for template
     draft_state = load_draft_state()
+    config = load_configuration()
     return templates.TemplateResponse(
-        request, "index.html", {"draft_state": draft_state.model_dump()}
+        request,
+        "index.html",
+        {"draft_state": draft_state.model_dump(), "config": config.model_dump()},
     )
 
 
@@ -1166,12 +1169,11 @@ font-family: Arial, sans-serif; padding: 20px;">
             status_code=200,
         )
 
+    config = load_configuration()
     return templates.TemplateResponse(
         request,
         "team_viewer.html",
-        {
-            "selected_team_id": team_id,
-        },
+        {"selected_team_id": team_id, "config": config.model_dump()},
     )
 
 

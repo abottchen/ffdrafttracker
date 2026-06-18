@@ -763,3 +763,37 @@ class TestMainApiIntegration:
         self.owners_file.write_text(json.dumps(owners_data))
         owner = self.client.get("/api/v1/owners/1").json()
         assert owner["color"] == "#21D4FD"
+
+    def test_root_injects_config_into_context(self):
+        """root() passes the full config object into the template context."""
+        from unittest.mock import MagicMock
+
+        from fastapi.responses import HTMLResponse
+
+        import main
+        with patch.object(
+            main.templates, "TemplateResponse",
+            MagicMock(return_value=HTMLResponse("ok")),
+        ) as m:
+            self.client.get("/")
+        context = m.call_args.args[2]
+        assert "config" in context
+        assert context["config"]["total_rounds"] == 19  # from the test fixture
+
+    def test_viewer_injects_config_into_context(self):
+        """team_viewer() passes the full config object into the template context."""
+        from unittest.mock import MagicMock
+
+        from fastapi.responses import HTMLResponse
+        from fastapi.testclient import TestClient
+
+        import main
+        viewer_client = TestClient(main.viewer_app)
+        with patch.object(
+            main.templates, "TemplateResponse",
+            MagicMock(return_value=HTMLResponse("ok")),
+        ) as m:
+            viewer_client.get("/")
+        context = m.call_args.args[2]
+        assert "config" in context
+        assert context["config"]["total_rounds"] == 19
