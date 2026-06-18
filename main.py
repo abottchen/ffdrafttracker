@@ -21,7 +21,7 @@ from src.models import (
     Team,
 )
 from src.models.player_stats import PlayerStatsCollection
-from src.services.draft_rules import max_bid, remaining_roster_spots
+from src.services.draft_rules import max_bid, position_count, remaining_roster_spots
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -494,6 +494,27 @@ async def nominate_player(request: NominateRequest):
             detail=f"Owner {request.owner_id} does not exist",
         )
 
+    # Enforce position maximum for the nominating team (nomination opens a bid).
+    players = load_players()
+    player = next((p for p in players if p.id == request.player_id), None)
+    if player is not None:
+        max_at_pos = config.position_maximums.get(player.position)
+        player_positions = {p.id: p.position for p in players}
+        if max_at_pos is not None:
+            team = next(
+                (t for t in draft_state.teams if t.owner_id == request.owner_id), None
+            )
+            if team is not None and (
+                position_count(team, player.position, player_positions) >= max_at_pos
+            ):
+                raise HTTPException(
+                    status_code=422,
+                    detail=(
+                        f"Team is already at the maximum of {max_at_pos} "
+                        f"players at the {player.position} position"
+                    ),
+                )
+
     # Create nomination
     draft_state.nominated = Nominated(
         player_id=request.player_id,
@@ -506,8 +527,6 @@ async def nominate_player(request: NominateRequest):
     draft_state.save_to_file(DRAFT_STATE_FILE)
 
     # Return success with player details
-    players = load_players()
-    player = next((p for p in players if p.id == request.player_id), None)
     owner = owners.get(request.owner_id, {})
 
     # Log action with names
