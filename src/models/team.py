@@ -7,3 +7,4 @@ class Team(BaseModel):
     owner_id: int
     budget_remaining: int
     picks: list[DraftPick] = Field(default_factory=list)
+    manually_done: bool = False
