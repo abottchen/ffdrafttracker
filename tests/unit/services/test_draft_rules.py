@@ -92,6 +92,21 @@ class TestNextEligibleNominator:
         nxt = next_eligible_nominator(state, _config(17), from_id=2, inclusive=False)
         assert nxt == 1
 
+    def test_advance_wraps_from_last_owner_across_many_teams(self):
+        # From the highest owner_id, advance must wrap to the lowest.
+        state = _state(
+            [_team(200, 0, 1), _team(200, 0, 2), _team(200, 0, 3), _team(200, 0, 4)]
+        )
+        nxt = next_eligible_nominator(state, _config(17), from_id=4, inclusive=False)
+        assert nxt == 1
+
+    def test_advance_wraps_past_ineligible_back_to_low_owner(self):
+        # Wrap from the last owner past a full team to the first eligible.
+        full = _team(0, 17, 1)
+        state = _state([full, _team(200, 0, 2), _team(200, 0, 3)])
+        nxt = next_eligible_nominator(state, _config(17), from_id=3, inclusive=False)
+        assert nxt == 2
+
     def test_advance_skips_full_roster(self):
         state = _state([_team(200, 0, 1), _team(0, 17, 2), _team(200, 0, 3)])
         nxt = next_eligible_nominator(state, _config(17), from_id=1, inclusive=False)
