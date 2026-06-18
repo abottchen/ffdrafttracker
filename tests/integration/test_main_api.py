@@ -615,3 +615,16 @@ class TestMainApiIntegration:
         })
         assert resp.status_code == 422
         assert "position" in resp.json()["detail"].lower()
+
+    def test_draft_advances_to_next_owner(self):
+        """After a draft, next_to_nominate moves to the next eligible owner."""
+        self.client.post("/api/v1/nominate", json={
+            "owner_id": 1, "player_id": 1, "initial_bid": 5, "expected_version": 1,
+        })
+        state = self.client.get("/api/v1/draft-state").json()
+        self.client.post("/api/v1/draft", json={
+            "owner_id": 1, "player_id": 1, "final_price": 5,
+            "expected_version": state["version"],
+        })
+        state = self.client.get("/api/v1/draft-state").json()
+        assert state["next_to_nominate"] == 2  # advanced from 1
