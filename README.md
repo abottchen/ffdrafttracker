@@ -102,10 +102,13 @@ A live auction draft tracking tool for fantasy football leagues. Features a web-
   {
     "id": 1,
     "owner_name": "John Smith",
-    "team_name": "Smith's Squad"
+    "team_name": "Smith's Squad",
+    "color": "#21D4FD"
   }
 ]
 ```
+
+`color` is a per-team identity hex color (`#RRGGBB`), hand-edited reference data used by both the admin and viewer UIs. It defaults to `#888888` if omitted.
 
 ### Player Database (`data/players.json`)
 Players and defenses with ESPN IDs for automatic image loading:
