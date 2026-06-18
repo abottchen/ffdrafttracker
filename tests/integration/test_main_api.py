@@ -628,3 +628,23 @@ class TestMainApiIntegration:
         })
         state = self.client.get("/api/v1/draft-state").json()
         assert state["next_to_nominate"] == 2  # advanced from 1
+
+    def test_admin_draft_skips_filled_nominator(self):
+        """If admin-draft fills the current nominator's roster, the turn passes."""
+        import json
+        # Tiny roster so a single admin-draft completes owner 1.
+        config_data = {
+            "initial_budget": 200, "min_bid": 1,
+            "position_maximums": {"QB": 2, "RB": 4, "WR": 6, "TE": 2, "K": 1},
+            "total_rounds": 1,
+        }
+        self.config_file.write_text(json.dumps(config_data))
+        # next_to_nominate is 1; admin-draft a player onto owner 1 -> roster full.
+        state = self.client.get("/api/v1/draft-state").json()
+        assert state["next_to_nominate"] == 1
+        self.client.post("/api/v1/admin/draft", json={
+            "owner_id": 1, "player_id": 1, "price": 5,
+            "expected_version": state["version"],
+        })
+        state = self.client.get("/api/v1/draft-state").json()
+        assert state["next_to_nominate"] == 2  # owner 1 now full -> advance

@@ -846,6 +846,14 @@ async def admin_draft_player(request: AdminDraftRequest):
     # Remove player from available list
     draft_state.available_player_ids.remove(request.player_id)
 
+    # Repair the nominator pointer in case this pick filled its roster.
+    config = load_configuration()
+    nxt = next_eligible_nominator(
+        draft_state, config, from_id=draft_state.next_to_nominate, inclusive=True
+    )
+    if nxt is not None:
+        draft_state.next_to_nominate = nxt
+
     # Save state with version increment
     draft_state.save_to_file(DRAFT_STATE_FILE)
 
