@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from src.models import (
     Configuration,
@@ -113,6 +113,16 @@ class AdminDraftRequest(BaseModel):
 class TeamUpdateRequest(BaseModel):
     manually_done: bool
     expected_version: int
+
+
+# Response-only models (computed, read-only enrichments over the persisted shape).
+class TeamView(Team):
+    max_bid: int | None = None  # None when the roster is full
+
+
+class DraftStateResponse(DraftState):
+    teams: list[TeamView] = Field(default_factory=list)
+    up_next: int | None = None  # next distinct eligible nominator, or null
 
 
 # Helper functions
@@ -297,8 +307,26 @@ async def root(request: Request):
 
 # Shared business logic functions
 async def _get_draft_state_data():
-    """Shared logic for getting draft state."""
-    return load_draft_state()
+    """Shared logic for getting draft state, enriched with computed read-only
+    fields (per-team max_bid, draft-level up_next)."""
+    state = load_draft_state()
+    config = load_configuration()
+
+    team_views = [
+        TeamView(**team.model_dump(), max_bid=max_bid(team, config))
+        for team in state.teams
+    ]
+    up_next = next_eligible_nominator(
+        state, config, from_id=state.next_to_nominate, inclusive=False
+    )
+    if up_next == state.next_to_nominate:
+        up_next = None  # fewer than two eligible -> no distinct "up next"
+
+    return DraftStateResponse(
+        **state.model_dump(exclude={"teams"}),
+        teams=team_views,
+        up_next=up_next,
+    )
 
 
 async def _get_players_data():
@@ -396,7 +424,7 @@ async def _get_team_data(owner_id: int):
 
 
 # Read-only API endpoints for main app (admin interface)
-@app.get("/api/v1/draft-state", response_model=DraftState)
+@app.get("/api/v1/draft-state", response_model=DraftStateResponse)
 async def get_draft_state():
     """Get complete current draft state."""
     return await _get_draft_state_data()
@@ -1147,7 +1175,7 @@ font-family: Arial, sans-serif; padding: 20px;">
 
 
 # Read-only API endpoints for viewer app
-@viewer_app.get("/api/v1/draft-state", response_model=DraftState)
+@viewer_app.get("/api/v1/draft-state", response_model=DraftStateResponse)
 async def viewer_get_draft_state():
     """Get complete current draft state."""
     return await _get_draft_state_data()

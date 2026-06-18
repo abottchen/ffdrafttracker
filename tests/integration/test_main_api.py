@@ -697,3 +697,50 @@ class TestMainApiIntegration:
             "manually_done": True, "expected_version": state["version"],
         })
         assert resp.status_code == 404
+
+    def test_draft_state_exposes_max_bid_and_up_next(self):
+        """draft-state carries per-team max_bid + manually_done and up_next."""
+        state = self.client.get("/api/v1/draft-state").json()
+        # total_rounds=19, budget 200, 0 picks -> max_bid = 200 - 18 = 182.
+        team1 = next(t for t in state["teams"] if t["owner_id"] == 1)
+        assert team1["max_bid"] == 182
+        assert team1["manually_done"] is False
+        # Two eligible teams (owners 1 and 2); from owner 1 up_next is 2.
+        assert state["up_next"] == 2
+
+    def test_max_bid_none_when_roster_full(self):
+        """A full roster reports max_bid = null."""
+        import json
+        config_data = {
+            "initial_budget": 200, "min_bid": 1,
+            "position_maximums": {"QB": 2, "RB": 4, "WR": 6, "TE": 2, "K": 1},
+            "total_rounds": 1,
+        }
+        self.config_file.write_text(json.dumps(config_data))
+        state = self.client.get("/api/v1/draft-state").json()
+        self.client.post("/api/v1/admin/draft", json={
+            "owner_id": 1, "player_id": 1, "price": 5,
+            "expected_version": state["version"],
+        })
+        state = self.client.get("/api/v1/draft-state").json()
+        team1 = next(t for t in state["teams"] if t["owner_id"] == 1)
+        assert team1["max_bid"] is None
+
+    def test_up_next_null_with_one_eligible_team(self):
+        """up_next is null when only one team can still nominate."""
+        import json
+        config_data = {
+            "initial_budget": 200, "min_bid": 1,
+            "position_maximums": {"QB": 2, "RB": 4, "WR": 6, "TE": 2, "K": 1},
+            "total_rounds": 1,
+        }
+        self.config_file.write_text(json.dumps(config_data))
+        # Fill owner 2's roster -> only owner 1 eligible.
+        state = self.client.get("/api/v1/draft-state").json()
+        self.client.post("/api/v1/admin/draft", json={
+            "owner_id": 2, "player_id": 2, "price": 5,
+            "expected_version": state["version"],
+        })
+        state = self.client.get("/api/v1/draft-state").json()
+        assert state["next_to_nominate"] == 1
+        assert state["up_next"] is None
