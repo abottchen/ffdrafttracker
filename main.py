@@ -604,6 +604,24 @@ async def place_bid(request: BidRequest):
             ),
         )
 
+    # Enforce position maximum for the bidding team.
+    players = load_players()
+    player = next(
+        (p for p in players if p.id == draft_state.nominated.player_id), None
+    )
+    if player is not None:
+        max_at_pos = config.position_maximums.get(player.position)
+        if max_at_pos is not None:
+            player_positions = {p.id: p.position for p in players}
+            if position_count(team, player.position, player_positions) >= max_at_pos:
+                raise HTTPException(
+                    status_code=422,
+                    detail=(
+                        f"Team is already at the maximum of {max_at_pos} "
+                        f"players at the {player.position} position"
+                    ),
+                )
+
     # Update bid
     previous_bid = draft_state.nominated.current_bid
     draft_state.nominated.current_bid = request.bid_amount
@@ -613,9 +631,7 @@ async def place_bid(request: BidRequest):
     draft_state.save_to_file(DRAFT_STATE_FILE)
 
     # Get names for logging
-    players = load_players()
     owners = load_owners()
-    player = next((p for p in players if p.id == draft_state.nominated.player_id), None)
     owner = owners.get(request.owner_id, {})
 
     player_name = (

@@ -578,3 +578,40 @@ class TestMainApiIntegration:
         })
         assert resp.status_code == 422
         assert "position" in resp.json()["detail"].lower()
+
+    def test_bid_rejected_at_position_max(self):
+        """Bidding on a position the team is maxed at returns 422."""
+        import json
+        config_data = {
+            "initial_budget": 200, "min_bid": 1,
+            "position_maximums": {"QB": 1, "RB": 4, "WR": 6, "TE": 2, "K": 1},
+            "total_rounds": 19,
+        }
+        self.config_file.write_text(json.dumps(config_data))
+        players = json.loads(self.players_file.read_text())
+        players.append({"id": 5, "first_name": "Lamar", "last_name": "Jackson",
+                        "team": "BAL", "position": "QB"})
+        self.players_file.write_text(json.dumps(players))
+        ds = json.loads(self.draft_state_file.read_text())
+        ds["available_player_ids"].append(5)
+        self.draft_state_file.write_text(json.dumps(ds))
+
+        # Owner 2 admin-drafts QB player 1 -> at QB cap of 1.
+        state = self.client.get("/api/v1/draft-state").json()
+        self.client.post("/api/v1/admin/draft", json={
+            "owner_id": 2, "player_id": 1, "price": 5,
+            "expected_version": state["version"],
+        })
+        # Owner 1 nominates the other QB (owner 1 has 0 QBs -> allowed).
+        state = self.client.get("/api/v1/draft-state").json()
+        self.client.post("/api/v1/nominate", json={
+            "owner_id": 1, "player_id": 5, "initial_bid": 1,
+            "expected_version": state["version"],
+        })
+        # Owner 2 (already maxed at QB) tries to bid -> 422.
+        state = self.client.get("/api/v1/draft-state").json()
+        resp = self.client.post("/api/v1/bid", json={
+            "owner_id": 2, "bid_amount": 2, "expected_version": state["version"],
+        })
+        assert resp.status_code == 422
+        assert "position" in resp.json()["detail"].lower()
