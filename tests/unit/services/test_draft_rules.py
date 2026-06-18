@@ -1,5 +1,10 @@
-from src.models import Configuration, DraftPick, Team
-from src.services.draft_rules import max_bid, position_count, remaining_roster_spots
+from src.models import Configuration, DraftPick, DraftState, Team
+from src.services.draft_rules import (
+    max_bid,
+    next_eligible_nominator,
+    position_count,
+    remaining_roster_spots,
+)
 
 
 def _config(total_rounds=17):
@@ -17,6 +22,13 @@ def _team(budget, n_picks, owner_id=1):
         for i in range(n_picks)
     ]
     return Team(owner_id=owner_id, budget_remaining=budget, picks=picks)
+
+
+def _state(teams, next_to_nominate=1):
+    return DraftState(
+        nominated=None, available_player_ids=[], teams=teams,
+        next_to_nominate=next_to_nominate, version=1,
+    )
 
 
 class TestRemainingRosterSpots:
@@ -67,3 +79,51 @@ class TestPositionCount:
             picks=[DraftPick(pick_id=1, player_id=99, owner_id=1, price=5)],
         )
         assert position_count(team, "RB", {}) == 0
+
+
+class TestNextEligibleNominator:
+    def test_advance_to_next_owner(self):
+        state = _state([_team(200, 0, 1), _team(200, 0, 2), _team(200, 0, 3)])
+        nxt = next_eligible_nominator(state, _config(17), from_id=1, inclusive=False)
+        assert nxt == 2
+
+    def test_advance_wraps_around(self):
+        state = _state([_team(200, 0, 1), _team(200, 0, 2)])
+        nxt = next_eligible_nominator(state, _config(17), from_id=2, inclusive=False)
+        assert nxt == 1
+
+    def test_advance_skips_full_roster(self):
+        state = _state([_team(200, 0, 1), _team(0, 17, 2), _team(200, 0, 3)])
+        nxt = next_eligible_nominator(state, _config(17), from_id=1, inclusive=False)
+        assert nxt == 3
+
+    def test_advance_skips_manually_done(self):
+        done = _team(200, 0, 2)
+        done.manually_done = True
+        state = _state([_team(200, 0, 1), done, _team(200, 0, 3)])
+        nxt = next_eligible_nominator(state, _config(17), from_id=1, inclusive=False)
+        assert nxt == 3
+
+    def test_inclusive_keeps_current_when_eligible(self):
+        state = _state([_team(200, 0, 1), _team(200, 0, 2)])
+        nxt = next_eligible_nominator(state, _config(17), from_id=1, inclusive=True)
+        assert nxt == 1
+
+    def test_inclusive_advances_when_current_ineligible(self):
+        done = _team(0, 17, 1)
+        state = _state([done, _team(200, 0, 2)])
+        nxt = next_eligible_nominator(state, _config(17), from_id=1, inclusive=True)
+        assert nxt == 2
+
+    def test_returns_none_when_no_one_eligible(self):
+        state = _state([_team(0, 17, 1), _team(0, 17, 2)])
+        assert (
+            next_eligible_nominator(state, _config(17), from_id=1, inclusive=True)
+            is None
+        )
+
+    def test_exclusive_returns_self_when_sole_eligible(self):
+        # Owner 1 is the only eligible team; exclusive search wraps back to it.
+        state = _state([_team(200, 0, 1), _team(0, 17, 2)])
+        nxt = next_eligible_nominator(state, _config(17), from_id=1, inclusive=False)
+        assert nxt == 1
