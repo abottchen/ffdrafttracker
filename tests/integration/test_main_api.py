@@ -519,3 +519,29 @@ class TestMainApiIntegration:
         assert reset_state["teams"][0]["budget_remaining"] == 200
         assert set(reset_state["available_player_ids"]) == {1, 2, 3, 4}
         assert reset_state["version"] == 1
+
+    def test_bid_rejected_above_max_bid(self):
+        """A bid above the roster-completion max_bid is rejected with 422."""
+        # Owner 1 nominates player 1 at $1 (config total_rounds=19, budget 200).
+        self.client.post("/api/v1/nominate", json={
+            "owner_id": 1, "player_id": 1, "initial_bid": 1, "expected_version": 1,
+        })
+        state = self.client.get("/api/v1/draft-state").json()
+        # Owner 2 (0 picks, 19 spots) max_bid = 200 - 18 = 182. Bid 183 must fail.
+        resp = self.client.post("/api/v1/bid", json={
+            "owner_id": 2, "bid_amount": 183, "expected_version": state["version"],
+        })
+        assert resp.status_code == 422
+        assert "Insufficient budget" in resp.json()["detail"]
+        assert "roster spots" in resp.json()["detail"]
+
+    def test_bid_at_max_bid_succeeds(self):
+        """A bid exactly at max_bid is allowed."""
+        self.client.post("/api/v1/nominate", json={
+            "owner_id": 1, "player_id": 1, "initial_bid": 1, "expected_version": 1,
+        })
+        state = self.client.get("/api/v1/draft-state").json()
+        resp = self.client.post("/api/v1/bid", json={
+            "owner_id": 2, "bid_amount": 182, "expected_version": state["version"],
+        })
+        assert resp.status_code == 200

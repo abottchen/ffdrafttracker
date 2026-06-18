@@ -21,6 +21,7 @@ from src.models import (
     Team,
 )
 from src.models.player_stats import PlayerStatsCollection
+from src.services.draft_rules import max_bid, remaining_roster_spots
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -569,22 +570,18 @@ async def place_bid(request: BidRequest):
             detail=f"Team not found for owner {request.owner_id} in draft state",
         )
 
-    # Calculate if owner can afford this bid AND still fill remaining roster spots
-    remaining_budget_after_bid = team.budget_remaining - request.bid_amount
-    current_roster_size = len(team.picks)
-    remaining_roster_spots = config.total_rounds - current_roster_size
-    min_budget_needed = (
-        remaining_roster_spots - 1
-    )  # -1 because current bid counts as one spot
-
-    if remaining_budget_after_bid < min_budget_needed:
+    # Reject if the bid would break roster completion (reserve $1 per open slot).
+    mb = max_bid(team, config)
+    if mb is None or request.bid_amount > mb:
+        spots = remaining_roster_spots(team, config)
+        remaining_budget_after_bid = team.budget_remaining - request.bid_amount
         raise HTTPException(
             status_code=422,
             detail=(
                 f"Insufficient budget. After ${request.bid_amount} bid, "
                 f"you would have ${remaining_budget_after_bid} left but need "
-                f"at least ${min_budget_needed} to fill remaining "
-                f"{remaining_roster_spots - 1} roster spots"
+                f"at least ${spots - 1} to fill remaining "
+                f"{spots - 1} roster spots"
             ),
         )
 
