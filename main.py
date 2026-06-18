@@ -177,6 +177,7 @@ def load_owners() -> dict[int, dict[str, str]]:
         owners[owner_data["id"]] = {
             "owner_name": owner_data["owner_name"],
             "team_name": owner_data["team_name"],
+            "color": owner_data.get("color", "#888888"),
         }
 
     return owners

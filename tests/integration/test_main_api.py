@@ -744,3 +744,22 @@ class TestMainApiIntegration:
         state = self.client.get("/api/v1/draft-state").json()
         assert state["next_to_nominate"] == 1
         assert state["up_next"] is None
+
+    def test_owners_include_default_color(self):
+        """Owners without a seeded color report the default gray."""
+        owners = self.client.get("/api/v1/owners").json()
+        assert all("color" in o for o in owners)
+        assert owners[0]["color"] == "#888888"
+
+    def test_owner_color_passthrough(self):
+        """A seeded color is returned verbatim."""
+        import json
+        owners_data = [
+            {"id": 1, "owner_name": "Rick", "team_name": "Portal Gunners",
+             "color": "#21D4FD"},
+            {"id": 2, "owner_name": "Morty", "team_name": "Aw Geez",
+             "color": "#FF5CA8"},
+        ]
+        self.owners_file.write_text(json.dumps(owners_data))
+        owner = self.client.get("/api/v1/owners/1").json()
+        assert owner["color"] == "#21D4FD"
