@@ -4,60 +4,121 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description"
-          content="Fantasy Football Team Viewer - View detailed team rosters, player stats, and position breakdowns for fantasy football teams">
+          content="Fantasy Football Draft Set — viewer showcase of rosters and draft status">
     <meta name="keywords"
-          content="fantasy football, team viewer, roster, player stats, fantasy sports, football team">
+          content="fantasy football, draft set, viewer, auction draft, rosters">
     <title>Fantasy Football Team Viewer</title>
-    <link rel="stylesheet" href="/static/css/common.css">
-    <link rel="stylesheet" href="/static/css/team-viewer.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap"
+          rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/draft-set-viewer.css">
   </head>
   <body>
-    <div class="header">
-      <h1>Fantasy Football Team Viewer</h1>
-      <p>Read-only team roster and statistics</p>
-    </div>
-    <div class="team-selector">
-      <label for="team-select" class="team-selector-label">Select Team:</label>
-      <select id="team-select" class="team-select">
-        <option value="">Loading teams...</option>
-      </select>
-    </div>
-    <div id="main-content" class="main-content main-content-hidden">
-      <div class="roster-section">
-        <h2 id="team-name">Team Roster</h2>
-        <div class="roster-header">
-          <div class="header-player"></div>
-          <div class="header-position">Pos</div>
-          <div class="header-name">Player</div>
-          <div class="header-bye">Bye</div>
-          <div class="header-stats">Statistics</div>
-          <div class="header-price">Price</div>
+    <div id="app">
+      <div class="vtop">
+        <div class="wordmark"><span class="yr cond">DRAFT</span><span class="tag">'25</span><span class="vsub">Viewer</span></div>
+        <div class="seg">
+          <button id="seg-teams" class="active" onclick="showView('teams')">Teams</button>
+          <button id="seg-status" onclick="showView('status')">Draft Status</button>
         </div>
-        <div id="player-list" class="player-list">
-          <!-- Players will be populated here -->
+        <div class="spacer"></div>
+        <div class="clocknote" id="clocknote"></div>
+        <div class="completion">
+          <span class="lbl">Complete</span>
+          <div class="track">
+            <div class="fill" id="completion-fill"></div>
+          </div>
+          <span class="pct tnum" id="completion-pct">0%</span>
         </div>
       </div>
-      <div class="team-summary">
-        <h2>Team Summary</h2>
-        <div id="team-stats">
-          <!-- Team stats will be populated here -->
+      <div class="teamstrip" id="teamstrip">
+        <button class="stripnav" onclick="navTeam(-1)" title="Previous team">‹</button>
+        <div class="chips" id="chips"></div>
+        <button class="stripnav" onclick="navTeam(1)" title="Next team">›</button>
+      </div>
+      <div class="view active" id="view-teams">
+        <div class="identity" id="identity"></div>
+        <div class="panel" id="rosterpanel">
+          <div class="roster-scroll">
+            <div class="roster-grid" id="roster"></div>
+          </div>
         </div>
-        <h3 class="team-summary-heading">Position Breakdown</h3>
-        <div id="position-breakdown" class="position-grid">
-          <!-- Position counts will be populated here -->
+        <div id="rail">
+          <div class="rcard target-card">
+            <h3>My Target Board</h3>
+            <div class="tb-search-wrap">
+              <input class="tb-search"
+                     id="tbSearch"
+                     placeholder="Search available players…"
+                     autocomplete="off">
+              <div class="tb-results" id="tbResults"></div>
+            </div>
+            <div class="tb-targets" id="tbTargets"></div>
+            <div class="tb-note">Private to this browser — saved locally, never shared, and it does not draft or bid for you.</div>
+          </div>
+          <div class="rcard breakdown">
+            <h3>Roster Completion</h3>
+            <div class="radar-wrap" id="radarwrap"></div>
+          </div>
+        </div>
+      </div>
+      <div class="view" id="view-status">
+        <div class="status-body">
+          <div class="sg">
+            <div class="rcard la-card">
+              <h3>Live Auction</h3>
+              <div id="liveAuction"></div>
+            </div>
+            <div class="rcard cost-card">
+              <div class="cost-head">
+                <h3>Positional Cost · Draft Timeline</h3>
+                <div class="cost-legend" id="costLegend"></div>
+              </div>
+              <div class="cost-wrap" id="costChart"></div>
+            </div>
+            <div class="rcard dom-card">
+              <h3>Position Dominance</h3>
+              <div class="dom-list" id="dominance"></div>
+            </div>
+            <div class="rcard bp-card">
+              <h3>Budget Power · Remaining</h3>
+              <div id="budgetPower"></div>
+            </div>
+            <div class="rcard rp-card">
+              <h3>Recent Picks</h3>
+              <div class="rp-list" id="recentPicks"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-    <div id="loading" class="loading loading-hidden">Loading team data...</div>
-    <div id="error" class="error error-hidden">
-      <!-- Error messages will appear here -->
-    </div>
+    <div id="ptip"></div>
+    <div id="vError" class="tb-empty verror-toast"></div>
+    {# Hand-tuned single-line JS below; djlint's reformat collapses a // comment over later code. #}
+    {# djlint:off #}
     <script>
         const API_BASE = '/api/v1';
-        let currentTeamId = {{ selected_team_id }};
-        let owners = [];
-        let config = null;
-        let playerStats = {};
+        // Server-injected (change F): config is authoritative; no hardcoded fallback.
+        const config = {{ config | tojson }};
+        const TOTAL = config.total_rounds;
+        const INITIAL = config.initial_budget;
+        const POSMAX = config.position_maximums;            // {QB,RB,WR,TE,K,"D/ST"}
+        const RADAR_ORDER = ['QB','RB','WR','TE','K','D/ST'];
+        const POSORDER = {QB:0,RB:1,WR:2,TE:3,K:4,'D/ST':5};
+        const POSCOLOR = {QB:'#A877DE',RB:'#46B86C',WR:'#5790CF',TE:'#E08A45',K:'#E6B23E','D/ST':'#D6564A'};
+        const LIGHTPOS = {QB:1,WR:1,'D/ST':1};
+        const STATMAX = {YDS:5000,TD:30,INT:20,RUSH:2100,REC:130,FG:40,XP:60,PTS:170,SACK:60};
+
+        let owners = [], ownersById = {}, playersById = {}, playerStats = {};
+        let TEAMS = [];                 // normalized model (mockup shape)
+        let lastDraftState = null;
+        let selected = 0;               // index into TEAMS
+        let curRoster = [], prevFrac = [0,0,0,0,0,0];
+        let lastSeenMaxPickId = 0;      // for recent-picks animation
+        let __recentSince = 0;          // watermark snapshot each poll for renderRecent
+        const INITIAL_TEAM_ID = {{ selected_team_id }};
+        let AVAILABLE = [];
 
         // NFL Team Logo URLs - using ESPN's CDN
         function getTeamLogoUrl(teamAbbr) {
@@ -99,678 +160,478 @@
             return teamMappings[teamAbbr] || `https://a.espncdn.com/i/teamlogos/nfl/500/${teamAbbr.toLowerCase()}.png`;
         }
 
-        async function loadOwners() {
-            try {
-                const response = await fetch(`${API_BASE}/owners`);
-                if (!response.ok) throw new Error('Failed to load owners');
-                
-                owners = await response.json();
-                
-                const select = document.getElementById('team-select');
-                select.innerHTML = '';
-                
-                owners.forEach(owner => {
-                    const option = document.createElement('option');
-                    option.value = owner.id;
-                    option.textContent = owner.team_name;
-                    if (owner.id === currentTeamId) {
-                        option.selected = true;
-                    }
-                    select.appendChild(option);
-                });
-                
-                // Load initial team data
-                await loadTeamData(currentTeamId);
-                
-            } catch (error) {
-                showError('Failed to load teams: ' + error.message);
-            }
+        const headshot = id => `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${id}.png&w=350&h=254`;
+        const logoUrl = abbr => getTeamLogoUrl(abbr);
+        function hexA(hex, a){ const n = parseInt(hex.slice(1),16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; }
+        function median(a){ const s=[...a].sort((x,y)=>x-y), m=s.length>>1; return s.length? (s.length%2? s[m] : (s[m-1]+s[m])/2) : 0; }
+        function ab2(n){ return (n||'').slice(0,2).toUpperCase(); }
+        const budgetClass = b => { const p = b/INITIAL*100; return p<=15?'crit':p<=35?'warn':'ok'; };
+        // D/ST headshot falls back to the team logo (no player headshot for defenses).
+        const shotImg = (p, cls) => p.pos === 'D/ST'
+            ? `<img class="${cls} logo" src="${logoUrl(p.nfl)}" alt="">`
+            : `<img class="${cls}" src="${headshot(p.id)}" alt="">`;
+        function defenseBye(teamAbbr){
+            for (const id in playerStats){ const s = playerStats[id]; if (s && s.team === teamAbbr && s.bye_week) return s.bye_week; }
+            return null;
         }
 
-        async function loadConfig() {
+        async function loadStatic() {
+            owners = await (await fetch(`${API_BASE}/owners`)).json();
+            ownersById = Object.fromEntries(owners.map(o => [o.id, o]));
+            const players = await (await fetch(`${API_BASE}/players`)).json();
+            playersById = Object.fromEntries(players.map(p => [p.id, p]));
             try {
-                const response = await fetch(`${API_BASE}/config`);
-                if (!response.ok) throw new Error('Failed to load config');
-                
-                config = await response.json();
-            } catch (error) {
-                console.warn('Failed to load config:', error.message);
-                // Use default config
-                config = {
-                    position_maximums: {
-                        "QB": 2, "RB": 4, "WR": 5, "TE": 2, "K": 1, "D/ST": 1
-                    },
-                    total_rounds: 15,
-                    initial_budget: 200
+                const r = await fetch(`${API_BASE}/player/stats`);
+                if (r.ok) playerStats = await r.json();
+            } catch (e) { playerStats = {}; }
+        }
+        async function loadAvailable() {
+            try {
+                const list = await (await fetch(`${API_BASE}/players/available`)).json();
+                AVAILABLE = list.map(p => ({ id: p.id, fn: p.first_name, ln: p.last_name, pos: p.position, nfl: p.team }));
+            } catch (e) { AVAILABLE = []; }
+        }
+
+        // Normalize the live draft state into the array shape the mockup renderers expect.
+        // Each entry: {ord, owner_id, team, owner, budget, picks (count), color, status, max_bid, _picks}
+        function buildModel(ds) {
+            const sorted = [...ds.teams].sort((a, b) => a.owner_id - b.owner_id);
+            TEAMS = sorted.map((t, i) => {
+                const o = ownersById[t.owner_id] || {};
+                let status = '';
+                if (t.manually_done || t.picks.length >= TOTAL) status = 'done';
+                else if (t.owner_id === ds.next_to_nominate) status = 'clock';
+                return {
+                    ord: i + 1, owner_id: t.owner_id,
+                    team: o.team_name || 'Unknown', owner: o.owner_name || '',
+                    budget: t.budget_remaining, picks: t.picks.length,
+                    color: o.color || '#E0A24A',
+                    max_bid: t.max_bid, status, _picks: t.picks
                 };
-            }
+            });
         }
+        // Indices for "On the Clock" / "Up Next", driven by the server (not re-derived).
+        function clockInfo() {
+            const clockIdx = lastDraftState ? TEAMS.findIndex(t => t.owner_id === lastDraftState.next_to_nominate) : -1;
+            const nextIdx = (lastDraftState && lastDraftState.up_next)
+                ? TEAMS.findIndex(t => t.owner_id === lastDraftState.up_next) : -1;
+            return { clockIdx, nextIdx };
+        }
+        const isDone = t => t.status === 'done';
+        const maxBid = t => t.max_bid;   // server-authoritative (— when null)
 
-        async function loadPlayerStats() {
+        function showError(msg){ const e = document.getElementById('vError'); e.textContent = msg; e.style.display = 'block'; }
+        function hideError(){ document.getElementById('vError').style.display = 'none'; }
+
+        async function pollState() {
             try {
-                const response = await fetch(`${API_BASE}/player/stats`);
-                if (!response.ok) {
-                    console.warn('Failed to load player stats');
-                    return;
+                const ds = await (await fetch(`${API_BASE}/draft-state`)).json();
+                hideError();
+                lastDraftState = ds;
+                buildModel(ds);
+                // Keep the selected team stable across polls (match by owner_id).
+                if (TEAMS.length) {
+                    if (selected >= TEAMS.length) selected = 0;
                 }
-                
-                playerStats = await response.json();
-                console.log('Loaded player stats for', Object.keys(playerStats).length, 'players');
-            } catch (error) {
-                console.warn('Failed to load player stats:', error.message);
-                playerStats = {};
+                // Advance the watermark every poll regardless of which view is active,
+                // so picks that land while on the Teams view don't all animate rp-new
+                // when the user switches to Draft Status.
+                __recentSince = lastSeenMaxPickId;
+                lastSeenMaxPickId = Math.max(lastSeenMaxPickId, maxPickId(ds));
+                renderChrome();                         // strip + clocknote + completion (Task 3)
+                if (document.getElementById('view-teams').classList.contains('active')) renderTeamsView();
+                else renderStatusView();
+            } catch (e) {
+                showError('Connection lost — retrying…');
             }
+            try { await loadAvailable(); } catch (e) {}
         }
 
-        function getStatTooltip(label) {
-            const tooltips = {
-                // Passing
-                'Comp': 'Completions',
-                'Att': 'Pass Attempts',
-                'Yds': 'Passing Yards',
-                'TD': 'Passing Touchdowns',
-                'INT': 'Interceptions',
-                '%': 'Completion Percentage',
-                'Rate': 'Passer Rating',
-                'Sacks': 'Times Sacked',
-                
-                // Rushing
-                'Car': 'Carries',
-                'RYds': 'Rushing Yards',
-                'RTD': 'Rushing Touchdowns',
-                'Avg': 'Yards per Carry',
-                'Long': 'Longest Run',
-                'Fum': 'Fumbles',
-                
-                // Receiving
-                'Rec': 'Receptions',
-                'RecYds': 'Receiving Yards',
-                'RecTD': 'Receiving Touchdowns',
-                'Tgt': 'Targets',
-                
-                // Kicking
-                'FGM': 'Field Goals Made',
-                'FGA': 'Field Goals Attempted',
-                'XPM': 'Extra Points Made',
-                'XPA': 'Extra Points Attempted',
-                'Pts': 'Total Points Scored'
-            };
-            
-            return tooltips[label] || label;
+        async function init() {
+            await loadStatic();
+            await loadAvailable();
+            // first poll establishes TEAMS, then map the injected team id to an index
+            const ds = await (await fetch(`${API_BASE}/draft-state`)).json();
+            lastDraftState = ds; buildModel(ds);
+            const idx = TEAMS.findIndex(t => t.owner_id === INITIAL_TEAM_ID);
+            selected = idx >= 0 ? idx : 0;
+            lastSeenMaxPickId = maxPickId(ds);
+            __recentSince = lastSeenMaxPickId;
+            renderChrome(); renderTeamsView();
+            setupTargetBoard();                          // Task 7
+            setInterval(pollState, 5000);
         }
-        
-        function formatPlayerStats(playerId) {
-            // Very defensive - handle any missing data gracefully
-            try {
-                const stats = playerStats[playerId];
-                if (!stats) {
-                    return ''; // Just show nothing if no stats available
-                }
+        function maxPickId(ds){ let m = 0; ds.teams.forEach(t => t.picks.forEach(p => { if (p.pick_id > m) m = p.pick_id; })); return m; }
 
-                let statColumns = [];
-                
-                // Show ALL available stats based on position
-                if (stats.position === 'QB') {
-                    // QB passing stats
-                    if (stats.passing) {
-                        const p = stats.passing;
-                        statColumns.push({
-                            label: 'Comp',
-                            value: p.completions,
-                            type: 'passing'
-                        });
-                        statColumns.push({
-                            label: 'Att',
-                            value: p.attempts,
-                            type: 'passing'
-                        });
-                        statColumns.push({
-                            label: 'Yds',
-                            value: p.yards,
-                            type: 'passing'
-                        });
-                        statColumns.push({
-                            label: 'TD',
-                            value: p.tds,
-                            type: 'passing'
-                        });
-                        statColumns.push({
-                            label: 'INT',
-                            value: p.ints,
-                            type: 'passing'
-                        });
-                        statColumns.push({
-                            label: '%',
-                            value: p.pct,
-                            type: 'passing'
-                        });
-                        statColumns.push({
-                            label: 'Rate',
-                            value: p.rating,
-                            type: 'passing'
-                        });
-                        statColumns.push({
-                            label: 'Sacks',
-                            value: p.sacks,
-                            type: 'passing'
-                        });
-                    }
-                    
-                    // QB rushing stats (if any)
-                    if (stats.rushing && parseInt(stats.rushing.carries) > 0) {
-                        if (statColumns.length > 0) statColumns.push({ separator: true });
-                        const r = stats.rushing;
-                        statColumns.push({
-                            label: 'Car',
-                            value: r.carries,
-                            type: 'rushing'
-                        });
-                        statColumns.push({
-                            label: 'RYds',
-                            value: r.yards,
-                            type: 'rushing'
-                        });
-                        statColumns.push({
-                            label: 'RTD',
-                            value: r.tds,
-                            type: 'rushing'
-                        });
-                        statColumns.push({
-                            label: 'Avg',
-                            value: r.avg,
-                            type: 'rushing'
-                        });
-                        statColumns.push({
-                            label: 'Long',
-                            value: r.long,
-                            type: 'rushing'
-                        });
-                    }
-                    
-                } else if (stats.position === 'RB') {
-                    // RB rushing stats
-                    if (stats.rushing) {
-                        const r = stats.rushing;
-                        statColumns.push({
-                            label: 'Car',
-                            value: r.carries,
-                            type: 'rushing'
-                        });
-                        statColumns.push({
-                            label: 'Yds',
-                            value: r.yards,
-                            type: 'rushing'
-                        });
-                        statColumns.push({
-                            label: 'TD',
-                            value: r.tds,
-                            type: 'rushing'
-                        });
-                        statColumns.push({
-                            label: 'Avg',
-                            value: r.avg,
-                            type: 'rushing'
-                        });
-                        statColumns.push({
-                            label: 'Long',
-                            value: r.long,
-                            type: 'rushing'
-                        });
-                        statColumns.push({
-                            label: 'Fum',
-                            value: r.fumbles,
-                            type: 'rushing'
-                        });
-                    }
-                    
-                    // RB receiving stats
-                    if (stats.receiving && parseInt(stats.receiving.receptions) > 0) {
-                        if (statColumns.length > 0) statColumns.push({ separator: true });
-                        const rec = stats.receiving;
-                        statColumns.push({
-                            label: 'Rec',
-                            value: rec.receptions,
-                            type: 'receiving'
-                        });
-                        statColumns.push({
-                            label: 'RecYds',
-                            value: rec.yards,
-                            type: 'receiving'
-                        });
-                        statColumns.push({
-                            label: 'RecTD',
-                            value: rec.tds,
-                            type: 'receiving'
-                        });
-                        statColumns.push({
-                            label: 'Tgt',
-                            value: rec.targets,
-                            type: 'receiving'
-                        });
-                        statColumns.push({
-                            label: 'Avg',
-                            value: rec.avg,
-                            type: 'receiving'
-                        });
-                        statColumns.push({
-                            label: 'Long',
-                            value: rec.long,
-                            type: 'receiving'
-                        });
-                    }
-                    
-                } else if (stats.position === 'WR' || stats.position === 'TE') {
-                    // WR/TE receiving stats
-                    if (stats.receiving) {
-                        const rec = stats.receiving;
-                        statColumns.push({
-                            label: 'Rec',
-                            value: rec.receptions,
-                            type: 'receiving'
-                        });
-                        statColumns.push({
-                            label: 'Yds',
-                            value: rec.yards,
-                            type: 'receiving'
-                        });
-                        statColumns.push({
-                            label: 'TD',
-                            value: rec.tds,
-                            type: 'receiving'
-                        });
-                        statColumns.push({
-                            label: 'Tgt',
-                            value: rec.targets,
-                            type: 'receiving'
-                        });
-                        statColumns.push({
-                            label: 'Avg',
-                            value: rec.avg,
-                            type: 'receiving'
-                        });
-                        statColumns.push({
-                            label: 'Long',
-                            value: rec.long,
-                            type: 'receiving'
-                        });
-                        statColumns.push({
-                            label: 'Fum',
-                            value: rec.fumbles,
-                            type: 'receiving'
-                        });
-                    }
-                    
-                    // WR rushing stats (if any)
-                    if (stats.position === 'WR' && stats.rushing && parseInt(stats.rushing.carries) > 0) {
-                        if (statColumns.length > 0) statColumns.push({ separator: true });
-                        const r = stats.rushing;
-                        statColumns.push({
-                            label: 'Car',
-                            value: r.carries,
-                            type: 'rushing'
-                        });
-                        statColumns.push({
-                            label: 'RYds',
-                            value: r.yards,
-                            type: 'rushing'
-                        });
-                        statColumns.push({
-                            label: 'RTD',
-                            value: r.tds,
-                            type: 'rushing'
-                        });
-                        statColumns.push({
-                            label: 'Avg',
-                            value: r.avg,
-                            type: 'rushing'
-                        });
-                    }
-                    
-                } else if (stats.position === 'K') {
-                    // Kicker stats
-                    if (stats.kicking) {
-                        const k = stats.kicking;
-                        statColumns.push({
-                            label: 'FGM',
-                            value: k.fgm,
-                            type: 'kicking'
-                        });
-                        statColumns.push({
-                            label: 'FGA',
-                            value: k.fga,
-                            type: 'kicking'
-                        });
-                        statColumns.push({
-                            label: 'XPM',
-                            value: k.xpm,
-                            type: 'kicking'
-                        });
-                        statColumns.push({
-                            label: 'XPA',
-                            value: k.xpa,
-                            type: 'kicking'
-                        });
-                        statColumns.push({
-                            label: 'Pts',
-                            value: k.points,
-                            type: 'kicking'
-                        });
-                        statColumns.push({
-                            label: '%',
-                            value: k.fg_pct,
-                            type: 'kicking'
-                        });
-                        statColumns.push({
-                            label: 'Long',
-                            value: k.long,
-                            type: 'kicking'
-                        });
-                    }
-                }
-                
-                if (statColumns.length === 0) {
-                    return '';
-                }
-                
-                // Generate table structure
-                let labelRow = '';
-                let valueRow = '';
-                
-                for (const col of statColumns) {
-                    if (col.separator) {
-                        labelRow += '<td class="stat-separator-col"></td>';
-                        valueRow += '<td class="stat-separator-col"></td>';
-                    } else {
-                        const cssClass = `stat-${col.type}`;
-                        const tooltip = getStatTooltip(col.label);
-                        labelRow += `<td class="${cssClass}"><div class="stat-label" title="${tooltip}">${col.label}</div></td>`;
-                        valueRow += `<td class="${cssClass}"><div class="stat-value">${col.value}</div></td>`;
-                    }
-                }
-                
-                return `<table class="stats-table">
-                    <tr class="stat-label-row">${labelRow}</tr>
-                    <tr class="stat-value-row">${valueRow}</tr>
-                </table>`;
-                
-            } catch (error) {
-                // If anything fails, just return empty string - don't break the UI
-                console.debug('Error formatting stats for player', playerId, error);
-                return '';
+        // FOUT guard
+        const app = document.getElementById('app');
+        function reveal(){ app.classList.add('ready'); }
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(reveal);
+        setTimeout(reveal, 1500);
+
+        function renderChips(){
+          const {clockIdx,nextIdx}=clockInfo();
+          document.getElementById('chips').innerHTML=TEAMS.map((t,i)=>{
+            const done=isDone(t);
+            const badge=i===clockIdx?'<span class="chip-badge clock">On Clock</span>'
+              :done?'<span class="chip-badge done">Done</span>'
+              :i===nextIdx?'<span class="chip-badge next">Next</span>':'';
+            const cls=`chip ${i===selected?'active':''} ${i===clockIdx?'is-clock':''} ${done?'is-done':''}`;
+            return `<div class="${cls}" style="--tc:${t.color}" onclick="selectTeam(${i})">
+              <div class="ct">${t.team}</div>
+              <div class="chip-foot"><span class="co">${t.owner}</span>${badge}</div></div>`;
+          }).join('');
+        }
+        function renderClockNote(){
+          const {clockIdx,nextIdx}=clockInfo();
+          const c=clockIdx>=0?TEAMS[clockIdx]:null, n=nextIdx>=0?TEAMS[nextIdx]:null;
+          document.getElementById('clocknote').innerHTML=
+            (c?`<span class="cn-clock"><span class="cn-dot"></span>On the Clock <b>${c.team}</b></span>`:'')+
+            (n?`<span class="cn-next">Up Next <b>${n.team}</b></span>`:'');
+        }
+        function renderChrome() {
+            renderChips();
+            renderClockNote();
+            const drafted = TEAMS.reduce((n, t) => n + t.picks, 0);
+            const pct = TEAMS.length ? Math.round(drafted / (TOTAL * TEAMS.length) * 100) : 0;
+            document.getElementById('completion-fill').style.width = pct + '%';
+            document.getElementById('completion-pct').textContent = pct + '%';
+        }
+        function selectTeam(i) {
+            selected = i;
+            const t = TEAMS[i];
+            if (t) {
+                const url = new URL(window.location);
+                url.searchParams.set('team_id', t.owner_id);
+                window.history.pushState({}, '', url);
             }
+            renderChips();
+            renderTeamsView();
+        }
+        function navTeam(d) {
+            if (!TEAMS.length) return;
+            selected = (selected + d + TEAMS.length) % TEAMS.length;
+            selectTeam(selected);
+            const chip = document.getElementById('chips').children[selected];
+            if (chip) chip.scrollIntoView({ inline: 'center', block: 'nearest' });
+        }
+        document.addEventListener('keydown', e => {
+            if (!document.getElementById('view-teams').classList.contains('active')) return;
+            if (e.key === 'ArrowLeft') navTeam(-1);
+            if (e.key === 'ArrowRight') navTeam(1);
+        });
+
+        function renderIdentity() {
+            const t = TEAMS[selected], bc = budgetClass(t.budget), spent = INITIAL - t.budget;
+            const el = document.getElementById('identity'); el.style.setProperty('--tc', t.color);
+            el.innerHTML = `
+    <div class="id-main"><div class="id-eyebrow">Managed by ${t.owner}</div><div class="id-name cond">${t.team}</div></div>
+    <div class="id-stats">
+      <div class="idstat"><span class="k">Budget</span><b class="v money ${bc} tnum">$${t.budget}</b><div class="mini ${bc}"><div class="f" style="width:${t.budget / INITIAL * 100}%"></div></div></div>
+      <div class="idstat"><span class="k">Max Bid</span><b class="v max tnum">${t.picks >= TOTAL ? '—' : '$' + maxBid(t)}</b></div>
+      <div class="idstat"><span class="k">Spent</span><b class="v tnum">$${spent}</b></div>
+      <div class="idstat"><span class="k">Roster</span><b class="v tnum">${t.picks}/${TOTAL}</b><div class="mini roster"><div class="f" style="width:${t.picks / TOTAL * 100}%"></div></div></div>
+    </div>`;
+        }
+        function showView(v) {
+            document.getElementById('view-teams').classList.toggle('active', v === 'teams');
+            document.getElementById('view-status').classList.toggle('active', v === 'status');
+            document.getElementById('seg-teams').classList.toggle('active', v === 'teams');
+            document.getElementById('seg-status').classList.toggle('active', v === 'status');
+            document.getElementById('teamstrip').style.display = v === 'teams' ? 'flex' : 'none';
+            if (v === 'status') renderStatusView(); else renderTeamsView();
+        }
+        function renderTeamsView() {
+            if (!TEAMS.length) return;
+            renderIdentity();
+            renderRoster();      // Task 5
+            renderRail();        // Task 6 (radar)
+        }
+        // Map real nested player_stats into the flat keys the card/tooltip use; '–' when absent.
+        function flattenStats(pos, st) {
+            const o = { YDS:'–', TD:'–', INT:'–', RUSH:'–', REC:'–', FG:'–', XP:'–', PTS:'–', SACK:'–' };
+            if (!st) return o;
+            if (pos === 'QB' && st.passing) { o.YDS = st.passing.yards; o.TD = st.passing.tds; o.INT = st.passing.ints; }
+            else if (pos === 'RB') { if (st.rushing){ o.RUSH = st.rushing.yards; o.TD = st.rushing.tds; } if (st.receiving) o.REC = st.receiving.receptions; }
+            else if (pos === 'WR' || pos === 'TE') { if (st.receiving){ o.REC = st.receiving.receptions; o.YDS = st.receiving.yards; o.TD = st.receiving.tds; } }
+            else if (pos === 'K' && st.kicking) { o.FG = st.kicking.fgm; o.XP = st.kicking.xpm; o.PTS = st.kicking.points; }
+            return o;  // D/ST has no structured stats in the backend -> all '–'
+        }
+        function normPlayer(pick) {
+            const pl = playersById[pick.player_id];
+            if (!pl) return null;
+            const st = playerStats[pl.id];
+            const bye = (pl.position === 'D/ST') ? defenseBye(pl.team) : (st ? st.bye_week : null);
+            return { id: pl.id, fn: pl.first_name, ln: pl.last_name, pos: pl.position, nfl: pl.team,
+                     bye: bye, price: pick.price, stats: flattenStats(pl.position, st) };
+        }
+        function rosterFor(t) {
+            return t._picks.map(normPlayer).filter(Boolean)
+                .sort((a, b) => (POSORDER[a.pos] - POSORDER[b.pos]) || (b.price - a.price));
+        }
+        function posCounts(roster) { const c = {}; roster.forEach(p => c[p.pos] = (c[p.pos] || 0) + 1); return c; }
+        // The 3 card stat boxes per position (matches the mockup's statCells shape).
+        function statCells(p) {
+            if (p.pos === 'QB') return [['Yds', p.stats.YDS, STATMAX.YDS], ['TD', p.stats.TD, STATMAX.TD], ['Int', p.stats.INT, STATMAX.INT]];
+            if (p.pos === 'RB') return [['Ru Yds', p.stats.RUSH, STATMAX.RUSH], ['TD', p.stats.TD, STATMAX.TD], ['Rec', p.stats.REC, STATMAX.REC]];
+            if (p.pos === 'WR' || p.pos === 'TE') return [['Rec', p.stats.REC, STATMAX.REC], ['Yds', p.stats.YDS, STATMAX.YDS], ['TD', p.stats.TD, STATMAX.TD]];
+            if (p.pos === 'K') return [['FG', p.stats.FG, STATMAX.FG], ['XP', p.stats.XP, STATMAX.XP], ['Pts', p.stats.PTS, STATMAX.PTS]];
+            return [['Sack', p.stats.SACK, STATMAX.SACK], ['Int', p.stats.INT, STATMAX.INT], ['TD', p.stats.TD, STATMAX.TD]];
+        }
+        function renderRoster() {
+            curRoster = rosterFor(TEAMS[selected]);
+            let html = '', lastPos = null;
+            curRoster.forEach((p, idx) => {
+                if (p.pos !== lastPos) { html += `<div class="posgroup" style="color:${POSCOLOR[p.pos]}"><span class="dot" style="background:${POSCOLOR[p.pos]}"></span>${p.pos}<span class="ln"></span></div>`; lastPos = p.pos; }
+                const cells = statCells(p).map(c => `<div class="st"><b class="tnum">${c[1]}</b><span>${c[0]}</span></div>`).join('');
+                html += `<div class="pcard" style="--pc:${POSCOLOR[p.pos]}" data-idx="${idx}" onmouseenter="showTip(event,${idx})" onmousemove="moveTip(event)" onmouseleave="hideTip()">
+      <div class="pc-photo">
+        <img class="pc-wm" src="${logoUrl(p.nfl)}" alt="">
+        ${shotImg(p, 'pc-shot')}
+        <span class="pc-pos ${LIGHTPOS[p.pos] ? 'light' : ''}">${p.pos}</span>
+        <span class="pc-price tnum">$${p.price}</span>
+        <div class="pc-scrim"><div class="pc-name">${p.fn} ${p.ln}</div><div class="pc-sub">${p.nfl}${p.bye ? ' · Bye '+p.bye : ''}</div></div>
+      </div>
+      <div class="pc-stats">${cells}</div>
+    </div>`;
+            });
+            document.getElementById('roster').innerHTML = html;
+        }
+        function renderRail(){
+          const counts={}; curRoster.forEach(p=>counts[p.pos]=(counts[p.pos]||0)+1);
+          const newFrac=RADAR_ORDER.map(pos=>Math.min((counts[pos]||0)/POSMAX[pos],1));
+          document.getElementById('radarwrap').innerHTML=renderRadar(counts,TEAMS[selected].color,prevFrac);
+          animateRadarTo(prevFrac.slice(),newFrac);
+          prevFrac=newFrac;
+        }
+        const RADAR_GEO={cx:120,cy:120,rO:82,n:6};
+        function radarPoint(i,frac){const{cx,cy,rO,n}=RADAR_GEO;const a=-Math.PI/2+i/n*2*Math.PI;return[cx+Math.cos(a)*frac*rO,cy+Math.sin(a)*frac*rO];}
+        function renderRadar(counts,color,shapeFrac){
+          const{cx,cy,rO,n}=RADAR_GEO, size=240,rings=3;
+          const pt=(a,r)=>[cx+Math.cos(a)*r,cy+Math.sin(a)*r];
+          let s=`<svg class="radar" viewBox="0 0 ${size} ${size}" preserveAspectRatio="xMidYMid meet">`;
+          for(let ring=1;ring<=rings;ring++){const rr=rO/rings*ring;let pts=[];for(let i=0;i<n;i++){const a=-Math.PI/2+i/n*2*Math.PI;const p=pt(a,rr);pts.push(p[0].toFixed(1)+','+p[1].toFixed(1));}s+=`<polygon class="r-grid ${ring===rings?'r-outer':''}" points="${pts.join(' ')}"/>`;}
+          for(let i=0;i<n;i++){const a=-Math.PI/2+i/n*2*Math.PI;const p=pt(a,rO);s+=`<line class="r-axis" x1="${cx}" y1="${cy}" x2="${p[0].toFixed(1)}" y2="${p[1].toFixed(1)}"/>`;}
+          let sp=[],dots='';
+          for(let i=0;i<n;i++){const p=radarPoint(i,shapeFrac[i]);sp.push(p[0].toFixed(1)+','+p[1].toFixed(1));dots+=`<circle class="r-dot" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="${color}"/>`;}
+          s+=`<polygon class="r-shape" points="${sp.join(' ')}" style="fill:${hexA(color,.2)};stroke:${color};filter:drop-shadow(0 0 7px ${hexA(color,.55)})"/>`+dots;
+          for(let i=0;i<n;i++){const pos=RADAR_ORDER[i];const a=-Math.PI/2+i/n*2*Math.PI;const p=pt(a,rO+16);let anc='middle';if(Math.cos(a)>0.4)anc='start';else if(Math.cos(a)<-0.4)anc='end';let dy=4;if(Math.sin(a)>0.5)dy=11;else if(Math.sin(a)<-0.5)dy=-3;
+            s+=`<text class="r-label" x="${p[0].toFixed(1)}" y="${(p[1]+dy).toFixed(1)}" text-anchor="${anc}" fill="${POSCOLOR[pos]}">${pos}</text>`;
+            s+=`<text class="r-cnt" x="${p[0].toFixed(1)}" y="${(p[1]+dy+11).toFixed(1)}" text-anchor="${anc}">${counts[pos]||0}/${POSMAX[pos]}</text>`;}
+          return s+'</svg>';
+        }
+        function animateRadarTo(from,to){
+          const svg=document.querySelector('#radarwrap .radar'); if(!svg)return;
+          const shape=svg.querySelector('.r-shape'), dots=svg.querySelectorAll('.r-dot'), dur=480, t0=performance.now();
+          function step(now){
+            const tt=Math.min(1,(now-t0)/dur), e=1-Math.pow(1-tt,3);
+            let pts=[];
+            for(let i=0;i<RADAR_GEO.n;i++){const f=from[i]+(to[i]-from[i])*e;const p=radarPoint(i,f);pts.push(p[0].toFixed(1)+','+p[1].toFixed(1));if(dots[i]){dots[i].setAttribute('cx',p[0].toFixed(1));dots[i].setAttribute('cy',p[1].toFixed(1));}}
+            shape.setAttribute('points',pts.join(' '));
+            if(tt<1)requestAnimationFrame(step);
+          }
+          requestAnimationFrame(step);
+        }
+        function renderStatusView() {
+            renderLiveAuction();
+            renderRecent();
+            renderCostChart();     // Task 9
+            renderDominance();     // Task 10
+            renderBudgetPower();   // Task 10
         }
 
-        function getDefenseByeWeek(teamAbbr) {
-            // Find bye week by looking up any player from the same team
-            for (const playerId in playerStats) {
-                const stats = playerStats[playerId];
-                if (stats && stats.team === teamAbbr && stats.bye_week) {
-                    return stats.bye_week;
-                }
-            }
-            return null; // No bye week found for this team
-        }
-
-        function formatByeWeek(byeWeek, teamAbbr) {
-            if (!byeWeek || typeof byeWeek !== 'number') {
-                return '';
-            }
-            const teamLogoUrl = getTeamLogoUrl(teamAbbr);
-            return `<div class="bye-week-column" style="background-image: url('${teamLogoUrl}')">
-                <div class="bye-number">${byeWeek}</div>
+        /* ── Live Auction ── */
+        function renderLiveAuction() {
+            const el = document.getElementById('liveAuction');
+            const nom = lastDraftState && lastDraftState.nominated;
+            if (!nom) { el.innerHTML = '<div class="la-empty">Awaiting nomination…</div>'; return; }
+            const p = normPlayer({ player_id: nom.player_id, price: nom.current_bid });
+            const bidder = ownersById[nom.current_bidder_id];
+            if (!p) { el.innerHTML = '<div class="la-empty">Awaiting nomination…</div>'; return; }
+            el.innerHTML = `<div class="la-body">
+                <div class="la-photo"><span class="la-pos" style="background:${POSCOLOR[p.pos]}">${p.pos}</span>${shotImg(p, '')}</div>
+                <div class="la-info"><div class="la-eyebrow">Now Auctioning <span class="la-live"><span class="d"></span>LIVE</span></div>
+                  <div class="la-name cond">${p.fn} ${p.ln}</div><div class="la-sub">${p.nfl} · ${p.pos}</div></div>
+                <div class="la-bid"><div class="k">Current Bid</div><div class="v tnum">$${nom.current_bid}</div>
+                  <div class="la-bidder"><span class="dot" style="background:${bidder ? bidder.color : '#888'}"></span>${bidder ? bidder.team_name : '—'}</div></div>
             </div>`;
         }
 
-        async function loadTeamData(teamId) {
-            try {
-                hideError();
-                // Don't show loading for refresh updates
-                
-                const response = await fetch(`${API_BASE}/teams/${teamId}`);
-                if (!response.ok) {
-                    if (response.status === 404) {
-                        throw new Error('Team not found or has no picks yet');
-                    }
-                    throw new Error('Failed to load team data');
-                }
-                
-                const teamData = await response.json();
-                displayTeamData(teamData);
-                
-            } catch (error) {
-                showError('Failed to load team data: ' + error.message);
-            }
+        /* ── Recent Picks ── */
+        function recentRow(p, tm, price) {
+            return `<div class="rp-row"><div class="rp-av">${shotImg(p, '')}</div>
+    <div class="rp-id"><div class="rp-name">${p.fn} ${p.ln}</div><div class="rp-sub">${p.pos} · ${p.nfl}</div></div>
+    <div class="rp-to"><span class="bp-dot" style="background:${tm.color}"></span>${tm.team}</div>
+    <div class="rp-price tnum">$${price}</div></div>`;
+        }
+        function allPicksDesc() {
+            const rows = [];
+            (lastDraftState ? lastDraftState.teams : []).forEach(t => {
+                const tm = TEAMS.find(x => x.owner_id === t.owner_id);
+                t.picks.forEach(pk => {
+                    const p = normPlayer(pk);
+                    if (p && tm) rows.push({ pickId: pk.pick_id, p, tm, price: pk.price });
+                });
+            });
+            return rows.sort((a, b) => b.pickId - a.pickId);
+        }
+        function renderRecent() {
+            const list = document.getElementById('recentPicks');
+            const rows = allPicksDesc().slice(0, 10);
+            list.innerHTML = rows.map(r => {
+                const isNew = r.pickId > __recentSince;
+                const html = recentRow(r.p, r.tm, r.price);
+                return isNew ? html.replace('class="rp-row"', 'class="rp-row rp-new"') : html;
+            }).join('');
+            // Watermark is advanced in pollState(), not here.
         }
 
-        function displayTeamData(teamData) {
-            const owner = owners.find(o => o.id === teamData.owner_id);
-            
-            // Update team name
-            document.getElementById('team-name').textContent = 
-                owner ? `${owner.team_name} Roster` : 'Team Roster';
-            
-            // Display players
-            displayPlayers(teamData.picks);
-            
-            // Display team summary
-            displayTeamSummary(teamData, owner);
-            
-            // Show main content
-            document.getElementById('main-content').style.display = 'grid';
+        /* ── Target Board ── */
+        let targets = []; try { targets = JSON.parse(localStorage.getItem('ffdraft_targets') || '[]'); } catch (e) {}
+        let dragId = null, dragSrc = null;
+        function saveTargets() { try { localStorage.setItem('ffdraft_targets', JSON.stringify(targets)); } catch (e) {} }
+        function pById(id) { return AVAILABLE.find(p => p.id === id); }
+        function tbRow(p, cls, btn) {
+            return `<div class="${cls}" draggable="true" data-id="${p.id}">
+          <span class="tb-pos" style="background:${POSCOLOR[p.pos]}${LIGHTPOS[p.pos] ? ';color:#fff' : ''}">${p.pos}</span>
+          <span class="tb-nm">${p.fn} ${p.ln}</span><span class="tb-meta">${p.nfl}</span>${btn}</div>`;
+        }
+        function renderResults() {
+            const q = document.getElementById('tbSearch').value.trim().toLowerCase(), box = document.getElementById('tbResults');
+            if (!q) { box.style.display = 'none'; box.innerHTML = ''; return; }
+            const m = AVAILABLE.filter(p => !targets.includes(p.id) && (p.fn + ' ' + p.ln).toLowerCase().includes(q)).slice(0, 7);
+            box.style.display = m.length ? 'block' : 'none';
+            box.innerHTML = m.map(p => tbRow(p, 'tb-res', '<button class="tb-add" title="Add to targets">+</button>')).join('');
+            box.querySelectorAll('.tb-res').forEach(el => {
+                const id = +el.dataset.id;
+                el.addEventListener('dragstart', e => { dragId = id; dragSrc = 'res'; e.dataTransfer.effectAllowed = 'copy'; e.dataTransfer.setData('text/plain', id); });
+                el.querySelector('.tb-add').addEventListener('click', ev => { ev.stopPropagation(); addTarget(id); });
+                el.addEventListener('click', () => addTarget(id));
+            });
+        }
+        function addTarget(id) { if (!targets.includes(id)) { targets.push(id); saveTargets(); renderTargets(); } const s = document.getElementById('tbSearch'); s.value = ''; renderResults(); s.focus(); }
+        function removeTarget(id) { targets = targets.filter(t => t !== id); saveTargets(); renderTargets(); }
+        function renderTargets() {
+            const box = document.getElementById('tbTargets');
+            if (!targets.length) { box.innerHTML = '<div class="tb-empty">Search above and drag (or +) players here<br>to build your target list.</div>'; return; }
+            box.innerHTML = targets.map((id, i) => { const p = pById(id); return p ? tbRow(p, 'tb-tgt', '<button class="tb-x" title="Remove">✕</button>').replace('<span class="tb-pos"', `<span class="tb-rank">${i + 1}</span><span class="tb-pos"`) : ''; }).join('');
+            box.querySelectorAll('.tb-tgt').forEach(el => {
+                const id = +el.dataset.id;
+                el.addEventListener('dragstart', e => { dragId = id; dragSrc = 'tgt'; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id); });
+                el.querySelector('.tb-x').addEventListener('click', () => removeTarget(id));
+            });
+        }
+        function tgtAfter(box, y) { return [...box.querySelectorAll('.tb-tgt')].find(r => { const b = r.getBoundingClientRect(); return y < b.top + b.height / 2; }); }
+        function setupTargetBoard() {
+            document.getElementById('tbSearch').addEventListener('input', renderResults);
+            const box = document.getElementById('tbTargets');
+            box.addEventListener('dragover', e => { e.preventDefault(); box.classList.add('drag-over'); box.querySelectorAll('.tb-tgt').forEach(r => r.classList.remove('drop-before')); const a = tgtAfter(box, e.clientY); if (a) a.classList.add('drop-before'); });
+            box.addEventListener('dragleave', () => box.classList.remove('drag-over'));
+            box.addEventListener('drop', e => {
+                e.preventDefault(); box.classList.remove('drag-over');
+                if (dragSrc === 'res') { addTarget(dragId); }
+                else if (dragSrc === 'tgt') { const a = tgtAfter(box, e.clientY); targets = targets.filter(t => t !== dragId); const idx = a ? targets.indexOf(+a.dataset.id) : targets.length; targets.splice(idx < 0 ? targets.length : idx, 0, dragId); saveTargets(); renderTargets(); }
+                dragId = null; dragSrc = null;
+            });
+            renderTargets();
         }
 
-        function displayPlayers(picks) {
-            const playerList = document.getElementById('player-list');
-            
-            if (!picks || picks.length === 0) {
-                playerList.innerHTML = '<div class="no-players">No players drafted yet</div>';
-                return;
-            }
-            
-            // Sort picks by pick order (pick_id ascending)
-            const sortedPicks = picks.sort((a, b) => {
-                return a.pick.pick_id - b.pick.pick_id;
-            });
-            
-            // Group players by position
-            const positionOrder = ['QB', 'RB', 'WR', 'TE', 'K', 'D/ST'];
-            const playersByPosition = {};
-            
-            sortedPicks.forEach(pick => {
-                const position = pick.player.position;
-                if (!playersByPosition[position]) {
-                    playersByPosition[position] = [];
-                }
-                playersByPosition[position].push(pick);
-            });
-            
-            let html = '';
-            let isFirstGroup = true;
-            
-            positionOrder.forEach(position => {
-                if (playersByPosition[position] && playersByPosition[position].length > 0) {
-                    // Add separator between position groups
-                    if (!isFirstGroup) {
-                        html += '<div class="position-separator"></div>';
-                    }
-                    isFirstGroup = false;
-                    
-                    // Add players in this position group
-                    html += playersByPosition[position].map(pick => {
-                const player = pick.player;
-                
-                // Use team logo for defenses, player headshot for individuals
-                let imageUrl;
-                if (player.position === 'D/ST') {
-                    imageUrl = getTeamLogoUrl(player.team);
-                } else {
-                    imageUrl = `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${player.id}.png&w=350&h=254`;
-                }
-                
-                const teamLogoUrl = getTeamLogoUrl(player.team);
-                
-                // Handle bye week for defenses by looking up a player from the same team
-                let byeWeek;
-                if (player.position === 'D/ST') {
-                    byeWeek = getDefenseByeWeek(player.team);
-                } else {
-                    byeWeek = playerStats[player.id]?.bye_week;
-                }
-                const byeWeekHtml = formatByeWeek(byeWeek, player.team);
-                
-                // Display "DST" instead of "D/ST" for better fit
-                const displayPosition = player.position === 'D/ST' ? 'DST' : player.position;
-                const cssPositionClass = player.position === 'D/ST' ? 'DST' : player.position;
-                
-                return `
-                    <div class="player-card">
-                        <div class="player-image-container">
-                            <img src="${teamLogoUrl}" alt="${player.team}" class="player-image-background" title="${player.team}">
-                            <img src="${imageUrl}" alt="${player.last_name}" class="player-image" onerror="this.style.display='none'">
-                        </div>
-                        <span class="player-position position-${cssPositionClass}">${displayPosition}</span>
-                        <div class="player-info">
-                            <div class="player-name">${player.first_name} ${player.last_name}</div>
-                            ${byeWeekHtml}
-                            <div class="player-stats">
-                                ${formatPlayerStats(player.id)}
-                            </div>
-                        </div>
-                        <div class="player-price">$${pick.pick.price}</div>
-                    </div>
-                `;
-                    }).join('');
-                }
-            });
-            
-            playerList.innerHTML = html;
+        /* hover tooltip */
+        function showTip(e, i) {
+            const p = curRoster[i], tip = document.getElementById('ptip');
+            tip.style.setProperty('--pc', POSCOLOR[p.pos]);
+            const rows = statCells(p).map(c => { const n=parseFloat(String(c[1]).replace(/,/g,'')); return `<div class="tt-stat"><span class="l">${c[0]}</span><span class="bar"><i style="width:${!isNaN(n) ? Math.min(n/c[2]*100,100) : 0}%"></i></span><span class="n tnum">${c[1]}</span></div>`; }).join('');
+            tip.innerHTML = `<div class="tt-head"><span class="tt-pos ${LIGHTPOS[p.pos] ? 'light' : ''}" style="background:${POSCOLOR[p.pos]}">${p.pos}</span><span class="tt-name">${p.fn} ${p.ln}</span></div>
+    <div class="tt-sub">${p.nfl}${p.bye ? ' · Bye '+p.bye : ''} · Drafted for <b style="color:var(--turf)">$${p.price}</b></div>${rows}`;
+            tip.style.display = 'block'; moveTip(e);
         }
+        function moveTip(e) {
+            const tip = document.getElementById('ptip'); if (tip.style.display !== 'block') return;
+            const w = tip.offsetWidth, h = tip.offsetHeight;
+            let x = e.clientX + 18, y = e.clientY + 18;
+            if (x + w > window.innerWidth - 8) x = e.clientX - w - 18;
+            if (y + h > window.innerHeight - 8) y = window.innerHeight - h - 8;
+            tip.style.left = x + 'px'; tip.style.top = Math.max(8, y) + 'px';
+        }
+        function hideTip() { document.getElementById('ptip').style.display = 'none'; }
 
-        function displayTeamSummary(teamData, owner) {
-            const statsDiv = document.getElementById('team-stats');
-            const positionDiv = document.getElementById('position-breakdown');
-            
-            // Calculate position counts
-            const positionCounts = {};
-            teamData.picks.forEach(pick => {
-                const position = pick.player.position;
-                positionCounts[position] = (positionCounts[position] || 0) + 1;
+        // Chronological pick log for the cost timeline: one entry per pick, x = pick order.
+        function buildDraftLog() {
+            const picks = [];
+            (lastDraftState ? lastDraftState.teams : []).forEach(t => {
+                const tm = TEAMS.find(x => x.owner_id === t.owner_id);
+                t.picks.forEach(pk => {
+                    const pl = playersById[pk.player_id];
+                    if (pl && tm) picks.push({ pickId: pk.pick_id, pos: pl.position, price: pk.price,
+                        name: `${pl.first_name} ${pl.last_name}`, teamName: tm.team, color: tm.color });
+                });
             });
-            
-            // Team stats
-            const totalSpent = teamData.picks.reduce((sum, pick) => sum + pick.pick.price, 0);
-            const remainingPicks = config.total_rounds - teamData.picks.length;
-            
-            statsDiv.innerHTML = `
-                <div class="summary-item">
-                    <span class="summary-label">Owner</span>
-                    <span class="summary-value">${owner ? owner.owner_name : 'Unknown'}</span>
-                </div>
-                <div class="summary-item">
-                    <span class="summary-label">Budget Remaining</span>
-                    <span class="summary-value budget-value">$${teamData.budget_remaining}</span>
-                </div>
-                <div class="summary-item">
-                    <span class="summary-label">Total Spent</span>
-                    <span class="summary-value">$${totalSpent}</span>
-                </div>
-                <div class="summary-item">
-                    <span class="summary-label">Players Drafted</span>
-                    <span class="summary-value">${teamData.picks.length} / ${config.total_rounds}</span>
-                </div>
-                <div class="summary-progress">
-                    <div class="summary-progress-bar" style="width: ${(teamData.picks.length / config.total_rounds) * 100}%"></div>
-                </div>
-                <div class="summary-item">
-                    <span class="summary-label">Remaining Picks</span>
-                    <span class="summary-value">${remainingPicks}</span>
-                </div>
-            `;
-            
-            // Position breakdown
-            const positions = ['QB', 'RB', 'WR', 'TE', 'K', 'D/ST'];
-            positionDiv.innerHTML = positions.map(position => {
-                const current = positionCounts[position] || 0;
-                const max = config.position_maximums[position] || 0;
-                const percentage = max > 0 ? (current / max) * 100 : 0;
-                const statusClass = current >= max ? 'at-max' : 'under-max';
-                
-                // Determine bar color based on fill percentage
-                let barClass = 'progress-bar-normal';
-                if (percentage >= 100) {
-                    barClass = 'progress-bar-full';
-                } else if (percentage >= 75) {
-                    barClass = 'progress-bar-warning';
-                }
-                
-                // Use same position class for consistency
-                const displayPosition = position === 'D/ST' ? 'DST' : position;
-                const cssPositionClass = position === 'D/ST' ? 'DST' : position;
-                
-                return `
-                    <div class="position-item">
-                        <div class="position-header">
-                            <span class="position-badge position-${cssPositionClass}">${displayPosition}</span>
-                            <div class="position-count ${statusClass}">${current} / ${max}</div>
-                        </div>
-                        <div class="position-progress">
-                            <div class="position-progress-bar ${barClass}" style="width: ${Math.min(percentage, 100)}%"></div>
-                        </div>
-                    </div>
-                `;
+            picks.sort((a, b) => a.pickId - b.pickId);
+            return picks.map((p, i) => ({ no: i + 1, pos: p.pos, price: p.price, name: p.name, teamName: p.teamName, color: p.color }));
+        }
+        function renderCostChart() {
+            const log = buildDraftLog(), order = RADAR_ORDER;
+            const wrap = document.getElementById('costChart');
+            if (!log.length) { wrap.innerHTML = '<div class="la-empty">No picks yet</div>'; document.getElementById('costLegend').innerHTML = ''; return; }
+            const W = 680, H = 280, padL = 46, padR = 16, padT = 14, padB = 28, maxNo = Math.max(2, log.length);
+            const yMax = Math.max(10, Math.ceil(Math.max(...log.map(l => l.price)) / 10) * 10);
+            const X = no => padL + (no - 1) / (maxNo - 1) * (W - padL - padR);
+            const Y = p => H - padB - (p / yMax) * (H - padT - padB);
+            const stats = {};
+            order.forEach(pos => { const a = log.filter(l => l.pos === pos).map(l => l.price);
+                if (a.length) { const m = a.reduce((s, v) => s + v, 0) / a.length;
+                    stats[pos] = { md: median(a), sd: Math.sqrt(a.reduce((s, v) => s + (v - m) ** 2, 0) / a.length) || 1 }; } });
+            let s = `<svg class="cost-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`;
+            const step = Math.max(10, Math.round(yMax / 4 / 5) * 5);
+            for (let g = 0; g <= yMax; g += step) { const yy = Y(g);
+                s += `<line class="c-grid" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W - padR}" y2="${yy.toFixed(1)}"/><text class="c-ytick" x="${padL - 6}" y="${(yy + 3).toFixed(1)}" text-anchor="end">$${g}</text>`; }
+            s += `<line class="c-axis" x1="${padL}" y1="${(H - padB).toFixed(1)}" x2="${W - padR}" y2="${(H - padB).toFixed(1)}"/>`;
+            s += `<text class="c-ytick" x="${padL}" y="${H - 9}" text-anchor="start">EARLY</text><text class="c-ytick" x="${W - padR}" y="${H - 9}" text-anchor="end">LATE</text>`;
+            order.forEach(pos => { const pts = log.filter(l => l.pos === pos); if (!pts.length) return;
+                s += `<polyline class="c-line" points="${pts.map(l => X(l.no).toFixed(1) + ',' + Y(l.price).toFixed(1)).join(' ')}" style="stroke:${POSCOLOR[pos]}"/>`;
+                pts.forEach(l => { const z = stats[pos] ? (l.price - stats[pos].md) / stats[pos].sd : 0;
+                    const cx = X(l.no).toFixed(1), cy = Y(l.price).toFixed(1);
+                    const data = `data-n="${l.name}" data-pos="${pos}" data-pr="${l.price}" data-tm="${l.teamName}" data-z="${z.toFixed(1)}"`;
+                    s += `<circle class="c-dot" cx="${cx}" cy="${cy}" r="3.6" style="fill:${POSCOLOR[pos]}"/>`;
+                    s += `<circle class="c-hit" cx="${cx}" cy="${cy}" r="9" ${data}/>`; }); });
+            s += '</svg>';
+            wrap.innerHTML = s;
+            document.getElementById('costLegend').innerHTML = order.map(p => `<span class="cl-item"><span class="cl-dot" style="background:${POSCOLOR[p]}"></span>${p}</span>`).join('');
+            wrap.querySelectorAll('.c-hit').forEach(c => { c.addEventListener('mouseenter', e => showCostTip(e, c)); c.addEventListener('mousemove', moveTip); c.addEventListener('mouseleave', hideTip); });
+        }
+        function showCostTip(e, c) {
+            const tip = document.getElementById('ptip'), pos = c.dataset.pos, z = parseFloat(c.dataset.z), above = z >= 0;
+            tip.style.setProperty('--pc', POSCOLOR[pos]);
+            tip.innerHTML = `<div class="tt-head"><span class="tt-pos ${LIGHTPOS[pos] ? 'light' : ''}" style="background:${POSCOLOR[pos]}">${pos}</span><span class="tt-name">${c.dataset.n}</span></div>
+                <div class="tt-sub">${c.dataset.tm} · <b style="color:var(--turf)">$${c.dataset.pr}</b></div>
+                <div class="tt-zline" style="color:${above ? 'var(--live)' : 'var(--turf)'}">${above ? '+' : ''}${z.toFixed(1)}σ ${above ? 'above' : 'below'} median</div>`;
+            tip.style.display = 'block'; moveTip(e);
+        }
+        function renderDominance() {
+            const order = ['QB', 'RB', 'WR', 'TE', 'K', 'D/ST'];
+            const rs = TEAMS.map(t => ({ t, c: posCounts(rosterFor(t)) }));
+            document.getElementById('dominance').innerHTML = order.map(pos => {
+                let leader = null, empties = [];
+                rs.forEach(r => { const n = r.c[pos] || 0; if (n > 0 && (!leader || n > leader.n)) leader = { t: r.t, n }; if (n === 0) empties.push(ab2(r.t.owner)); });
+                const segs = rs.filter(r => (r.c[pos] || 0) > 0).sort((a, b) => (b.c[pos] || 0) - (a.c[pos] || 0))
+                    .map(r => `<div class="battle-seg" style="flex-grow:${r.c[pos]};background:linear-gradient(180deg,${r.t.color},${hexA(r.t.color, .72)})" title="${r.t.team}: ${r.c[pos]}"></div>`).join('');
+                const emptyTxt = empties.length ? (empties.length <= 4 ? 'open: ' + empties.join(', ') : empties.length + ' teams need one') : 'all rostered';
+                const note = leader ? `led by <b>${leader.t.owner}</b> (${leader.n}) · ${emptyTxt}` : 'none drafted yet';
+                return `<div class="battle-row"><div class="battle-head"><span class="battle-pos" style="color:${POSCOLOR[pos]}">${pos}</span><span class="battle-note">${note}</span></div>
+      <div class="battle-bar">${segs}${empties.length ? '<div class="battle-empty"></div>' : ''}</div></div>`;
             }).join('');
         }
-
-        function showLoading() {
-            document.getElementById('loading').style.display = 'block';
-            document.getElementById('main-content').style.display = 'none';
+        function renderBudgetPower() {
+            const ranked = [...TEAMS].sort((a, b) => b.budget - a.budget);
+            document.getElementById('budgetPower').innerHTML = ranked.map((t, i) => `
+                <div class="bp-row"><span class="bp-rank cond">${i + 1}</span>
+                  <span class="bp-name"><span class="bp-dot" style="background:${t.color}"></span><span class="nm">${t.team}</span></span>
+                  <span class="bp-track"><span class="bp-fill" style="width:${t.budget / INITIAL * 100}%"></span></span>
+                  <span class="bp-val tnum">$${t.budget}</span></div>`).join('');
         }
 
-        function hideLoading() {
-            document.getElementById('loading').style.display = 'none';
-        }
-
-        function showError(message) {
-            const errorDiv = document.getElementById('error');
-            errorDiv.textContent = message;
-            errorDiv.style.display = 'block';
-            document.getElementById('main-content').style.display = 'none';
-        }
-
-        function hideError() {
-            document.getElementById('error').style.display = 'none';
-        }
-
-        // Event listeners
-        document.getElementById('team-select').addEventListener('change', function(e) {
-            const teamId = parseInt(e.target.value);
-            if (teamId && teamId !== currentTeamId) {
-                currentTeamId = teamId;
-                loadTeamData(teamId);
-                
-                // Update URL
-                const url = new URL(window.location);
-                url.searchParams.set('team_id', teamId);
-                window.history.pushState({}, '', url);
-            }
-        });
-
-        // Initialize
-        async function init() {
-            await loadConfig();
-            await loadPlayerStats();
-            await loadOwners();
-            
-            // Auto-refresh every 5 seconds
-            setInterval(() => {
-                if (currentTeamId) {
-                    loadTeamData(currentTeamId);
-                }
-            }, 5000);
-        }
-
-        // Start the application
         init();
-    </script>
+</script>
+    {# djlint:on #}
   </body>
 </html>
