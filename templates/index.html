@@ -192,6 +192,14 @@
           </div>
         </div>
         <div class="dsec">
+          <h3>Ticker</h3>
+          <div class="drow" id="ticker-speed-row">
+            <button class="dbtn ghost" data-speed="50s" onclick="setTickerSpeed('50s')">Slow</button>
+            <button class="dbtn ghost" data-speed="26s" onclick="setTickerSpeed('26s')">Normal</button>
+            <button class="dbtn ghost" data-speed="14s" onclick="setTickerSpeed('14s')">Fast</button>
+          </div>
+        </div>
+        <div class="dsec">
           <h3>API &amp; Docs</h3>
           <div class="dlinks">
             <a href="/docs" target="_blank">📚 Swagger API Docs</a>
@@ -818,6 +826,15 @@
             }
         }
 
+        function setTickerSpeed(s) {
+            document.documentElement.style.setProperty('--ticker-speed', s);
+            localStorage.setItem('tickerSpeed', s);
+            document.querySelectorAll('#ticker-speed-row [data-speed]').forEach(b => {
+                b.classList.toggle('ghost', b.dataset.speed !== s);
+            });
+        }
+        setTickerSpeed(localStorage.getItem('tickerSpeed') || '26s');
+
         (function setupResetHold() {
             const btn = document.getElementById('reset-btn');
             let timer = null, start = 0;
@@ -1133,11 +1150,21 @@
             }
         }
 
-        // FOUT guard: reveal once webfonts are ready (cqh/cqw layout depends on metrics).
+        // FOUT guard: reveal once webfonts are ready (--hu/cqw layout depends on metrics).
         const stage = document.getElementById('stage');
         function revealStage() { stage.classList.add('ready'); }
         if (document.fonts && document.fonts.ready) { document.fonts.ready.then(revealStage); }
         setTimeout(revealStage, 1500);
+
+        // Hero height unit: --hu = 1% of the hero's rendered height, so calc(N*var(--hu))
+        // in the CSS behaves like the old Ncqh — but works in Firefox, where cqh on a
+        // size-container flex layout mis-resolves to min-height and squishes the photo.
+        const heroSizer = new ResizeObserver(entries => {
+            for (const entry of entries) {
+                entry.target.style.setProperty('--hu', (entry.contentRect.height / 100) + 'px');
+            }
+        });
+        document.querySelectorAll('.hero').forEach(hero => heroSizer.observe(hero));
 
         loadData();
         setInterval(refreshData, 30000);

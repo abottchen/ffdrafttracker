@@ -69,8 +69,10 @@ body{
 .ondeck{font-family:'Saira Condensed';font-weight:700;font-size:13px;letter-spacing:1px;text-transform:uppercase;color:var(--slate);white-space:nowrap;}
 .ondeck b{color:var(--gold);}
 
-/* ---------- HERO — scales with HEIGHT (cqh) ---------- */
-.hero{flex:1;min-height:150px;position:relative;border-radius:14px;overflow:hidden;
+/* ---------- HERO — scales with HEIGHT via --hu (1% of hero height; set by
+   ResizeObserver in index.html. Replaces cqh, which Firefox mis-resolves to
+   min-height in this size-container flex layout, squishing the photo column). ---------- */
+.hero{flex:1;min-height:150px;--hu:2.6px;position:relative;border-radius:14px;overflow:hidden;
   border:1px solid var(--line2);
   container-type:size;
   background:
@@ -81,37 +83,37 @@ body{
 .hero::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,199,44,.10),transparent 35%);pointer-events:none;}
 .hero-logo{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);height:165%;width:auto;opacity:.12;z-index:-1;pointer-events:none;
   filter:drop-shadow(0 0 30px rgba(0,0,0,.4));}
-.hero-photo{width:92cqh;flex-shrink:0;position:relative;z-index:2;overflow:hidden;border-right:1px solid var(--line2);
+.hero-photo{width:calc(92*var(--hu));flex-shrink:0;position:relative;z-index:2;overflow:hidden;border-right:1px solid var(--line2);
   background:radial-gradient(circle at 50% 30%, #1c3563, var(--deep2));}
 .hero-photo img{position:absolute;bottom:0;left:50%;transform:translateX(-50%);height:100%;width:auto;filter:drop-shadow(0 6px 14px rgba(0,0,0,.6));}
-.hero-photo .posbadge{position:absolute;top:6cqh;left:6cqh;font-family:'Saira Condensed';font-weight:800;font-size:clamp(11px,7cqh,22px);letter-spacing:1px;
+.hero-photo .posbadge{position:absolute;top:calc(6*var(--hu));left:calc(6*var(--hu));font-family:'Saira Condensed';font-weight:800;font-size:clamp(11px,calc(7*var(--hu)),22px);letter-spacing:1px;
   background:var(--gold);color:var(--midnight);padding:.15em .5em;border-radius:6px;}
-.hero-body{flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 3cqh;min-width:0;position:relative;z-index:1;}
-.hero-eyebrow{display:flex;align-items:center;gap:2cqh;margin-bottom:1cqh;}
-.auctioning{font-family:'Saira Condensed';font-weight:800;font-size:clamp(11px,7.5cqh,24px);letter-spacing:3px;text-transform:uppercase;
+.hero-body{flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 calc(3*var(--hu));min-width:0;position:relative;z-index:1;}
+.hero-eyebrow{display:flex;align-items:center;gap:calc(2*var(--hu));margin-bottom:calc(1*var(--hu));}
+.auctioning{font-family:'Saira Condensed';font-weight:800;font-size:clamp(11px,calc(7.5*var(--hu)),24px);letter-spacing:3px;text-transform:uppercase;
   background:linear-gradient(90deg,var(--gold),#fff0b8,var(--gold));background-size:200% 100%;
   -webkit-background-clip:text;background-clip:text;color:transparent;animation:sweep 3s linear infinite;}
 @keyframes sweep{to{background-position:200% 0;}}
-.live{display:flex;align-items:center;gap:6px;font-family:'Saira Condensed';font-weight:800;font-size:clamp(10px,6cqh,20px);letter-spacing:2px;color:var(--live);}
+.live{display:flex;align-items:center;gap:6px;font-family:'Saira Condensed';font-weight:800;font-size:clamp(10px,calc(6*var(--hu)),20px);letter-spacing:2px;color:var(--live);}
 .live .dot{width:.6em;height:.6em;border-radius:50%;background:var(--live);box-shadow:0 0 0 0 rgba(232,50,60,.6);animation:pulse 1.4s infinite;}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(232,50,60,.6)}70%{box-shadow:0 0 0 10px rgba(232,50,60,0)}100%{box-shadow:0 0 0 0 rgba(232,50,60,0)}}
-.hero-name{font-family:'Saira Condensed';font-weight:900;font-size:clamp(28px,28cqh,96px);line-height:.92;letter-spacing:.5px;
+.hero-name{font-family:'Saira Condensed';font-weight:900;font-size:clamp(28px,calc(28*var(--hu)),96px);line-height:.92;letter-spacing:.5px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 4px rgba(0,0,0,.75), 0 6px 22px rgba(0,0,0,.55);}
-.hero-meta{font-family:'Saira Condensed';font-weight:600;font-size:clamp(13px,9.5cqh,32px);letter-spacing:1px;color:var(--slate);margin-top:1cqh;}
+.hero-meta{font-family:'Saira Condensed';font-weight:600;font-size:clamp(13px,calc(9.5*var(--hu)),32px);letter-spacing:1px;color:var(--slate);margin-top:calc(1*var(--hu));}
 .hero-meta b{color:var(--ice);}
-.hero-right{width:46cqh;min-width:250px;flex-shrink:0;border-left:1px solid var(--line2);display:flex;flex-direction:column;justify-content:center;
-  padding:0 3cqh;gap:.4em;background:linear-gradient(180deg,rgba(43,213,118,.06),transparent);}
-.bid-label{font-family:'Saira Condensed';font-weight:700;font-size:clamp(11px,6.5cqh,22px);letter-spacing:2px;text-transform:uppercase;color:var(--slate);}
-.bid-amt{font-family:'Saira Condensed';font-weight:900;font-size:clamp(30px,26cqh,86px);line-height:.85;
+.hero-right{width:calc(46*var(--hu));min-width:250px;flex-shrink:0;border-left:1px solid var(--line2);display:flex;flex-direction:column;justify-content:center;
+  padding:0 calc(3*var(--hu));gap:.4em;background:linear-gradient(180deg,rgba(43,213,118,.06),transparent);}
+.bid-label{font-family:'Saira Condensed';font-weight:700;font-size:clamp(11px,calc(6.5*var(--hu)),22px);letter-spacing:2px;text-transform:uppercase;color:var(--slate);}
+.bid-amt{font-family:'Saira Condensed';font-weight:900;font-size:clamp(30px,calc(26*var(--hu)),86px);line-height:.85;
   background:linear-gradient(100deg,#15A352 0%,#3BE07F 16%,#D7FFE8 31%,#3BE07F 46%,var(--turf) 68%,#11A455 100%);
   background-size:300% 100%;
   -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
   filter:drop-shadow(0 2px 2px rgba(0,0,0,.5)) drop-shadow(0 0 18px rgba(43,213,118,.5));}
 .bidder{display:flex;align-items:flex-start;gap:.45em;margin-top:.2em;}
 .bidder .chip{width:5px;height:1.15em;margin-top:.12em;border-radius:3px;flex-shrink:0;}
-.bidder .nm{font-family:'Saira Condensed';font-weight:700;font-size:clamp(14px,9cqh,30px);line-height:1.04;text-shadow:0 1px 3px rgba(0,0,0,.6);}
-.hero-actions{display:flex;gap:8px;margin-top:1.2cqh;}
-.hero-actions .sold{flex:1;min-width:0;font-family:'Saira Condensed';font-weight:900;font-size:clamp(13px,9cqh,28px);letter-spacing:1px;text-transform:uppercase;
+.bidder .nm{font-family:'Saira Condensed';font-weight:700;font-size:clamp(14px,calc(9*var(--hu)),30px);line-height:1.04;text-shadow:0 1px 3px rgba(0,0,0,.6);}
+.hero-actions{display:flex;gap:8px;margin-top:calc(1.2*var(--hu));}
+.hero-actions .sold{flex:1;min-width:0;font-family:'Saira Condensed';font-weight:900;font-size:clamp(13px,calc(9*var(--hu)),28px);letter-spacing:1px;text-transform:uppercase;
   background:linear-gradient(180deg,#16863f 0%,#127a3a 48%,#0c602f 100%);color:#fff;-webkit-text-fill-color:#fff;border:1px solid rgba(255,255,255,.28);border-radius:9px;padding:.3em .2em;cursor:pointer;
   text-shadow:0 1px 2px rgba(0,0,0,.45);
   box-shadow:0 4px 0 #0c6e39, 0 7px 18px rgba(43,213,118,.45), inset 0 1px 0 rgba(255,255,255,.55);
@@ -125,7 +127,7 @@ body{
   background:rgba(7,13,26,.5);border:1px solid var(--line2);color:var(--slate);border-radius:7px;cursor:pointer;font-size:13px;backdrop-filter:blur(4px);}
 .hero-dismiss:hover{color:var(--live);border-color:var(--live);}
 /* count-UP timer (elapsed time on this nomination); sits with the LIVE cluster */
-.timer{flex-shrink:0;font-family:'Saira Condensed';font-weight:800;font-size:clamp(16px,11cqh,40px);
+.timer{flex-shrink:0;font-family:'Saira Condensed';font-weight:800;font-size:clamp(16px,calc(11*var(--hu)),40px);
   background:var(--midnight);border:1px solid var(--live);color:var(--live);border-radius:8px;padding:.05em .4em;letter-spacing:1px;
   box-shadow:0 0 12px rgba(232,50,60,.25);}
 
@@ -135,15 +137,15 @@ body.standby .hero.active{display:none;}
 body.standby .hero.standby{display:flex;}
 .hero.standby .hero-photo{background:radial-gradient(circle at 50% 34%, #18294a, var(--deep2));}
 .hero.standby .sil{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);height:72%;width:auto;}
-.standby-eyebrow{font-family:'Saira Condensed';font-weight:800;font-size:clamp(11px,7.5cqh,24px);letter-spacing:3px;text-transform:uppercase;color:var(--gold);opacity:.9;}
-.standby-name{font-family:'Saira Condensed';font-weight:900;font-size:clamp(24px,23cqh,80px);line-height:.94;letter-spacing:.5px;
+.standby-eyebrow{font-family:'Saira Condensed';font-weight:800;font-size:clamp(11px,calc(7.5*var(--hu)),24px);letter-spacing:3px;text-transform:uppercase;color:var(--gold);opacity:.9;}
+.standby-name{font-family:'Saira Condensed';font-weight:900;font-size:clamp(24px,calc(23*var(--hu)),80px);line-height:.94;letter-spacing:.5px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 4px rgba(0,0,0,.75),0 6px 22px rgba(0,0,0,.55);}
-.standby-hint{font-family:'Saira Condensed';font-weight:600;font-size:clamp(12px,8cqh,26px);letter-spacing:.5px;color:var(--slate);margin-top:1.6cqh;display:flex;align-items:center;gap:.5em;}
+.standby-hint{font-family:'Saira Condensed';font-weight:600;font-size:clamp(12px,calc(8*var(--hu)),26px);letter-spacing:.5px;color:var(--slate);margin-top:calc(1.6*var(--hu));display:flex;align-items:center;gap:.5em;}
 .standby-hint .arrow{color:var(--electric);animation:nudge 1.8s ease-in-out infinite;}
 @keyframes nudge{0%,100%{transform:translateY(0);}50%{transform:translateY(-3px);}}
 .hero-right.standby-right{background:linear-gradient(180deg,rgba(255,255,255,.02),transparent);}
 .bid-amt.muted{background:none;-webkit-text-fill-color:#3a4866;color:#3a4866;filter:none;animation:none;}
-.standby-cap{font-family:'Inter';font-weight:500;font-size:clamp(10px,5.5cqh,16px);color:#4a5a78;margin-top:.3em;}
+.standby-cap{font-family:'Inter';font-weight:500;font-size:clamp(10px,calc(5.5*var(--hu)),16px);color:#4a5a78;margin-top:.3em;}
 
 /* ---------- RAIL — cards scale with WIDTH (cqw) ---------- */
 .rail-head{display:flex;align-items:center;gap:10px;flex-shrink:0;}
@@ -180,7 +182,10 @@ body.standby .hero.standby{display:flex;}
 /* fill brightens with roster completion: gradient mapped to the FULL track,
    so an empty team reads dark and a full team reads bright (subtle). */
 .picks-fill{position:absolute;left:0;top:0;bottom:0;opacity:.88;
-  background:linear-gradient(90deg,
+  /* Longhand (not `background:` shorthand) — Firefox drops the shorthand when
+     its image value contains color-mix(in srgb, var(...), ...). Chromium accepts
+     it either way, so the longhand is the safe form. */
+  background-image:linear-gradient(90deg,
     color-mix(in srgb, var(--tc) 16%, #0b1018) 0%,
     color-mix(in srgb, var(--tc) 52%, #0b1018) 58%,
     color-mix(in srgb, var(--tc) 96%, #ffffff) 100%);
@@ -228,7 +233,7 @@ body.standby .hero.standby{display:flex;}
 .ticker .tag{font-family:'Saira Condensed';font-weight:900;font-size:14px;letter-spacing:1.5px;background:var(--live);color:#fff;
   height:100%;display:flex;align-items:center;padding:0 14px;flex-shrink:0;}
 .ticker .crawl-wrap{flex:1;overflow:hidden;white-space:nowrap;}
-.ticker .crawl{display:inline-block;padding-left:100%;animation:crawl 26s linear infinite;
+.ticker .crawl{display:inline-block;padding-left:100%;animation:crawl var(--ticker-speed,26s) linear infinite;
   font-family:'Saira Condensed';font-weight:600;font-size:15px;letter-spacing:.5px;color:var(--ice);}
 .ticker .crawl .sep{color:var(--gold);margin:0 14px;}
 .ticker .crawl .amt{color:var(--turf);font-weight:800;}
