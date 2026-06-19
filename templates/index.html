@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap"
           rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/draft-set-admin.css">
+    <link rel="stylesheet" href="/static/css/draft-set-admin.css?v=9">
   </head>
   <body>
     <div id="stage">
@@ -46,6 +46,7 @@
       <div class="hero active">
         <div class="hero-photo">
           <span class="posbadge" id="hero-posbadge"></span>
+          <span class="byebadge is-hidden" id="hero-bye"><span class="k">Bye</span> <span class="v" id="hero-bye-num"></span></span>
           <img id="hero-photo-img" src="" alt="" width="350" height="254">
         </div>
         <div class="hero-body">
@@ -105,10 +106,18 @@
       <div class="rail-head">
         <h2>Participants · Draft Order</h2>
         <div class="rule"></div>
+        <div class="legend" title="Admin keyboard controls">
+          <kbd>1</kbd>–<kbd>0</kbd> Select <span class="sepdot">·</span>
+          <kbd>←</kbd><kbd>→</kbd> Move <span class="sepdot">·</span>
+          <kbd>Enter</kbd> +1 <span class="sepdot">·</span>
+          <kbd>↑</kbd><kbd>↓</kbd> Adjust <span class="sepdot">·</span>
+          <kbd>D</kbd> Draft <span class="sepdot">·</span>
+          <kbd>Esc</kbd> Clear
+        </div>
       </div>
       <div class="rail" id="rail"></div>
-      <!-- INTEL (blank reserved pane) -->
-      <div class="intel">
+      <!-- INTEL (reserved pane) — hidden until there's real commentary to show -->
+      <div class="intel" hidden>
         <span class="badge">Draft Intel</span>
         <span class="note">reserved — AI draft commentary</span>
       </div>
@@ -228,6 +237,7 @@
         let adminSelectedPlayerId = null;
         let adminSelectedPlayerName = null;
         let adminHighlightedIndex = -1;
+        let cursorIndex = null;   // keyboard bid cursor: index into draftState.teams
 
         function openDrawer() {
             document.getElementById('scrim').classList.add('open');
@@ -277,6 +287,22 @@
                 'WAS': 'https://a.espncdn.com/i/teamlogos/nfl/500/was.png'
             };
             return teamMappings[teamAbbr] || 'https://a.espncdn.com/i/teamlogos/nfl/500/nfl.png';
+        }
+
+        // Hardcoded per-team tint for the auction backdrop — each team's signature color,
+        // shifted brighter where the brand primary is too dark to read on the steel bg.
+        function getTeamColor(teamAbbr) {
+            const colors = {
+                'ARI': '#C8102E', 'ATL': '#E31837', 'BAL': '#5E48A8', 'BUF': '#1A6DD6',
+                'CAR': '#0085CA', 'CHI': '#E0541C', 'CIN': '#FB4F14', 'CLE': '#FF6A2B',
+                'DAL': '#2A5BD0', 'DEN': '#FB4F14', 'DET': '#1B8FD6', 'GB': '#3A8C52',
+                'HOU': '#C8324B', 'IND': '#2A74C4', 'JAX': '#13909E', 'KC': '#E31837',
+                'LV': '#B9C0C4', 'LAC': '#0FA0E0', 'LAR': '#2A63E0', 'MIA': '#00B6C0',
+                'MIN': '#6A3CB0', 'NE': '#D33C50', 'NO': '#D3BC8D', 'NYG': '#2A52C9',
+                'NYJ': '#2E8C5E', 'PHI': '#1A8579', 'PIT': '#FFB612', 'SEA': '#69BE28',
+                'SF': '#C8102E', 'TB': '#D50A0A', 'TEN': '#4B92DB', 'WAS': '#9A3550'
+            };
+            return colors[teamAbbr] || '#E8A33D';
         }
         async function loadData() {
             try {
@@ -337,7 +363,9 @@
             const drafted = teams.reduce((n, t) => n + t.picks.length, 0);
             const totalPossible = config.total_rounds * teams.length;
             const pct = totalPossible > 0 ? Math.round(drafted / totalPossible * 100) : 0;
-            document.getElementById('progress-fill').style.width = pct + '%';
+            const fill = document.getElementById('progress-fill');
+            fill.style.width = pct + '%';
+            fill.style.setProperty('--pct', pct || 1);   // map the amber->green gradient to progress
             document.getElementById('progress-pct').textContent = pct + '%';
         }
         
@@ -352,6 +380,18 @@
             return s.stats_summary ? ` · ${s.stats_summary}` : '';
         }
 
+        // Bye week for the nominee. D/ST has no per-player stats row, so derive it from
+        // any teammate's bye (parity with the team viewer's defenseBye).
+        function playerByeWeek(player) {
+            const s = playerStats[player.id];
+            if (s && s.bye_week) return s.bye_week;
+            for (const id in playerStats) {
+                const st = playerStats[id];
+                if (st && st.team === player.team && st.bye_week) return st.bye_week;
+            }
+            return null;
+        }
+
         function updateNominationPanel(draftState) {
             const nominated = draftState.nominated;
             if (nominated) {
@@ -361,6 +401,8 @@
                 const bidder = owners.find(o => o.id === nominated.current_bidder_id);
                 if (player) {
                     const logo = getTeamLogoUrl(player.team);
+                    const heroActive = document.querySelector('.hero.active');
+                    if (heroActive) heroActive.style.setProperty('--team-tint', getTeamColor(player.team));
                     const img = player.position === 'D/ST'
                         ? logo
                         : `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${player.id}.png&w=350&h=254`;
@@ -372,6 +414,10 @@
                     photo.style.display = ''; photo.src = img; photo.alt = player.last_name; photo.onerror = function(){ this.style.display='none'; };
                     document.getElementById('hero-logo').src = logo;
                     document.getElementById('hero-name').textContent = name;
+                    const bye = playerByeWeek(player);
+                    const byeEl = document.getElementById('hero-bye');
+                    if (bye) document.getElementById('hero-bye-num').textContent = bye;
+                    byeEl.classList.toggle('is-hidden', !bye);
                     document.getElementById('hero-meta').innerHTML =
                         `${player.position} · <b>${player.team}</b>${heroStatLine(player.id, player.position)}`;
                     document.getElementById('bid-amt').textContent = `$${nominated.current_bid}`;
@@ -581,6 +627,20 @@
             return 'ok';
         }
 
+        // Can this team legally bid `amount` on the current nominee? (parity with
+        // backend + updateBidButtonState): not done, within budget, within roster-safe
+        // max bid, and not already at the position maximum for the nominee.
+        function canTeamBid(team, amount, nomPos) {
+            if (team.manually_done || team.picks.length >= config.total_rounds) return false;
+            const maxBid = (team.max_bid === null || team.max_bid === undefined) ? -1 : team.max_bid;
+            if (amount > team.budget_remaining) return false;
+            if (amount > maxBid) return false;
+            if (nomPos && config.position_maximums[nomPos] !== undefined) {
+                if (teamPositionCount(team, nomPos) >= config.position_maximums[nomPos]) return false;
+            }
+            return true;
+        }
+
         // Valid bid (parity with backend): min next bid <= amount <= max_bid (roster-safe
         // budget reservation), amount <= budget, and team not at position max for nominee.
         function updateBidButtonState(team, nextBid, nomPos, inp, btn) {
@@ -601,6 +661,12 @@
         }
 
         function updateTeams(draftState) {
+            // Don't rebuild the rail while the operator is typing a manual bid — a rebuild
+            // would blow away the focused box and their keystrokes would fall through to
+            // team-selection. The rail refreshes on commit (we blur first) or next poll.
+            const ae = document.activeElement;
+            if (ae && ae.closest && ae.closest('.bidctl')) return;
+
             const teams = draftState.teams;
             const nominated = draftState.nominated;
             const rail = document.getElementById('rail');
@@ -608,6 +674,15 @@
 
             const nextBid = nominated ? nominated.current_bid + 1 : config.min_bid;
             const nomPos = nominatedPosition(draftState);
+
+            // Keep the keyboard cursor on an eligible team (or the first one).
+            if (nominated) {
+                const eligible = teams.map((t, i) => canTeamBid(t, nextBid, nomPos) ? i : -1).filter(i => i >= 0);
+                if (!eligible.length) cursorIndex = null;
+                else if (cursorIndex === null || !eligible.includes(cursorIndex)) cursorIndex = eligible[0];
+            } else {
+                cursorIndex = null;
+            }
 
             teams.forEach((team, idx) => {
                 const owner = owners.find(o => o.id === team.owner_id);
@@ -617,6 +692,8 @@
                 const isDone = team.manually_done || isRosterFull;
                 const isHigh = nominated && nominated.current_bidder_id === team.owner_id;
                 const isClock = team.owner_id === draftState.next_to_nominate && !isDone;
+                const canBid = nominated ? canTeamBid(team, nextBid, nomPos) : false;
+                const hk = idx < 9 ? String(idx + 1) : (idx === 9 ? '0' : '');
 
                 const pct = Math.round(team.picks.length / total * 100);
                 const budgetPct = Math.round(team.budget_remaining / config.initial_budget * 100);
@@ -630,6 +707,8 @@
                 if (isClock) plateCls += ' is-clock';
                 else if (isHigh) plateCls += ' is-high';
                 if (isDone) plateCls += ' is-done';
+                if (nominated && idx === cursorIndex) plateCls += ' is-cursor';
+                if (nominated && !isDone && !canBid) plateCls += ' is-blocked';
 
                 const statusEl = isDone ? '<span class="status done">Done</span>'
                     : isClock ? '<span class="status clock">On the Clock</span>'
@@ -646,8 +725,10 @@
 
                 rail.insertAdjacentHTML('beforeend', `
                     <div class="${plateCls}" id="plate-${team.owner_id}" style="--tc:${color}">
-                        ${statusEl}
-                        <span class="ord cond">#${idx + 1}</span>
+                        <div class="plate-top">
+                            ${statusEl}
+                            ${hk ? `<span class="hotkey" title="Press ${hk} to select this team">${hk}</span>` : ''}
+                        </div>
                         <span class="tname">${owner ? owner.team_name : 'Unknown Team'}</span>
                         <span class="owner">${owner ? owner.owner_name : 'Unknown'}</span>
                         <span class="spacer"></span>
@@ -678,19 +759,28 @@
                     const revalidate = () => updateBidButtonState(team, nextBid, nomPos, inp, btn);
                     inp.addEventListener('input', revalidate);
                     inp.addEventListener('keydown', e => {
-                        if (e.key === 'Enter') { e.preventDefault(); if (!btn.disabled) placeBidForOwner(team.owner_id); }
+                        if (e.key === 'Enter') { e.preventDefault(); if (!btn.disabled) placeBidForOwner(team.owner_id); return; }
+                        // ↑/↓ nudge the manual bid by $1; never below current_bid + 1 (nextBid).
+                        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                            e.preventDefault();
+                            let v = parseInt(inp.value) || nextBid;
+                            v += (e.key === 'ArrowUp') ? 1 : -1;
+                            if (v < nextBid) v = nextBid;
+                            inp.value = v;
+                            revalidate();
+                        }
                     });
                     plate.addEventListener('click', e => {
                         if (e.target.closest('button') || e.target.closest('input')) return;
+                        cursorIndex = teams.indexOf(team);
+                        applyCursor();
                         inp.focus(); inp.select();
                     });
                     revalidate();
                 });
-                // focus the first eligible bid input for fast keyboard bidding
-                setTimeout(() => {
-                    const first = document.querySelector('.bidctl input');
-                    if (first) { first.focus(); first.select(); }
-                }, 100);
+                // Keyboard-first: no auto-focus. Number keys select; Enter bids +1; the
+                // cursor highlights the team Enter/↑ act on (re-applied after each re-render).
+                applyCursor();
             }
         }
 
@@ -725,6 +815,7 @@
                     await refreshData();
                     document.getElementById('nomination-bid').value = '1';
                     document.getElementById('player-search').value = '';
+                    document.getElementById('player-search').blur();   // hand off to the bid console
                     selectedPlayerId = null;
                     selectedPlayerName = null;
                 } else {
@@ -736,14 +827,17 @@
             }
         }
 
-        async function placeBidForOwner(ownerId) {
-            const bidInput = document.getElementById(`bid-input-${ownerId}`);
-            const bid = parseInt(bidInput.value);
+        async function placeBidForOwner(ownerId, amountOverride) {
+            // amountOverride is set for the Enter "+1" bid; otherwise read the box (manual bid).
+            const ae = document.activeElement;   // capture before the await for the blur below
+            const bid = (amountOverride !== undefined && amountOverride !== null)
+                ? amountOverride
+                : parseInt(document.getElementById(`bid-input-${ownerId}`).value);
             if (!bid) {
                 showMessage('Please enter a bid amount', 'error');
                 return;
             }
-            
+
             try {
                 const response = await fetch('/api/v1/bid', {
                     method: 'POST',
@@ -754,12 +848,15 @@
                         expected_version: currentVersion
                     })
                 });
-                
+
                 if (response.ok) {
                     const result = await response.json();
                     showMessage('Bid placed successfully!', 'success');
                     currentVersion = result.new_version;
+                    // Blur the manual-bid box (if any) so the rail can rebuild post-commit.
+                    if (ae && ae.closest && ae.closest('.bidctl')) ae.blur();
                     await refreshData();
+                    flashBid(ownerId);   // confirm the bid landed (no modal — speed)
                 } else {
                     const error = await response.json();
                     showMessage('Bid failed: ' + error.detail, 'error');
@@ -768,6 +865,127 @@
                 showMessage('Error placing bid: ' + error.message, 'error');
             }
         }
+
+        // ---------- Bid console: keyboard-driven live bidding ----------
+        // Highlight the team the cursor is on (Enter/↑ act on it). Re-applied after
+        // every rail re-render since updateTeams() rebuilds the plates.
+        function applyCursor() {
+            document.querySelectorAll('.plate.is-cursor').forEach(p => p.classList.remove('is-cursor'));
+            if (cursorIndex === null || !currentDraftState || !currentDraftState.nominated) return;
+            const team = currentDraftState.teams[cursorIndex];
+            if (!team) return;
+            const plate = document.getElementById(`plate-${team.owner_id}`);
+            if (plate) plate.classList.add('is-cursor');
+        }
+
+        function flashBid(ownerId) {
+            const plate = document.getElementById(`plate-${ownerId}`);
+            if (!plate) return;
+            plate.classList.add('bid-flash');
+            setTimeout(() => plate.classList.remove('bid-flash'), 550);
+        }
+        function flashBlocked(ownerId) {
+            const plate = document.getElementById(`plate-${ownerId}`);
+            if (!plate) return;
+            plate.classList.add('blocked-flash');
+            setTimeout(() => plate.classList.remove('blocked-flash'), 380);
+        }
+
+        // Pull a 0–9 digit from a key event (top row OR numpad, shifted or not).
+        function digitFromEvent(e) {
+            if (/^(Digit|Numpad)\d$/.test(e.code)) return parseInt(e.code.slice(-1), 10);
+            if (/^\d$/.test(e.key)) return parseInt(e.key, 10);
+            return null;
+        }
+        // Keys 1–9 map to teams 1–9; key 0 maps to the 10th team.
+        function indexForDigit(d, teamCount) {
+            const idx = (d === 0) ? 9 : d - 1;
+            return idx < teamCount ? idx : -1;
+        }
+
+        function moveCursor(dir) {
+            const ds = currentDraftState;
+            if (!ds || !ds.nominated) return;
+            const nextBid = ds.nominated.current_bid + 1;
+            const nomPos = nominatedPosition(ds);
+            const eligible = ds.teams.map((t, i) => canTeamBid(t, nextBid, nomPos) ? i : -1).filter(i => i >= 0);
+            if (!eligible.length) return;
+            let pos = eligible.indexOf(cursorIndex);
+            pos = (pos === -1) ? 0 : (pos + dir + eligible.length) % eligible.length;
+            cursorIndex = eligible[pos];
+            applyCursor();
+        }
+
+        // Number keys move the cursor to a team (no bid). Enter then bids +1.
+        function selectCursor(index) {
+            const ds = currentDraftState;
+            if (!ds || !ds.nominated || index < 0 || index >= ds.teams.length) return;
+            cursorIndex = index;
+            applyCursor();
+        }
+
+        // Open the selected team's box to type a manual (jump) bid — via ↑ or click.
+        // The box takes focus, so number-select is suspended until Enter/Esc returns to nav.
+        function focusBidBox(index) {
+            const ds = currentDraftState;
+            if (!ds || !ds.nominated) return;
+            const team = ds.teams[index];
+            if (!team) return;
+            cursorIndex = index;
+            applyCursor();
+            const inp = document.getElementById(`bid-input-${team.owner_id}`);
+            if (inp) { inp.focus(); inp.select(); }
+        }
+
+        // Place a +1 bid for the selected team (Enter on the cursor team).
+        function quickBidIndex(index) {
+            const ds = currentDraftState;
+            if (!ds || !ds.nominated) return;
+            const team = ds.teams[index];
+            if (!team) return;
+            const nextBid = ds.nominated.current_bid + 1;
+            const nomPos = nominatedPosition(ds);
+            if (!canTeamBid(team, nextBid, nomPos)) { flashBlocked(team.owner_id); return; }
+            cursorIndex = index;
+            applyCursor();
+            placeBidForOwner(team.owner_id, nextBid);
+        }
+
+        function handleConsoleKey(e) {
+            if (document.getElementById('drawer').classList.contains('open')) return;
+            const ae = document.activeElement;
+            const typing = ae && (ae.tagName === 'INPUT' || ae.tagName === 'SELECT' || ae.tagName === 'TEXTAREA' || ae.isContentEditable);
+            if (typing) {
+                // Escape leaves a bid box and returns to keyboard-nav mode.
+                if (e.key === 'Escape' && ae.closest && ae.closest('.bidctl')) { ae.blur(); e.preventDefault(); }
+                return;
+            }
+            // 'N' jumps to the nominate search in any state.
+            if (e.key === 'n' || e.key === 'N') { e.preventDefault(); document.getElementById('player-search').focus(); return; }
+
+            const ds = currentDraftState;
+            if (!ds || !ds.nominated) return;   // bidding keys only during a live auction
+
+            // 'D' drafts the nominee to the current high bidder.
+            if (e.key === 'd' || e.key === 'D') { e.preventDefault(); completeDraft(); return; }
+
+            const digit = digitFromEvent(e);
+            if (digit !== null) {
+                const idx = indexForDigit(digit, ds.teams.length);
+                if (idx < 0) return;
+                e.preventDefault();
+                selectCursor(idx);   // number selects the team; Enter then bids +1
+                return;
+            }
+            switch (e.key) {
+                case 'ArrowRight': e.preventDefault(); moveCursor(1); break;
+                case 'ArrowLeft':  e.preventDefault(); moveCursor(-1); break;
+                case 'ArrowUp':    e.preventDefault(); if (cursorIndex !== null) focusBidBox(cursorIndex); break;
+                case 'Enter':      e.preventDefault(); if (cursorIndex !== null) quickBidIndex(cursorIndex); break;
+                case 'Escape':     cursorIndex = null; applyCursor(); break;
+            }
+        }
+        document.addEventListener('keydown', handleConsoleKey);
 
         async function completeDraft() {
             try {
