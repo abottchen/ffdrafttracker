@@ -184,16 +184,22 @@
       document.addEventListener('keydown',function(e){if(e.key==='Escape')closeDrawer();});
     </script>
     <script>
+        // Server-injected (change F): config is authoritative; no hardcoded fallbacks.
+        let config = {{ config | tojson }};
         let currentVersion = {{ draft_state.version }};
-        let selectedPlayerId = null;
-        let selectedPlayerName = null;
         let players = [];
         let owners = [];
-        let availablePlayerIds = [];
-        let highlightedIndex = -1;
-        let lastDraftedPlayerId = null;
-        let currentDraftState = null;
         let playerStats = {};
+        let availablePlayerIds = [];
+        let currentDraftState = null;
+        let selectedPlayerId = null;
+        let selectedPlayerName = null;
+        let highlightedIndex = -1;
+        let nominationTimerInterval = null;
+        let nominationStartTime = null;
+        let adminSelectedPlayerId = null;
+        let adminSelectedPlayerName = null;
+        let adminHighlightedIndex = -1;
 
         // NFL Team Logo URLs - using ESPN's CDN
         function formatPlayerStats(playerId, position) {
@@ -352,58 +358,19 @@
             };
             return teamMappings[teamAbbr] || 'https://a.espncdn.com/i/teamlogos/nfl/500/nfl.png';
         }
-        let doneTeams = new Set();
-        let config = null;
-        let nominationTimerInterval = null;
-        let nominationStartTime = null;
-        let adminSelectedPlayerId = null;
-        let adminSelectedPlayerName = null;
-        let adminHighlightedIndex = -1;
-        
-        // Context menu variables
-        let contextMenuPickId = null;
-        let contextMenuPlayerId = null;
-        let contextMenuPlayerName = null;
-        let contextMenuOwnerId = null;
-        let contextMenuPrice = null;
-
-        // Load initial data
         async function loadData() {
             try {
-                // Load players
-                const playersResponse = await fetch('/api/v1/players');
-                players = await playersResponse.json();
-
-                // Load player stats
+                players = await (await fetch('/api/v1/players')).json();
                 try {
-                    const statsResponse = await fetch('/api/v1/player/stats');
-                    if (statsResponse.ok) {
-                        playerStats = await statsResponse.json();
-                        console.log('Loaded player stats for', Object.keys(playerStats).length, 'players');
-                    }
-                } catch (error) {
-                    console.warn('Failed to load player stats:', error.message);
-                    playerStats = {};
-                }
-                
-                // Load owners
-                const ownersResponse = await fetch('/api/v1/owners');
-                owners = await ownersResponse.json();
-                
-                // Load configuration
-                const configResponse = await fetch('/api/v1/config');
-                config = await configResponse.json();
-                
-                // Load draft state
+                    const statsResp = await fetch('/api/v1/player/stats');
+                    if (statsResp.ok) playerStats = await statsResp.json();
+                } catch (e) { playerStats = {}; }
+                owners = await (await fetch('/api/v1/owners')).json();
+                // config already injected; no fetch needed.
                 await refreshData();
-                
-                // Set up player search
                 setupPlayerSearch();
-                
-                // Set up admin draft functionality
                 setupAdminPlayerSearch();
                 populateAdminOwnerSelect();
-                
             } catch (error) {
                 showMessage('Error loading data: ' + error.message, 'error');
             }
@@ -411,33 +378,17 @@
 
         async function refreshData() {
             try {
-                const response = await fetch('/api/v1/draft-state');
-                const draftState = await response.json();
-                
+                const draftState = await (await fetch('/api/v1/draft-state')).json();
                 currentVersion = draftState.version;
                 currentDraftState = draftState;
-                
-                
-                // Update nomination panel
-                updateNominationPanel(draftState.nominated);
-                
-                // Update available players for search
                 availablePlayerIds = draftState.available_player_ids;
-                
-                // Update teams (use our custom next-to-nominate logic)
-                const effectiveNextToNominate = getNextToNominate(draftState.teams);
-                updateTeams(draftState.teams, effectiveNextToNominate, draftState.nominated);
-                
-                // Update drafted players
-                console.log('Updating drafted players, teams:', draftState.teams);
-                updateDraftedPlayers(draftState.teams, draftState);
-                
-                // Populate team select dropdown
-                populateTeamSelect(draftState.teams);
-                
-                // Update draft progress
-                updateDraftProgress(draftState.teams);
-                
+
+                updateNominationPanel(draftState);          // hero active/standby (Task 4/5)
+                updateTeams(draftState);                    // rail (Task 3)
+                updateDraftProgress(draftState.teams);      // top bar (Task 6)
+                updateOnDeck(draftState);                   // nominate-bar hint (Task 5)
+                updateTicker(draftState);                   // draft wire (Task 9)
+                populateDrawerSelects(draftState);          // drawer selects (Task 8)
             } catch (error) {
                 showMessage('Error refreshing data: ' + error.message, 'error');
             }
@@ -1268,14 +1219,11 @@
         }
 
         function showMessage(text, type) {
-            const messageDiv = document.getElementById('message');
-            messageDiv.textContent = text;
-            messageDiv.className = type;
-            messageDiv.style.display = 'block';
-            
-            setTimeout(() => {
-                messageDiv.style.display = 'none';
-            }, 5000);
+            const el = document.getElementById('message');
+            el.textContent = text;
+            el.className = 'toast show ' + (type || '');
+            clearTimeout(el._t);
+            el._t = setTimeout(() => { el.className = 'toast ' + (type || ''); }, 4000);
         }
 
         function populateTeamSelect(teams) {
@@ -1790,10 +1738,13 @@
             }
         });
 
-        // Load data when page loads
+        // FOUT guard: reveal once webfonts are ready (cqh/cqw layout depends on metrics).
+        const stage = document.getElementById('stage');
+        function revealStage() { stage.classList.add('ready'); }
+        if (document.fonts && document.fonts.ready) { document.fonts.ready.then(revealStage); }
+        setTimeout(revealStage, 1500);
+
         loadData();
-        
-        // Auto-refresh every 30 seconds
         setInterval(refreshData, 30000);
     </script>
   </body>
