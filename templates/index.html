@@ -163,26 +163,6 @@
         </div>
       </div>
     </aside>
-    <!-- Reveal stage + drawer scaffold (full JS wired in later tasks) -->
-    <script>
-      (function(){
-        var stage=document.getElementById('stage');
-        function reveal(){stage.classList.add('ready');}
-        if(document.fonts&&document.fonts.ready){document.fonts.ready.then(reveal);}
-        setTimeout(reveal,1500);
-      })();
-      function openDrawer(){
-        document.getElementById('scrim').classList.add('open');
-        var d=document.getElementById('drawer');
-        d.classList.add('open');d.setAttribute('aria-hidden','false');
-      }
-      function closeDrawer(){
-        document.getElementById('scrim').classList.remove('open');
-        var d=document.getElementById('drawer');
-        d.classList.remove('open');d.setAttribute('aria-hidden','true');
-      }
-      document.addEventListener('keydown',function(e){if(e.key==='Escape')closeDrawer();});
-    </script>
     <script>
         // Server-injected (change F): config is authoritative; no hardcoded fallbacks.
         let config = {{ config | tojson }};
@@ -200,6 +180,18 @@
         let adminSelectedPlayerId = null;
         let adminSelectedPlayerName = null;
         let adminHighlightedIndex = -1;
+
+        function openDrawer() {
+            document.getElementById('scrim').classList.add('open');
+            document.getElementById('drawer').classList.add('open');
+            document.getElementById('drawer').setAttribute('aria-hidden', 'false');
+        }
+        function closeDrawer() {
+            document.getElementById('scrim').classList.remove('open');
+            document.getElementById('drawer').classList.remove('open');
+            document.getElementById('drawer').setAttribute('aria-hidden', 'true');
+        }
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
 
         // NFL Team Logo URLs - using ESPN's CDN
         function formatPlayerStats(playerId, position) {
@@ -1040,30 +1032,37 @@
             }
         }
 
-        async function resetDraft() {
-            if (!confirm('Are you sure you want to reset the draft? This will clear all picks and nominations.')) {
-                return;
-            }
-            
+        (function setupResetHold() {
+            const btn = document.getElementById('reset-btn');
+            let timer = null, start = 0;
+            const HOLD = 1200;
+            const cancel = () => {
+                if (timer) { clearInterval(timer); timer = null; }
+                btn.classList.remove('holding'); btn.style.removeProperty('--hold');
+            };
+            const begin = () => {
+                start = Date.now();
+                btn.classList.add('holding');
+                timer = setInterval(() => {
+                    const pct = Math.min(100, (Date.now() - start) / HOLD * 100);
+                    btn.style.setProperty('--hold', pct + '%');
+                    if (pct >= 100) { cancel(); doReset(); }
+                }, 40);
+            };
+            btn.addEventListener('mousedown', begin);
+            btn.addEventListener('touchstart', e => { e.preventDefault(); begin(); });
+            ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(ev => btn.addEventListener(ev, cancel));
+        })();
+
+        async function doReset() {
             try {
-                const response = await fetch('/api/v1/reset', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        force: true
-                    })
+                const resp = await fetch('/api/v1/reset', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ force: true })
                 });
-                
-                if (response.ok) {
-                    showMessage('Draft reset successfully!', 'success');
-                    await refreshData();
-                } else {
-                    const error = await response.json();
-                    showMessage('Reset failed: ' + error.detail, 'error');
-                }
-            } catch (error) {
-                showMessage('Error resetting draft: ' + error.message, 'error');
-            }
+                if (resp.ok) { showMessage('Draft reset', 'success'); closeDrawer(); await refreshData(); }
+                else { const e = await resp.json(); showMessage('Reset failed: ' + e.detail, 'error'); }
+            } catch (err) { showMessage('Error resetting: ' + err.message, 'error'); }
         }
 
         function showMessage(text, type) {
@@ -1074,120 +1073,105 @@
             el._t = setTimeout(() => { el.className = 'toast ' + (type || ''); }, 4000);
         }
 
-        function populateTeamSelect(teams) {
-            const select = document.getElementById('team-select');
-            select.innerHTML = '<option value="">Select team to mark done...</option>';
-            
-            teams.forEach(team => {
-                const owner = owners.find(o => o.id === team.owner_id);
-                if (owner && !doneTeams.has(team.owner_id)) {
-                    const option = document.createElement('option');
-                    option.value = team.owner_id;
-                    option.textContent = owner.team_name;
-                    select.appendChild(option);
-                }
+        function populateDrawerSelects(draftState) {
+            const teams = draftState.teams;
+            // Mark-done: teams not already done
+            const doneSel = document.getElementById('done-select');
+            doneSel.innerHTML = '<option value="">Select team…</option>';
+            teams.forEach(t => {
+                const o = owners.find(ow => ow.id === t.owner_id);
+                if (o && !t.manually_done) doneSel.insertAdjacentHTML('beforeend', `<option value="${t.owner_id}">${o.team_name}</option>`);
             });
-            
-            // Also populate drafted players dropdown
-            populateDraftedPlayersSelect(teams);
-        }
-        
-        function populateDraftedPlayersSelect(teams) {
-            const select = document.getElementById('drafted-player-select');
-            select.innerHTML = '<option value="">Select drafted player to remove...</option>';
-            
-            // Collect all drafted players with their pick IDs
-            const draftedPlayers = [];
-            teams.forEach(team => {
-                const owner = owners.find(o => o.id === team.owner_id);
-                team.picks.forEach(pick => {
-                    const player = players.find(p => p.id === pick.player_id);
-                    if (player) {
-                        draftedPlayers.push({
-                            pickId: pick.pick_id,
-                            firstName: player.first_name,
-                            lastName: player.last_name,
-                            ownerName: owner ? owner.team_name : 'Unknown',
-                            price: pick.price
-                        });
-                    }
+            // Transfer target: all teams
+            const transferSel = document.getElementById('transfer-select');
+            transferSel.innerHTML = '<option value="">Transfer to…</option>';
+            teams.forEach(t => {
+                const o = owners.find(ow => ow.id === t.owner_id);
+                if (o) transferSel.insertAdjacentHTML('beforeend', `<option value="${t.owner_id}">${o.team_name}</option>`);
+            });
+            // Remove/Transfer source: every drafted pick, sorted by last name
+            const removeSel = document.getElementById('remove-select');
+            removeSel.innerHTML = '<option value="">Select drafted player…</option>';
+            const picks = [];
+            teams.forEach(t => {
+                const o = owners.find(ow => ow.id === t.owner_id);
+                t.picks.forEach(pk => {
+                    const p = players.find(pl => pl.id === pk.player_id);
+                    if (p) picks.push({ pickId: pk.pick_id, playerId: pk.player_id, price: pk.price,
+                        label: `${p.last_name}, ${p.first_name} · ${o ? o.team_name : '?'} ($${pk.price})` });
                 });
             });
-            
-            // Sort alphabetically by last name, then first name
-            draftedPlayers.sort((a, b) => {
-                const lastNameCompare = a.lastName.localeCompare(b.lastName);
-                if (lastNameCompare !== 0) return lastNameCompare;
-                return a.firstName.localeCompare(b.firstName);
-            });
-            
-            // Add options to dropdown
-            draftedPlayers.forEach(item => {
-                const option = document.createElement('option');
-                option.value = item.pickId;
-                option.textContent = `${item.lastName}, ${item.firstName} (${item.ownerName} - $${item.price})`;
-                select.appendChild(option);
-            });
+            picks.sort((a, b) => a.label.localeCompare(b.label));
+            picks.forEach(pk => removeSel.insertAdjacentHTML('beforeend',
+                `<option value="${pk.pickId}" data-player="${pk.playerId}" data-price="${pk.price}">${pk.label}</option>`));
         }
 
-        function markTeamDone() {
-            const select = document.getElementById('done-select');
-            const ownerId = parseInt(select.value);
-
-            if (ownerId) {
-                showMessage('Team marked as done', 'success');
-
-                // Refresh display
-                if (currentDraftState) {
-                    updateTeams(currentDraftState);
-                }
-            } else {
-                showMessage('Please select a team first', 'error');
-            }
+        async function markTeamDone() {
+            const ownerId = parseInt(document.getElementById('done-select').value);
+            if (!ownerId) { showMessage('Please select a team first', 'error'); return; }
+            await patchTeamDone(ownerId, true);
         }
-
-        function clearDoneTeams() {
+        async function clearDoneTeams() {
+            // Clear every currently-done team (server is the source of truth).
+            const done = currentDraftState.teams.filter(t => t.manually_done);
+            for (const t of done) { await patchTeamDone(t.owner_id, false); }
             showMessage('All done teams cleared', 'success');
-
-            // Refresh display
-            if (currentDraftState) {
-                updateTeams(currentDraftState);
-            }
         }
-        
-        async function removeDraftedPlayer() {
-            const select = document.getElementById('drafted-player-select');
-            const pickId = parseInt(select.value);
-            
-            if (!pickId) {
-                showMessage('Please select a player to remove', 'error');
-                return;
-            }
-            
-            if (!confirm('Are you sure you want to remove this drafted player?')) {
-                return;
-            }
-            
+        async function patchTeamDone(ownerId, value) {
             try {
-                const response = await fetch(`/api/v1/draft/${pickId}`, {
-                    method: 'DELETE',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'If-Match': `"${currentVersion}"`
-                    }
+                const resp = await fetch(`/api/v1/teams/${ownerId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ manually_done: value, expected_version: currentVersion })
                 });
-                
-                if (response.ok) {
-                    showMessage('Player removed successfully!', 'success');
+                if (resp.ok) {
+                    const r = await resp.json();
+                    currentVersion = r.new_version;
+                    if (value) showMessage('Team marked done', 'success');
                     await refreshData();
-                    select.value = '';
                 } else {
-                    const error = await response.json();
-                    showMessage('Remove failed: ' + error.detail, 'error');
+                    const e = await resp.json();
+                    showMessage('Update failed: ' + e.detail, 'error');
                 }
-            } catch (error) {
-                showMessage('Error removing player: ' + error.message, 'error');
-            }
+            } catch (err) { showMessage('Error: ' + err.message, 'error'); }
+        }
+
+        async function removeDraftedPlayer() {
+            const sel = document.getElementById('remove-select');
+            const pickId = parseInt(sel.value);
+            if (!pickId) { showMessage('Please select a player to remove', 'error'); return; }
+            try {
+                const resp = await fetch(`/api/v1/draft/${pickId}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json', 'If-Match': `"${currentVersion}"` }
+                });
+                if (resp.ok) { const r = await resp.json(); currentVersion = r.new_version; showMessage('Player removed', 'success'); await refreshData(); }
+                else { const e = await resp.json(); showMessage('Remove failed: ' + e.detail, 'error'); }
+            } catch (err) { showMessage('Error removing: ' + err.message, 'error'); }
+        }
+
+        // Transfer = delete from source, then admin-draft to target at the same price.
+        async function transferSelectedPick() {
+            const sel = document.getElementById('remove-select');
+            const opt = sel.options[sel.selectedIndex];
+            const pickId = parseInt(sel.value);
+            const targetOwnerId = parseInt(document.getElementById('transfer-select').value);
+            if (!pickId || !targetOwnerId) { showMessage('Select a player and a target team', 'error'); return; }
+            const playerId = parseInt(opt.dataset.player);
+            const price = parseInt(opt.dataset.price) || 1;
+            try {
+                const del = await fetch(`/api/v1/draft/${pickId}`, {
+                    method: 'DELETE', headers: { 'Content-Type': 'application/json', 'If-Match': `"${currentVersion}"` }
+                });
+                if (!del.ok) { const e = await del.json(); showMessage('Transfer (remove) failed: ' + e.detail, 'error'); return; }
+                currentVersion = (await del.json()).new_version;
+                const add = await fetch('/api/v1/admin/draft', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ owner_id: targetOwnerId, player_id: playerId, price: price, expected_version: currentVersion })
+                });
+                if (add.ok) { currentVersion = (await add.json()).new_version; showMessage('Player transferred', 'success'); await refreshData(); }
+                else { const e = await add.json(); showMessage('Transfer (add) failed: ' + e.detail, 'error'); await refreshData(); }
+            } catch (err) { showMessage('Error transferring: ' + err.message, 'error'); }
         }
 
         // Admin draft functionality
@@ -1283,7 +1267,7 @@
             const select = document.getElementById('admin-owner-select');
             select.innerHTML = '<option value="">Select owner...</option>';
             
-            Object.values(owners).forEach(owner => {
+            owners.forEach(owner => {
                 const option = document.createElement('option');
                 option.value = owner.id;
                 option.textContent = owner.team_name;
