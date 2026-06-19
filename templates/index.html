@@ -4,133 +4,185 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description"
-          content="Fantasy Football Auction Draft Tracker - Manage live fantasy football auctions with real-time bidding and player nominations">
+          content="Fantasy Football Auction Draft Tracker - live auction control console">
     <meta name="keywords"
-          content="fantasy football, auction draft, draft tracker, fantasy sports, football, bidding, nominations">
-    <title>Fantasy Football Draft Tracker</title>
-    <link rel="stylesheet" href="/static/css/common.css">
-    <link rel="stylesheet" href="/static/css/draft.css">
+          content="fantasy football, auction draft, draft tracker, fantasy sports, bidding, nominations">
+    <title>Draft Set — Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/draft-set-admin.css">
   </head>
   <body>
-    <div class="draft-progress-container">
-      <div class="draft-progress-bar-container">
-        <div class="draft-progress-bar" id="draft-progress-bar">
-          <span class="draft-progress-percentage" id="draft-percentage">0%</span>
+    <div id="stage">
+
+      <!-- TOP BAR -->
+      <div class="topbar">
+        <div class="wordmark"><span class="yr cond">DRAFT</span><span class="tag">'25</span></div>
+        <div class="progress-wrap">
+          <span class="progress-label">Draft Complete</span>
+          <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+          <span class="progress-pct tnum" id="progress-pct">0%</span>
         </div>
-        <div class="draft-progress-markers" id="draft-markers">
-          <!-- Round markers will be added dynamically -->
+        <div class="gear" onclick="openDrawer()" title="Admin controls">⚙</div>
+      </div>
+
+      <!-- NOMINATE BAR -->
+      <div class="nominate-bar">
+        <span class="lead">Nominate</span>
+        <div class="player-search-container search">
+          <input class="search" id="player-search" placeholder="Type a player name…" autocomplete="off">
+          <div id="player-dropdown" class="player-dropdown"></div>
+        </div>
+        <input class="bid tnum" id="nomination-bid" type="number" min="1" value="1">
+        <button class="btn-nominate" onclick="nominateSelected()">Nominate</button>
+        <span class="ondeck" id="ondeck"></span>
+      </div>
+
+      <!-- HERO (active nomination) -->
+      <div class="hero active">
+        <div class="hero-photo">
+          <span class="posbadge" id="hero-posbadge"></span>
+          <img id="hero-photo-img" src="" alt="" width="350" height="254">
+        </div>
+        <div class="hero-body">
+          <img class="hero-logo" id="hero-logo" src="" alt="" width="500" height="500">
+          <div class="hero-eyebrow">
+            <span class="auctioning">Now Auctioning</span>
+            <span class="live"><span class="dot"></span>LIVE</span>
+            <div class="timer tnum" id="hero-timer" title="Time on this nomination">0:00</div>
+          </div>
+          <div class="hero-name cond" id="hero-name"></div>
+          <div class="hero-meta cond" id="hero-meta"></div>
+        </div>
+        <div class="hero-right">
+          <span class="bid-label">Current Bid</span>
+          <span class="bid-amt tnum" id="bid-amt">$0</span>
+          <div class="bidder"><span class="chip" id="bidder-chip"></span><span class="nm cond" id="bidder-nm"></span></div>
+          <div class="hero-actions">
+            <button class="sold" onclick="completeDraft()">Draft</button>
+          </div>
+        </div>
+        <button class="hero-dismiss" onclick="cancelNomination()" title="Cancel nomination">✕</button>
+      </div>
+
+      <!-- HERO (standby — no active nomination) -->
+      <div class="hero standby">
+        <div class="hero-photo">
+          <svg class="sil" id="standby-sil" viewBox="0 0 120 120" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+            <circle cx="60" cy="42" r="23" fill="#8A9BB5" opacity="0.16"/>
+            <path d="M20 118 C20 84 38 72 60 72 C82 72 100 84 100 118 Z" fill="#8A9BB5" opacity="0.16"/>
+          </svg>
+        </div>
+        <div class="hero-body">
+          <div class="hero-eyebrow"><span class="standby-eyebrow">On the Clock</span></div>
+          <div class="standby-name cond" id="standby-name"></div>
+          <div class="hero-meta cond" id="standby-meta"></div>
+          <div class="standby-hint cond"><span class="arrow">↑</span> Nominate a player above to start the auction</div>
+        </div>
+        <div class="hero-right standby-right">
+          <span class="bid-label">Current Bid</span>
+          <span class="bid-amt muted tnum">—</span>
+          <div class="standby-cap">No active auction</div>
         </div>
       </div>
-    </div>
-    <div class="players-grid">
-      <div id="nomination-panel" class="nomination-panel">
-        <div id="nomination-details" class="nomination-details-flex"></div>
+
+      <!-- RAIL -->
+      <div class="rail-head">
+        <h2>Participants · Draft Order</h2>
+        <div class="rule"></div>
       </div>
-      <div class="status-panel">
-        <div class="nomination-inputs">
-          <div class="player-search-container">
-            <input type="text"
-                   id="player-search"
-                   class="player-search"
-                   placeholder="Type player name..."
-                   autocomplete="off">
-            <div id="player-dropdown" class="player-dropdown">
-              <!-- Populated by JavaScript -->
+      <div class="rail" id="rail"></div>
+
+      <!-- INTEL (blank reserved pane) -->
+      <div class="intel">
+        <span class="badge">Draft Intel</span>
+        <span class="note">reserved — AI draft commentary</span>
+      </div>
+
+      <!-- TICKER -->
+      <div class="ticker is-hidden" id="ticker">
+        <span class="tag">DRAFT WIRE</span>
+        <div class="crawl-wrap"><div class="crawl" id="ticker-crawl"></div></div>
+        <button class="hide" title="Hide ticker"
+                onclick="document.getElementById('ticker').classList.add('is-hidden');document.getElementById('showWire').style.display='block';">✕</button>
+      </div>
+      <button class="show-wire" id="showWire"
+              onclick="document.getElementById('ticker').classList.remove('is-hidden');this.style.display='none';">▴ Draft Wire</button>
+
+    </div><!-- /#stage -->
+
+    <!-- TOAST -->
+    <div id="message" class="toast"></div>
+
+    <!-- ADMIN DRAWER -->
+    <div class="scrim" id="scrim" onclick="closeDrawer()"></div>
+    <aside class="drawer" id="drawer" aria-hidden="true">
+      <div class="drawer-head">
+        <h2>Admin Controls</h2>
+        <button class="drawer-close" onclick="closeDrawer()" title="Close">✕</button>
+      </div>
+      <div class="drawer-body">
+        <div class="dsec">
+          <h3>Draft</h3>
+          <div class="drow">
+            <button class="dbtn ghost" onclick="refreshData()">↻ Refresh</button>
+            <button class="dbtn danger" id="reset-btn">Reset Draft</button>
+          </div>
+        </div>
+        <div class="dsec">
+          <h3>Teams</h3>
+          <div class="drow"><select class="dselect" id="done-select"></select><button class="dbtn" onclick="markTeamDone()">Mark Done</button></div>
+          <div class="drow"><button class="dbtn ghost" onclick="clearDoneTeams()">Clear All Done</button></div>
+        </div>
+        <div class="dsec">
+          <h3>Admin Draft</h3>
+          <div class="drow"><span class="dlabel">Player</span>
+            <div class="player-search-container drawer-search">
+              <input class="dinput" id="admin-player-search" placeholder="Search player…" autocomplete="off">
+              <div id="admin-player-dropdown" class="player-dropdown"></div>
             </div>
           </div>
-          <input type="number"
-                 id="nomination-bid"
-                 class="bid-input"
-                 placeholder="Initial bid"
-                 min="1"
-                 value="1">
-          <button class="button" onclick="nominateSelected()">Nominate</button>
-          <div id="message" class="message-hidden"></div>
-          <div id="nomination-timer"
-               class="nomination-timer nomination-timer-hidden">00:00</div>
+          <div class="drow"><span class="dlabel">Owner</span><select class="dselect" id="admin-owner-select"></select></div>
+          <div class="drow"><span class="dlabel">Price</span><input class="dinput price-narrow" id="admin-price-input" type="number" min="1" placeholder="$"><button class="dbtn" onclick="adminDraftPlayer()">Insert</button></div>
         </div>
-      </div>
-    </div>
-    <div class="teams-horizontal" id="teams-list">
-      <!-- Teams will be populated by JavaScript -->
-    </div>
-    <div class="drafted-players-panel">
-      <div class="drafted-players-grid" id="drafted-players-grid">
-        <!-- Team rosters will be populated by JavaScript -->
-      </div>
-    </div>
-    <div class="api-links">
-      <h3>Admin Controls</h3>
-      <button class="button" onclick="refreshData()">🔄 Refresh</button>
-      <button class="button" onclick="resetDraft()">🔄 Reset Draft</button>
-      <br>
-      <br>
-      <select id="team-select" class="team-select">
-        <option value="">Select team to mark done...</option>
-      </select>
-      <button class="button" onclick="markTeamDone()">Mark Team Done</button>
-      <button class="button" onclick="clearDoneTeams()">Clear All Done</button>
-      <br>
-      <br>
-      <button class="button admin-cancel-hidden"
-              onclick="cancelNomination()"
-              id="admin-cancel-nomination">Cancel Nomination</button>
-      <br>
-      <br>
-      <select id="drafted-player-select" class="team-select">
-        <option value="">Select drafted player to remove...</option>
-      </select>
-      <button class="button" onclick="removeDraftedPlayer()">Remove</button>
-      <br>
-      <br>
-      <h3>Admin Draft</h3>
-      <div class="admin-draft-section">
-        <div class="form-group">
-          <label for="admin-player-search">Player:</label>
-          <div class="player-search-container">
-            <input type="text"
-                   id="admin-player-search"
-                   class="player-search"
-                   placeholder="Search for player..."
-                   autocomplete="off">
-            <div id="admin-player-dropdown" class="player-dropdown"></div>
+        <div class="dsec">
+          <h3>Remove / Transfer Pick</h3>
+          <div class="drow"><select class="dselect" id="remove-select"></select></div>
+          <div class="drow"><button class="dbtn danger" onclick="removeDraftedPlayer()">Remove</button><select class="dselect" id="transfer-select"></select><button class="dbtn" onclick="transferSelectedPick()">Transfer</button></div>
+        </div>
+        <div class="dsec">
+          <h3>API &amp; Docs</h3>
+          <div class="dlinks">
+            <a href="/docs" target="_blank">📚 Swagger API Docs</a>
+            <a href="/redoc" target="_blank">📖 ReDoc</a>
+            <a href="/api/v1/draft-state" target="_blank">🔗 Draft State JSON</a>
+            <a href="/api/v1/players" target="_blank">🔗 Players JSON</a>
+            <a href="/api/v1/owners" target="_blank">🔗 Owners JSON</a>
           </div>
         </div>
-        <div class="form-group">
-          <label for="admin-owner-select">Owner:</label>
-          <select id="admin-owner-select" class="team-select">
-            <option value="">Select owner...</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="admin-price-input">Price:</label>
-          <input type="number"
-                 id="admin-price-input"
-                 class="price-input"
-                 placeholder="Enter price..."
-                 min="1">
-        </div>
-        <button class="button" onclick="adminDraftPlayer()">Insert Player</button>
       </div>
-      <br>
-      <br>
-      <h3>API Documentation</h3>
-      <a href="/docs" target="_blank">📚 Interactive API Docs (Swagger)</a>
-      <a href="/redoc" target="_blank">📖 ReDoc Documentation</a>
-      <a href="/api/v1/draft-state" target="_blank">🔗 Draft State JSON</a>
-      <a href="/api/v1/players" target="_blank">🔗 Players JSON</a>
-      <a href="/api/v1/owners" target="_blank">🔗 Owners JSON</a>
-    </div>
-    <!-- Context Menu -->
-    <div id="context-menu" class="context-menu">
-      <div class="context-menu-item" id="context-delete">Delete</div>
-      <div class="context-menu-item has-submenu" id="context-move">
-        Move to Team
-        <div id="context-submenu" class="context-submenu">
-          <!-- Team options will be populated dynamically -->
-        </div>
-      </div>
-    </div>
+    </aside>
+    <!-- Reveal stage + drawer scaffold (full JS wired in later tasks) -->
+    <script>
+      (function(){
+        var stage=document.getElementById('stage');
+        function reveal(){stage.classList.add('ready');}
+        if(document.fonts&&document.fonts.ready){document.fonts.ready.then(reveal);}
+        setTimeout(reveal,1500);
+      })();
+      function openDrawer(){
+        document.getElementById('scrim').classList.add('open');
+        var d=document.getElementById('drawer');
+        d.classList.add('open');d.setAttribute('aria-hidden','false');
+      }
+      function closeDrawer(){
+        document.getElementById('scrim').classList.remove('open');
+        var d=document.getElementById('drawer');
+        d.classList.remove('open');d.setAttribute('aria-hidden','true');
+      }
+      document.addEventListener('keydown',function(e){if(e.key==='Escape')closeDrawer();});
+    </script>
     <script>
         let currentVersion = {{ draft_state.version }};
         let selectedPlayerId = null;
