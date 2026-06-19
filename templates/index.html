@@ -321,7 +321,7 @@
                         : `${player.last_name}, ${player.first_name}`;
                     document.getElementById('hero-posbadge').textContent = player.position;
                     const photo = document.getElementById('hero-photo-img');
-                    photo.src = img; photo.alt = player.last_name; photo.onerror = function(){ this.style.display='none'; };
+                    photo.style.display = ''; photo.src = img; photo.alt = player.last_name; photo.onerror = function(){ this.style.display='none'; };
                     document.getElementById('hero-logo').src = logo;
                     document.getElementById('hero-name').textContent = name;
                     document.getElementById('hero-meta').innerHTML =
@@ -861,7 +861,7 @@
             // Clear every currently-done team (server is the source of truth).
             const done = currentDraftState.teams.filter(t => t.manually_done);
             let ok = true;
-            for (const t of done) { ok = ok && await patchTeamDone(t.owner_id, false); }
+            for (const t of done) { ok = (await patchTeamDone(t.owner_id, false)) && ok; }
             if (ok) showMessage('All done teams cleared', 'success');
         }
         async function patchTeamDone(ownerId, value) {
