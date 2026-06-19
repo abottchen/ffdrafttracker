@@ -65,10 +65,24 @@
     <div id="vError" class="tb-empty verror-toast"></div>
     <script>
         const API_BASE = '/api/v1';
-        let currentTeamId = {{ selected_team_id }};
-        let owners = [];
-        let config = null;
-        let playerStats = {};
+        // Server-injected (change F): config is authoritative; no hardcoded fallback.
+        const config = {{ config | tojson }};
+        const TOTAL = config.total_rounds;
+        const INITIAL = config.initial_budget;
+        const POSMAX = config.position_maximums;            // {QB,RB,WR,TE,K,"D/ST"}
+        const RADAR_ORDER = ['QB','RB','WR','TE','K','D/ST'];
+        const POSORDER = {QB:0,RB:1,WR:2,TE:3,K:4,'D/ST':5};
+        const POSCOLOR = {QB:'#A877DE',RB:'#46B86C',WR:'#5790CF',TE:'#E08A45',K:'#E6B23E','D/ST':'#D6564A'};
+        const LIGHTPOS = {QB:1,WR:1,'D/ST':1};
+        const STATMAX = {YDS:5000,TD:30,INT:20,RUSH:2100,REC:130,FG:40,XP:60,PTS:170,SACK:60};
+
+        let owners = [], ownersById = {}, playersById = {}, playerStats = {};
+        let TEAMS = [];                 // normalized model (mockup shape)
+        let lastDraftState = null;
+        let selected = 0;               // index into TEAMS
+        let curRoster = [], prevFrac = [0,0,0,0,0,0];
+        let lastSeenMaxPickId = 0;      // for recent-picks animation
+        const INITIAL_TEAM_ID = {{ selected_team_id }};
 
         // NFL Team Logo URLs - using ESPN's CDN
         function getTeamLogoUrl(teamAbbr) {
@@ -110,68 +124,59 @@
             return teamMappings[teamAbbr] || `https://a.espncdn.com/i/teamlogos/nfl/500/${teamAbbr.toLowerCase()}.png`;
         }
 
-        async function loadOwners() {
-            try {
-                const response = await fetch(`${API_BASE}/owners`);
-                if (!response.ok) throw new Error('Failed to load owners');
-                
-                owners = await response.json();
-                
-                const select = document.getElementById('team-select');
-                select.innerHTML = '';
-                
-                owners.forEach(owner => {
-                    const option = document.createElement('option');
-                    option.value = owner.id;
-                    option.textContent = owner.team_name;
-                    if (owner.id === currentTeamId) {
-                        option.selected = true;
-                    }
-                    select.appendChild(option);
-                });
-                
-                // Load initial team data
-                await loadTeamData(currentTeamId);
-                
-            } catch (error) {
-                showError('Failed to load teams: ' + error.message);
-            }
+        const headshot = id => `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${id}.png&w=350&h=254`;
+        const logoUrl = abbr => getTeamLogoUrl(abbr);
+        function hexA(hex, a){ const n = parseInt(hex.slice(1),16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; }
+        function median(a){ const s=[...a].sort((x,y)=>x-y), m=s.length>>1; return s.length? (s.length%2? s[m] : (s[m-1]+s[m])/2) : 0; }
+        function ab2(n){ return (n||'').slice(0,2).toUpperCase(); }
+        const budgetClass = b => { const p = b/INITIAL*100; return p<=15?'crit':p<=35?'warn':'ok'; };
+        // D/ST headshot falls back to the team logo (no player headshot for defenses).
+        const shotImg = (p, cls) => p.pos === 'D/ST'
+            ? `<img class="${cls} logo" src="${logoUrl(p.nfl)}" alt="">`
+            : `<img class="${cls}" src="${headshot(p.id)}" alt="">`;
+        function defenseBye(teamAbbr){
+            for (const id in playerStats){ const s = playerStats[id]; if (s && s.team === teamAbbr && s.bye_week) return s.bye_week; }
+            return null;
         }
 
-        async function loadConfig() {
+        async function loadStatic() {
+            owners = await (await fetch(`${API_BASE}/owners`)).json();
+            ownersById = Object.fromEntries(owners.map(o => [o.id, o]));
+            const players = await (await fetch(`${API_BASE}/players`)).json();
+            playersById = Object.fromEntries(players.map(p => [p.id, p]));
             try {
-                const response = await fetch(`${API_BASE}/config`);
-                if (!response.ok) throw new Error('Failed to load config');
-                
-                config = await response.json();
-            } catch (error) {
-                console.warn('Failed to load config:', error.message);
-                // Use default config
-                config = {
-                    position_maximums: {
-                        "QB": 2, "RB": 4, "WR": 5, "TE": 2, "K": 1, "D/ST": 1
-                    },
-                    total_rounds: 15,
-                    initial_budget: 200
+                const r = await fetch(`${API_BASE}/player/stats`);
+                if (r.ok) playerStats = await r.json();
+            } catch (e) { playerStats = {}; }
+        }
+
+        // Normalize the live draft state into the array shape the mockup renderers expect.
+        // Each entry: {ord, owner_id, team, owner, budget, picks (count), color, status, max_bid, _picks}
+        function buildModel(ds) {
+            const sorted = [...ds.teams].sort((a, b) => a.owner_id - b.owner_id);
+            TEAMS = sorted.map((t, i) => {
+                const o = ownersById[t.owner_id] || {};
+                let status = '';
+                if (t.manually_done || t.picks.length >= TOTAL) status = 'done';
+                else if (t.owner_id === ds.next_to_nominate) status = 'clock';
+                return {
+                    ord: i + 1, owner_id: t.owner_id,
+                    team: o.team_name || 'Unknown', owner: o.owner_name || '',
+                    budget: t.budget_remaining, picks: t.picks.length,
+                    color: o.color || '#E0A24A',
+                    max_bid: t.max_bid, status, _picks: t.picks
                 };
-            }
+            });
         }
-
-        async function loadPlayerStats() {
-            try {
-                const response = await fetch(`${API_BASE}/player/stats`);
-                if (!response.ok) {
-                    console.warn('Failed to load player stats');
-                    return;
-                }
-                
-                playerStats = await response.json();
-                console.log('Loaded player stats for', Object.keys(playerStats).length, 'players');
-            } catch (error) {
-                console.warn('Failed to load player stats:', error.message);
-                playerStats = {};
-            }
+        // Indices for "On the Clock" / "Up Next", driven by the server (not re-derived).
+        function clockInfo() {
+            const clockIdx = lastDraftState ? TEAMS.findIndex(t => t.owner_id === lastDraftState.next_to_nominate) : -1;
+            const nextIdx = (lastDraftState && lastDraftState.up_next)
+                ? TEAMS.findIndex(t => t.owner_id === lastDraftState.up_next) : -1;
+            return { clockIdx, nextIdx };
         }
+        const isDone = t => t.status === 'done';
+        const maxBid = t => t.max_bid;   // server-authoritative (— when null)
 
         function getStatTooltip(label) {
             const tooltips = {
@@ -732,55 +737,55 @@
             }).join('');
         }
 
-        function showLoading() {
-            document.getElementById('loading').style.display = 'block';
-            document.getElementById('main-content').style.display = 'none';
-        }
+        function showError(msg){ const e = document.getElementById('vError'); e.textContent = msg; e.style.display = 'block'; }
+        function hideError(){ document.getElementById('vError').style.display = 'none'; }
 
-        function hideLoading() {
-            document.getElementById('loading').style.display = 'none';
-        }
-
-        function showError(message) {
-            const errorDiv = document.getElementById('error');
-            errorDiv.textContent = message;
-            errorDiv.style.display = 'block';
-            document.getElementById('main-content').style.display = 'none';
-        }
-
-        function hideError() {
-            document.getElementById('error').style.display = 'none';
-        }
-
-        // Event listeners
-        document.getElementById('team-select').addEventListener('change', function(e) {
-            const teamId = parseInt(e.target.value);
-            if (teamId && teamId !== currentTeamId) {
-                currentTeamId = teamId;
-                loadTeamData(teamId);
-                
-                // Update URL
-                const url = new URL(window.location);
-                url.searchParams.set('team_id', teamId);
-                window.history.pushState({}, '', url);
-            }
-        });
-
-        // Initialize
-        async function init() {
-            await loadConfig();
-            await loadPlayerStats();
-            await loadOwners();
-            
-            // Auto-refresh every 5 seconds
-            setInterval(() => {
-                if (currentTeamId) {
-                    loadTeamData(currentTeamId);
+        async function pollState() {
+            try {
+                const ds = await (await fetch(`${API_BASE}/draft-state`)).json();
+                hideError();
+                lastDraftState = ds;
+                buildModel(ds);
+                // Keep the selected team stable across polls (match by owner_id).
+                if (TEAMS.length) {
+                    if (selected >= TEAMS.length) selected = 0;
                 }
-            }, 5000);
+                renderChrome();                         // strip + clocknote + completion (Task 3)
+                if (document.getElementById('view-teams').classList.contains('active')) renderTeamsView();
+                else renderStatusView();
+            } catch (e) {
+                showError('Connection lost — retrying…');
+            }
         }
 
-        // Start the application
+        async function init() {
+            await loadStatic();
+            // first poll establishes TEAMS, then map the injected team id to an index
+            const ds = await (await fetch(`${API_BASE}/draft-state`)).json();
+            lastDraftState = ds; buildModel(ds);
+            const idx = TEAMS.findIndex(t => t.owner_id === INITIAL_TEAM_ID);
+            selected = idx >= 0 ? idx : 0;
+            lastSeenMaxPickId = maxPickId(ds);
+            renderChrome(); renderTeamsView();
+            setupTargetBoard();                          // Task 7
+            setInterval(pollState, 5000);
+        }
+        function maxPickId(ds){ let m = 0; ds.teams.forEach(t => t.picks.forEach(p => { if (p.pick_id > m) m = p.pick_id; })); return m; }
+
+        // FOUT guard
+        const app = document.getElementById('app');
+        function reveal(){ app.classList.add('ready'); }
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(reveal);
+        setTimeout(reveal, 1500);
+
+        // stubs filled by Tasks 3–10
+        // DONE_WITH_CONCERNS: these four stubs must be displaced by their respective tasks.
+        // Task 3 → renderChrome, Task 5 → renderTeamsView, Task 6 → renderStatusView, Task 7 → setupTargetBoard
+        function renderChrome(){}
+        function renderTeamsView(){}
+        function renderStatusView(){}
+        function setupTargetBoard(){}
+
         init();
     </script>
   </body>
