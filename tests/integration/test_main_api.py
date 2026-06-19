@@ -681,6 +681,112 @@ class TestMainApiIntegration:
         assert resp.status_code == 422
         assert "position" in resp.json()["detail"].lower()
 
+    def test_admin_draft_overrides_position_max(self):
+        """admin/draft is an unbounded override and ignores position maximums."""
+        import json
+
+        config_data = {
+            "initial_budget": 200,
+            "min_bid": 1,
+            "position_maximums": {"QB": 1, "RB": 4, "WR": 6, "TE": 2, "K": 1},
+            "total_rounds": 19,
+        }
+        self.config_file.write_text(json.dumps(config_data))
+        players = json.loads(self.players_file.read_text())
+        players.append(
+            {
+                "id": 5,
+                "first_name": "Lamar",
+                "last_name": "Jackson",
+                "team": "BAL",
+                "position": "QB",
+            }
+        )
+        self.players_file.write_text(json.dumps(players))
+        ds = json.loads(self.draft_state_file.read_text())
+        ds["available_player_ids"].append(5)
+        self.draft_state_file.write_text(json.dumps(ds))
+
+        # Owner 1 admin-drafts QB player 1 -> at the QB cap of 1.
+        state = self.client.get("/api/v1/draft-state").json()
+        first = self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 1,
+                "player_id": 1,
+                "price": 5,
+                "expected_version": state["version"],
+            },
+        )
+        assert first.status_code == 200
+
+        # Admin-draft a SECOND QB onto the same team -> still succeeds (unbounded).
+        state = self.client.get("/api/v1/draft-state").json()
+        second = self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 1,
+                "player_id": 5,
+                "price": 5,
+                "expected_version": state["version"],
+            },
+        )
+        assert second.status_code == 200
+
+        # Owner 1 now holds 2 QBs, exceeding the configured maximum of 1.
+        state = self.client.get("/api/v1/draft-state").json()
+        team1 = next(t for t in state["teams"] if t["owner_id"] == 1)
+        assert sum(1 for p in team1["picks"] if p["player_id"] in (1, 5)) == 2
+
+    def test_bid_rejected_when_roster_full(self):
+        """A full-roster team's bid is rejected with a clean message (no negatives)."""
+        import json
+
+        config_data = {
+            "initial_budget": 200,
+            "min_bid": 1,
+            "position_maximums": {"QB": 2, "RB": 4, "WR": 6, "TE": 2, "K": 1},
+            "total_rounds": 1,
+        }
+        self.config_file.write_text(json.dumps(config_data))
+
+        # Owner 1 admin-drafts a player -> roster full (1/1).
+        state = self.client.get("/api/v1/draft-state").json()
+        self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 1,
+                "player_id": 1,
+                "price": 5,
+                "expected_version": state["version"],
+            },
+        )
+        # Owner 2 nominates a different player.
+        state = self.client.get("/api/v1/draft-state").json()
+        self.client.post(
+            "/api/v1/nominate",
+            json={
+                "owner_id": 2,
+                "player_id": 2,
+                "initial_bid": 1,
+                "expected_version": state["version"],
+            },
+        )
+        # Owner 1 (full roster) tries to bid -> 422 with a sensible message.
+        state = self.client.get("/api/v1/draft-state").json()
+        resp = self.client.post(
+            "/api/v1/bid",
+            json={
+                "owner_id": 1,
+                "bid_amount": 2,
+                "expected_version": state["version"],
+            },
+        )
+        assert resp.status_code == 422
+        detail = resp.json()["detail"]
+        assert "full" in detail.lower()
+        assert "-1" not in detail
+
     def test_draft_advances_to_next_owner(self):
         """After a draft, next_to_nominate moves to the next eligible owner."""
         self.client.post(

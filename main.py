@@ -631,7 +631,12 @@ async def place_bid(request: BidRequest):
 
     # Reject if the bid would break roster completion (reserve $1 per open slot).
     mb = max_bid(team, config)
-    if mb is None or request.bid_amount > mb:
+    if mb is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Roster is full; this team cannot bid.",
+        )
+    if request.bid_amount > mb:
         spots = remaining_roster_spots(team, config)
         remaining_budget_after_bid = team.budget_remaining - request.bid_amount
         raise HTTPException(
