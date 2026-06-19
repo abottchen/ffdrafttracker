@@ -20,15 +20,11 @@ def max_bid(team: Team, config: Configuration) -> int | None:
     return team.budget_remaining - (spots - 1)  # reserve $1 per other open slot
 
 
-def position_count(
-    team: Team, position: str, player_positions: dict[int, str]
-) -> int:
+def position_count(team: Team, position: str, player_positions: dict[int, str]) -> int:
     """Count a team's picks at `position`, resolving player_id -> position
     via the supplied lookup (e.g. {p.id: p.position for p in players})."""
     return sum(
-        1
-        for pick in team.picks
-        if player_positions.get(pick.player_id) == position
+        1 for pick in team.picks if player_positions.get(pick.player_id) == position
     )
 
 

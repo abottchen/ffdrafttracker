@@ -65,15 +65,14 @@ class TestOwner:
 
     def test_valid_hex_color_accepted(self):
         """A 6-digit hex color is accepted."""
-        owner = Owner(id=1, owner_name="Rick", team_name="Portal Gunners",
-                      color="#21D4FD")
+        owner = Owner(
+            id=1, owner_name="Rick", team_name="Portal Gunners", color="#21D4FD"
+        )
         assert owner.color == "#21D4FD"
 
     def test_invalid_color_raises_validation_error(self):
         """Non-hex / wrong-length color strings are rejected."""
         with pytest.raises(ValidationError):
-            Owner(id=1, owner_name="Rick", team_name="Portal Gunners",
-                  color="blue")
+            Owner(id=1, owner_name="Rick", team_name="Portal Gunners", color="blue")
         with pytest.raises(ValidationError):
-            Owner(id=1, owner_name="Rick", team_name="Portal Gunners",
-                  color="#FFF")
+            Owner(id=1, owner_name="Rick", team_name="Portal Gunners", color="#FFF")
