@@ -47,9 +47,10 @@ A live auction draft tracking tool for fantasy football leagues. Features a web-
 
 2. **Install dependencies**
    ```bash
+   # Recommended (uses the committed uv.lock):
+   uv sync --extra dev
+   # OR with pip:
    pip install -e .
-   # OR manually:
-   pip install fastapi uvicorn pydantic
    ```
 
 3. **Set up your draft data**
@@ -61,15 +62,15 @@ A live auction draft tracking tool for fantasy football leagues. Features a web-
 4. **Generate player statistics (optional)**
    ```bash
    # Fetch 2024 season stats and 2025 bye weeks from ESPN
-   python utils/fetch_player_stats.py
-   
+   uv run python utils/fetch_player_stats.py
+
    # For testing with limited players:
-   python utils/fetch_player_stats.py --limit 50
+   uv run python utils/fetch_player_stats.py --limit 50
    ```
 
 5. **Start the application**
    ```bash
-   python main.py
+   uv run python main.py
    ```
 
 6. **Access the interfaces**
@@ -136,23 +137,23 @@ Players and defenses with ESPN IDs for automatic image loading:
 ### Running Tests
 ```bash
 # All tests
-python -m pytest tests/ -v
+uv run python -m pytest tests/ -v
 
 # Unit tests only
-python -m pytest tests/unit/ -v
+uv run python -m pytest tests/unit/ -v
 
 # Integration tests only
-python -m pytest tests/integration/ -v
+uv run python -m pytest tests/integration/ -v
 
 # With coverage
-python -m pytest tests/ --cov=src --cov-report=term-missing
+uv run python -m pytest tests/ --cov=src --cov-report=term-missing
 ```
 
 ### Code Quality
 ```bash
 # Linting and formatting
-ruff check src/ tests/
-ruff format src/ tests/
+uv run ruff check src/ tests/
+uv run ruff format src/ tests/
 ```
 
 ### API Documentation
@@ -186,7 +187,7 @@ For detailed architecture information, see [DESIGN.md](DESIGN.md).
 1. Customize `data/owners.json` with your league members
 2. Import player data to `data/players.json` (or use sample data)
 3. Adjust league settings in `data/config.json`
-4. Start the application: `python main.py`
+4. Start the application: `uv run python main.py`
 5. Share the team viewer URL with participants: `http://[your-ip]:8176`
 
 ### During the Draft
@@ -232,5 +233,5 @@ netsh advfirewall firewall add rule name="FFDraftTracker-Admin" dir=in action=al
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes with tests
-4. Run the test suite: `python -m pytest tests/ -v`
+4. Run the test suite: `uv run python -m pytest tests/ -v`
 5. Submit a pull request
