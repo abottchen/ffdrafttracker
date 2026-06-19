@@ -478,6 +478,35 @@
             document.getElementById('ondeck').innerHTML = html;
         }
 
+        function updateTicker(draftState) {
+            const ticker = document.getElementById('ticker');
+            const crawl = document.getElementById('ticker-crawl');
+            // Flatten picks, newest first (pick_id is reliably chronological).
+            const picks = [];
+            draftState.teams.forEach(t => {
+                const o = owners.find(ow => ow.id === t.owner_id);
+                t.picks.forEach(pk => {
+                    const p = players.find(pl => pl.id === pk.player_id);
+                    if (p) picks.push({ id: pk.pick_id,
+                        html: `<b>${p.first_name} ${p.last_name}</b> (${p.position}) → ${o ? o.team_name : '?'} <span class="amt">$${pk.price}</span>` });
+                });
+            });
+            picks.sort((a, b) => b.id - a.id);
+            const recent = picks.slice(0, 12);
+            if (recent.length === 0) {
+                crawl.innerHTML = '';
+                ticker.classList.add('is-hidden');
+                document.getElementById('showWire').style.display = 'none';
+                return;
+            }
+            crawl.innerHTML = recent.map(r => r.html).join('<span class="sep">●</span>');
+            // Respect a prior manual hide: only auto-reveal if neither ticker nor pill is showing.
+            const pill = document.getElementById('showWire');
+            if (ticker.classList.contains('is-hidden') && pill.style.display !== 'block') {
+                ticker.classList.remove('is-hidden');
+            }
+        }
+
         function setupPlayerSearch() {
             const searchInput = document.getElementById('player-search');
             const dropdown = document.getElementById('player-dropdown');
