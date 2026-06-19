@@ -3,12 +3,15 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Fantasy Football Draft Set — viewer showcase of rosters and draft status">
-    <meta name="keywords" content="fantasy football, draft set, viewer, auction draft, rosters">
+    <meta name="description"
+          content="Fantasy Football Draft Set — viewer showcase of rosters and draft status">
+    <meta name="keywords"
+          content="fantasy football, draft set, viewer, auction draft, rosters">
     <title>Fantasy Football Team Viewer</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap"
+          rel="stylesheet">
     <link rel="stylesheet" href="/static/css/draft-set-viewer.css">
   </head>
   <body>
@@ -21,48 +24,79 @@
         </div>
         <div class="spacer"></div>
         <div class="clocknote" id="clocknote"></div>
-        <div class="completion"><span class="lbl">Complete</span><div class="track"><div class="fill" id="completion-fill"></div></div><span class="pct tnum" id="completion-pct">0%</span></div>
+        <div class="completion">
+          <span class="lbl">Complete</span>
+          <div class="track">
+            <div class="fill" id="completion-fill"></div>
+          </div>
+          <span class="pct tnum" id="completion-pct">0%</span>
+        </div>
       </div>
-
       <div class="teamstrip" id="teamstrip">
         <button class="stripnav" onclick="navTeam(-1)" title="Previous team">‹</button>
         <div class="chips" id="chips"></div>
         <button class="stripnav" onclick="navTeam(1)" title="Next team">›</button>
       </div>
-
       <div class="view active" id="view-teams">
         <div class="identity" id="identity"></div>
-        <div class="panel" id="rosterpanel"><div class="roster-scroll"><div class="roster-grid" id="roster"></div></div></div>
+        <div class="panel" id="rosterpanel">
+          <div class="roster-scroll">
+            <div class="roster-grid" id="roster"></div>
+          </div>
+        </div>
         <div id="rail">
-          <div class="rcard target-card"><h3>My Target Board</h3>
-            <div class="tb-search-wrap"><input class="tb-search" id="tbSearch" placeholder="Search available players…" autocomplete="off"><div class="tb-results" id="tbResults"></div></div>
+          <div class="rcard target-card">
+            <h3>My Target Board</h3>
+            <div class="tb-search-wrap">
+              <input class="tb-search"
+                     id="tbSearch"
+                     placeholder="Search available players…"
+                     autocomplete="off">
+              <div class="tb-results" id="tbResults"></div>
+            </div>
             <div class="tb-targets" id="tbTargets"></div>
             <div class="tb-note">Private to this browser — saved locally, never shared, and it does not draft or bid for you.</div>
           </div>
-          <div class="rcard breakdown"><h3>Roster Completion</h3>
-            <div class="radar-wrap" id="radarwrap"></div></div>
+          <div class="rcard breakdown">
+            <h3>Roster Completion</h3>
+            <div class="radar-wrap" id="radarwrap"></div>
+          </div>
         </div>
       </div>
-
       <div class="view" id="view-status">
         <div class="status-body">
           <div class="sg">
-            <div class="rcard la-card"><h3>Live Auction</h3>
-              <div id="liveAuction"></div></div>
-            <div class="rcard cost-card"><div class="cost-head"><h3>Positional Cost · Draft Timeline</h3>
-              <div class="cost-legend" id="costLegend"></div></div><div class="cost-wrap" id="costChart"></div></div>
-            <div class="rcard dom-card"><h3>Position Dominance</h3>
-              <div class="dom-list" id="dominance"></div></div>
-            <div class="rcard bp-card"><h3>Budget Power · Remaining</h3>
-              <div id="budgetPower"></div></div>
-            <div class="rcard rp-card"><h3>Recent Picks</h3>
-              <div class="rp-list" id="recentPicks"></div></div>
+            <div class="rcard la-card">
+              <h3>Live Auction</h3>
+              <div id="liveAuction"></div>
+            </div>
+            <div class="rcard cost-card">
+              <div class="cost-head">
+                <h3>Positional Cost · Draft Timeline</h3>
+                <div class="cost-legend" id="costLegend"></div>
+              </div>
+              <div class="cost-wrap" id="costChart"></div>
+            </div>
+            <div class="rcard dom-card">
+              <h3>Position Dominance</h3>
+              <div class="dom-list" id="dominance"></div>
+            </div>
+            <div class="rcard bp-card">
+              <h3>Budget Power · Remaining</h3>
+              <div id="budgetPower"></div>
+            </div>
+            <div class="rcard rp-card">
+              <h3>Recent Picks</h3>
+              <div class="rp-list" id="recentPicks"></div>
+            </div>
           </div>
         </div>
       </div>
     </div>
     <div id="ptip"></div>
     <div id="vError" class="tb-empty verror-toast"></div>
+    {# Hand-tuned single-line JS below; djlint's reformat collapses a // comment over later code. #}
+    {# djlint:off #}
     <script>
         const API_BASE = '/api/v1';
         // Server-injected (change F): config is authoritative; no hardcoded fallback.
@@ -597,6 +631,7 @@
         }
 
         init();
-    </script>
+</script>
+    {# djlint:on #}
   </body>
 </html>
