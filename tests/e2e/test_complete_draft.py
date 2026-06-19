@@ -87,7 +87,7 @@ def test_complete_draft_workflow():
 
             # Simulate complete draft
             final_state = _simulate_complete_draft(
-                client, teams, total_rounds, available_players
+                client, teams, total_rounds, available_players, config
             )
 
             # Validate final state
@@ -169,12 +169,21 @@ def _simulate_complete_draft(
     teams: list[dict],
     total_rounds: int,
     available_players: list[int],
+    config: dict,
 ) -> dict:
     """Simulate a complete draft process."""
 
     current_version = 1
     round_count = 0
     max_rounds = len(teams) * total_rounds  # Safety limit
+    position_maximums = config.get("position_maximums", {})
+
+    # Map every player id -> position once for cap-aware selection/bidding.
+    players_response = client.get("/api/v1/players")
+    assert players_response.status_code == 200
+    player_id_to_position = {
+        player["id"]: player["position"] for player in players_response.json()
+    }
 
     while round_count < max_rounds:
         # Get current state
@@ -206,15 +215,33 @@ def _simulate_complete_draft(
                 print("No more players available!")
                 break
 
-            # Use strategic player selection to ensure position coverage
-            player_id = _select_strategic_player(
-                client, available, current_state, round_count
-            )
-
             # Calculate max bid for nominating owner to ensure they can complete roster
             nominating_team = next(
                 (t for t in current_state["teams"] if t["owner_id"] == next_owner_id),
                 None,
+            )
+
+            # Restrict the pool to positions the nominating team is not maxed at,
+            # so nominations never violate the server's position-maximum rule.
+            nominatable = available
+            if nominating_team is not None:
+                nominatable = [
+                    pid
+                    for pid in available
+                    if _team_can_take_position(
+                        nominating_team,
+                        player_id_to_position.get(pid),
+                        position_maximums,
+                        player_id_to_position,
+                    )
+                ]
+            if not nominatable:
+                print("Nominating team is maxed at every available position!")
+                break
+
+            # Use strategic player selection to ensure position coverage
+            player_id = _select_strategic_player(
+                client, nominatable, current_state, round_count
             )
             if nominating_team:
                 remaining_slots = total_rounds - len(nominating_team["picks"])
@@ -276,11 +303,16 @@ def _simulate_complete_draft(
 
             nominated = current_state["nominated"]
 
-            # Pick a random owner to bid (only those who can still draft and afford it)
+            # Pick a random owner to bid (only those who can still draft, are not
+            # maxed at the nominated player's position, and can afford it).
+            nominated_position = player_id_to_position.get(nominated["player_id"])
             eligible_teams = [
                 t
                 for t in current_state["teams"]
                 if _can_team_draft_more(t, total_rounds)
+                and _team_can_take_position(
+                    t, nominated_position, position_maximums, player_id_to_position
+                )
             ]
             if not eligible_teams:
                 break
@@ -362,6 +394,24 @@ def _simulate_complete_draft(
     # Get final state
     state_response = client.get("/api/v1/draft-state")
     return state_response.json()
+
+
+def _team_can_take_position(
+    team: dict,
+    position: str,
+    position_maximums: dict,
+    player_id_to_position: dict,
+) -> bool:
+    """Whether a team is below the configured maximum for a given position."""
+    cap = position_maximums.get(position)
+    if cap is None:
+        return True  # unlimited position
+    held = sum(
+        1
+        for pick in team["picks"]
+        if player_id_to_position.get(pick["player_id"]) == position
+    )
+    return held < cap
 
 
 def _is_draft_complete(teams: list[dict], total_rounds: int) -> bool:

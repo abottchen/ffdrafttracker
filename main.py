@@ -9,8 +9,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+from src.draft_rules import (
+    max_bid,
+    next_eligible_nominator,
+    position_count,
+    remaining_roster_spots,
+)
 from src.models import (
     Configuration,
     DraftPick,
@@ -90,8 +96,6 @@ class DraftRequest(BaseModel):
     expected_version: int
 
 
-
-
 class ResetRequest(BaseModel):
     expected_version: int | None = None
     force: bool = False
@@ -102,6 +106,21 @@ class AdminDraftRequest(BaseModel):
     player_id: int
     price: int
     expected_version: int
+
+
+class TeamUpdateRequest(BaseModel):
+    manually_done: bool
+    expected_version: int
+
+
+# Response-only models (computed, read-only enrichments over the persisted shape).
+class TeamView(Team):
+    max_bid: int | None = None  # None when the roster is full
+
+
+class DraftStateResponse(DraftState):
+    teams: list[TeamView] = Field(default_factory=list)
+    up_next: int | None = None  # next distinct eligible nominator, or null
 
 
 # Helper functions
@@ -156,6 +175,7 @@ def load_owners() -> dict[int, dict[str, str]]:
         owners[owner_data["id"]] = {
             "owner_name": owner_data["owner_name"],
             "team_name": owner_data["team_name"],
+            "color": owner_data.get("color", "#888888"),
         }
 
     return owners
@@ -279,15 +299,36 @@ async def root(request: Request):
 
     # Load initial data for template
     draft_state = load_draft_state()
+    config = load_configuration()
     return templates.TemplateResponse(
-        request, "index.html", {"draft_state": draft_state.model_dump()}
+        request,
+        "index.html",
+        {"draft_state": draft_state.model_dump(), "config": config.model_dump()},
     )
 
 
 # Shared business logic functions
 async def _get_draft_state_data():
-    """Shared logic for getting draft state."""
-    return load_draft_state()
+    """Shared logic for getting draft state, enriched with computed read-only
+    fields (per-team max_bid, draft-level up_next)."""
+    state = load_draft_state()
+    config = load_configuration()
+
+    team_views = [
+        TeamView(**team.model_dump(), max_bid=max_bid(team, config))
+        for team in state.teams
+    ]
+    up_next = next_eligible_nominator(
+        state, config, from_id=state.next_to_nominate, inclusive=False
+    )
+    if up_next == state.next_to_nominate:
+        up_next = None  # fewer than two eligible -> no distinct "up next"
+
+    return DraftStateResponse(
+        **state.model_dump(exclude={"teams"}),
+        teams=team_views,
+        up_next=up_next,
+    )
 
 
 async def _get_players_data():
@@ -385,7 +426,7 @@ async def _get_team_data(owner_id: int):
 
 
 # Read-only API endpoints for main app (admin interface)
-@app.get("/api/v1/draft-state", response_model=DraftState)
+@app.get("/api/v1/draft-state", response_model=DraftStateResponse)
 async def get_draft_state():
     """Get complete current draft state."""
     return await _get_draft_state_data()
@@ -493,6 +534,27 @@ async def nominate_player(request: NominateRequest):
             detail=f"Owner {request.owner_id} does not exist",
         )
 
+    # Enforce position maximum for the nominating team (nomination opens a bid).
+    players = load_players()
+    player = next((p for p in players if p.id == request.player_id), None)
+    if player is not None:
+        max_at_pos = config.position_maximums.get(player.position)
+        player_positions = {p.id: p.position for p in players}
+        if max_at_pos is not None:
+            team = next(
+                (t for t in draft_state.teams if t.owner_id == request.owner_id), None
+            )
+            if team is not None and (
+                position_count(team, player.position, player_positions) >= max_at_pos
+            ):
+                raise HTTPException(
+                    status_code=422,
+                    detail=(
+                        f"Team is already at the maximum of {max_at_pos} "
+                        f"players at the {player.position} position"
+                    ),
+                )
+
     # Create nomination
     draft_state.nominated = Nominated(
         player_id=request.player_id,
@@ -505,8 +567,6 @@ async def nominate_player(request: NominateRequest):
     draft_state.save_to_file(DRAFT_STATE_FILE)
 
     # Return success with player details
-    players = load_players()
-    player = next((p for p in players if p.id == request.player_id), None)
     owner = owners.get(request.owner_id, {})
 
     # Log action with names
@@ -569,24 +629,41 @@ async def place_bid(request: BidRequest):
             detail=f"Team not found for owner {request.owner_id} in draft state",
         )
 
-    # Calculate if owner can afford this bid AND still fill remaining roster spots
-    remaining_budget_after_bid = team.budget_remaining - request.bid_amount
-    current_roster_size = len(team.picks)
-    remaining_roster_spots = config.total_rounds - current_roster_size
-    min_budget_needed = (
-        remaining_roster_spots - 1
-    )  # -1 because current bid counts as one spot
-
-    if remaining_budget_after_bid < min_budget_needed:
+    # Reject if the bid would break roster completion (reserve $1 per open slot).
+    mb = max_bid(team, config)
+    if mb is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Roster is full; this team cannot bid.",
+        )
+    if request.bid_amount > mb:
+        spots = remaining_roster_spots(team, config)
+        remaining_budget_after_bid = team.budget_remaining - request.bid_amount
         raise HTTPException(
             status_code=422,
             detail=(
                 f"Insufficient budget. After ${request.bid_amount} bid, "
                 f"you would have ${remaining_budget_after_bid} left but need "
-                f"at least ${min_budget_needed} to fill remaining "
-                f"{remaining_roster_spots - 1} roster spots"
+                f"at least ${spots - 1} to fill remaining "
+                f"{spots - 1} roster spots"
             ),
         )
+
+    # Enforce position maximum for the bidding team.
+    players = load_players()
+    player = next((p for p in players if p.id == draft_state.nominated.player_id), None)
+    if player is not None:
+        max_at_pos = config.position_maximums.get(player.position)
+        if max_at_pos is not None:
+            player_positions = {p.id: p.position for p in players}
+            if position_count(team, player.position, player_positions) >= max_at_pos:
+                raise HTTPException(
+                    status_code=422,
+                    detail=(
+                        f"Team is already at the maximum of {max_at_pos} "
+                        f"players at the {player.position} position"
+                    ),
+                )
 
     # Update bid
     previous_bid = draft_state.nominated.current_bid
@@ -597,9 +674,7 @@ async def place_bid(request: BidRequest):
     draft_state.save_to_file(DRAFT_STATE_FILE)
 
     # Get names for logging
-    players = load_players()
     owners = load_owners()
-    player = next((p for p in players if p.id == draft_state.nominated.player_id), None)
     owner = owners.get(request.owner_id, {})
 
     player_name = (
@@ -705,40 +780,13 @@ async def complete_draft(request: DraftRequest):
     # Clear nomination
     draft_state.nominated = None
 
-    # Update next to nominate (cycle through owners, skipping completed rosters)
-    owners = load_owners()
-    owner_ids = sorted(owners.keys())  # Get ordered list of owner IDs
+    # Advance to the next eligible nominator (skips full rosters and done teams).
     config = load_configuration()
-
-    if owner_ids:
-        current_idx = (
-            owner_ids.index(draft_state.next_to_nominate)
-            if draft_state.next_to_nominate in owner_ids
-            else 0
-        )
-
-        # Find next owner who can still draft (hasn't reached total_rounds picks)
-        attempts = 0
-        while attempts < len(owner_ids):
-            next_idx = (current_idx + 1 + attempts) % len(owner_ids)
-            next_owner_id = owner_ids[next_idx]
-
-            # Check if this owner has completed their roster
-            next_team = next(
-                (t for t in draft_state.teams if t.owner_id == next_owner_id), None
-            )
-            if next_team and len(next_team.picks) < config.total_rounds:
-                # This owner can still draft
-                draft_state.next_to_nominate = next_owner_id
-                break
-
-            attempts += 1
-        else:
-            # All owners have completed rosters, keep current nominator
-            # (This should rarely happen as draft should end when all rosters are full)
-            pass
-    else:
-        draft_state.next_to_nominate = 1
+    nxt = next_eligible_nominator(
+        draft_state, config, from_id=draft_state.next_to_nominate, inclusive=False
+    )
+    if nxt is not None:
+        draft_state.next_to_nominate = nxt
 
     # Save state with version increment
     draft_state.save_to_file(DRAFT_STATE_FILE)
@@ -836,6 +884,14 @@ async def admin_draft_player(request: AdminDraftRequest):
     # Remove player from available list
     draft_state.available_player_ids.remove(request.player_id)
 
+    # Repair the nominator pointer in case this pick filled its roster.
+    config = load_configuration()
+    nxt = next_eligible_nominator(
+        draft_state, config, from_id=draft_state.next_to_nominate, inclusive=True
+    )
+    if nxt is not None:
+        draft_state.next_to_nominate = nxt
+
     # Save state with version increment
     draft_state.save_to_file(DRAFT_STATE_FILE)
 
@@ -856,12 +912,49 @@ async def admin_draft_player(request: AdminDraftRequest):
     }
 
 
+@app.patch("/api/v1/teams/{owner_id}")
+async def update_team(owner_id: int, request: TeamUpdateRequest):
+    """Set or clear a team's manually-done flag (admin action)."""
+    draft_state = load_draft_state()
+    check_version(draft_state.version, request.expected_version)
+
+    team = next((t for t in draft_state.teams if t.owner_id == owner_id), None)
+    if not team:
+        raise HTTPException(
+            status_code=404, detail=f"Team not found for owner {owner_id}"
+        )
+
+    team.manually_done = request.manually_done
+
+    # Repair the nominator pointer in case the current nominator was just marked done.
+    config = load_configuration()
+    nxt = next_eligible_nominator(
+        draft_state, config, from_id=draft_state.next_to_nominate, inclusive=True
+    )
+    if nxt is not None:
+        draft_state.next_to_nominate = nxt
+
+    draft_state.save_to_file(DRAFT_STATE_FILE)
+
+    owners = load_owners()
+    owner_name = owners.get(owner_id, {}).get("owner_name", f"ID:{owner_id}")
+    logger.info(f"Team for {owner_name} manually_done set to {team.manually_done}")
+
+    return {
+        "success": True,
+        "owner_id": owner_id,
+        "manually_done": team.manually_done,
+        "next_to_nominate": draft_state.next_to_nominate,
+        "new_version": draft_state.version,
+    }
+
+
 # Admin endpoints
 @app.delete("/api/v1/nominate")
 async def cancel_nomination(
     if_match: str = Header(
         ..., description="ETag for optimistic locking (expected version)"
-    )
+    ),
 ):
     """Cancel current nomination (admin action)."""
     # Load current state
@@ -873,7 +966,7 @@ async def cancel_nomination(
     except ValueError:
         raise HTTPException(
             status_code=400,
-            detail="If-Match header must contain a valid version number"
+            detail="If-Match header must contain a valid version number",
         )
 
     # Check version
@@ -916,7 +1009,7 @@ async def remove_draft_pick(
     pick_id: int,
     if_match: str = Header(
         ..., description="ETag for optimistic locking (expected version)"
-    )
+    ),
 ):
     """Remove a draft pick and restore player to available pool."""
     # Load current state
@@ -928,7 +1021,7 @@ async def remove_draft_pick(
     except ValueError:
         raise HTTPException(
             status_code=400,
-            detail="If-Match header must contain a valid version number"
+            detail="If-Match header must contain a valid version number",
         )
 
     check_version(draft_state.version, expected_version)
@@ -1075,17 +1168,16 @@ font-family: Arial, sans-serif; padding: 20px;">
             status_code=200,
         )
 
+    config = load_configuration()
     return templates.TemplateResponse(
         request,
         "team_viewer.html",
-        {
-            "selected_team_id": team_id,
-        },
+        {"selected_team_id": team_id, "config": config.model_dump()},
     )
 
 
 # Read-only API endpoints for viewer app
-@viewer_app.get("/api/v1/draft-state", response_model=DraftState)
+@viewer_app.get("/api/v1/draft-state", response_model=DraftStateResponse)
 async def viewer_get_draft_state():
     """Get complete current draft state."""
     return await _get_draft_state_data()

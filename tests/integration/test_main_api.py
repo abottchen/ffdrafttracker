@@ -49,6 +49,7 @@ class TestMainApiIntegration:
 
         # Clean up temp directory
         import shutil
+
         try:
             shutil.rmtree(self.temp_dir, ignore_errors=True)
         except Exception:
@@ -121,7 +122,6 @@ class TestMainApiIntegration:
         (self.temp_dir / "draft_state.json").write_text(
             json.dumps(draft_state_data, indent=2)
         )
-
 
     def test_full_auction_workflow(self):
         """Test complete auction workflow: nominate -> bid -> draft."""
@@ -519,3 +519,521 @@ class TestMainApiIntegration:
         assert reset_state["teams"][0]["budget_remaining"] == 200
         assert set(reset_state["available_player_ids"]) == {1, 2, 3, 4}
         assert reset_state["version"] == 1
+
+    def test_bid_rejected_above_max_bid(self):
+        """A bid above the roster-completion max_bid is rejected with 422."""
+        # Owner 1 nominates player 1 at $1 (config total_rounds=19, budget 200).
+        self.client.post(
+            "/api/v1/nominate",
+            json={
+                "owner_id": 1,
+                "player_id": 1,
+                "initial_bid": 1,
+                "expected_version": 1,
+            },
+        )
+        state = self.client.get("/api/v1/draft-state").json()
+        # Owner 2 (0 picks, 19 spots) max_bid = 200 - 18 = 182. Bid 183 must fail.
+        resp = self.client.post(
+            "/api/v1/bid",
+            json={
+                "owner_id": 2,
+                "bid_amount": 183,
+                "expected_version": state["version"],
+            },
+        )
+        assert resp.status_code == 422
+        assert "Insufficient budget" in resp.json()["detail"]
+        assert "roster spots" in resp.json()["detail"]
+
+    def test_bid_at_max_bid_succeeds(self):
+        """A bid exactly at max_bid is allowed."""
+        self.client.post(
+            "/api/v1/nominate",
+            json={
+                "owner_id": 1,
+                "player_id": 1,
+                "initial_bid": 1,
+                "expected_version": 1,
+            },
+        )
+        state = self.client.get("/api/v1/draft-state").json()
+        resp = self.client.post(
+            "/api/v1/bid",
+            json={
+                "owner_id": 2,
+                "bid_amount": 182,
+                "expected_version": state["version"],
+            },
+        )
+        assert resp.status_code == 200
+
+    def test_nominate_rejected_at_position_max(self):
+        """Nominating a position the team is already maxed at returns 422."""
+        # Re-seed with QB cap of 1 and two QBs so the cap is reachable.
+        import json
+
+        config_data = {
+            "initial_budget": 200,
+            "min_bid": 1,
+            "position_maximums": {"QB": 1, "RB": 4, "WR": 6, "TE": 2, "K": 1},
+            "total_rounds": 19,
+        }
+        self.config_file.write_text(json.dumps(config_data))
+        players = json.loads(self.players_file.read_text())
+        players.append(
+            {
+                "id": 5,
+                "first_name": "Lamar",
+                "last_name": "Jackson",
+                "team": "BAL",
+                "position": "QB",
+            }
+        )
+        self.players_file.write_text(json.dumps(players))
+        ds = json.loads(self.draft_state_file.read_text())
+        ds["available_player_ids"].append(5)
+        self.draft_state_file.write_text(json.dumps(ds))
+
+        # Owner 1 admin-drafts QB player 1 -> now at the QB cap of 1.
+        state = self.client.get("/api/v1/draft-state").json()
+        self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 1,
+                "player_id": 1,
+                "price": 5,
+                "expected_version": state["version"],
+            },
+        )
+        state = self.client.get("/api/v1/draft-state").json()
+        # Owner 1 tries to nominate the other QB -> 422.
+        resp = self.client.post(
+            "/api/v1/nominate",
+            json={
+                "owner_id": 1,
+                "player_id": 5,
+                "initial_bid": 1,
+                "expected_version": state["version"],
+            },
+        )
+        assert resp.status_code == 422
+        assert "position" in resp.json()["detail"].lower()
+
+    def test_bid_rejected_at_position_max(self):
+        """Bidding on a position the team is maxed at returns 422."""
+        import json
+
+        config_data = {
+            "initial_budget": 200,
+            "min_bid": 1,
+            "position_maximums": {"QB": 1, "RB": 4, "WR": 6, "TE": 2, "K": 1},
+            "total_rounds": 19,
+        }
+        self.config_file.write_text(json.dumps(config_data))
+        players = json.loads(self.players_file.read_text())
+        players.append(
+            {
+                "id": 5,
+                "first_name": "Lamar",
+                "last_name": "Jackson",
+                "team": "BAL",
+                "position": "QB",
+            }
+        )
+        self.players_file.write_text(json.dumps(players))
+        ds = json.loads(self.draft_state_file.read_text())
+        ds["available_player_ids"].append(5)
+        self.draft_state_file.write_text(json.dumps(ds))
+
+        # Owner 2 admin-drafts QB player 1 -> at QB cap of 1.
+        state = self.client.get("/api/v1/draft-state").json()
+        self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 2,
+                "player_id": 1,
+                "price": 5,
+                "expected_version": state["version"],
+            },
+        )
+        # Owner 1 nominates the other QB (owner 1 has 0 QBs -> allowed).
+        state = self.client.get("/api/v1/draft-state").json()
+        self.client.post(
+            "/api/v1/nominate",
+            json={
+                "owner_id": 1,
+                "player_id": 5,
+                "initial_bid": 1,
+                "expected_version": state["version"],
+            },
+        )
+        # Owner 2 (already maxed at QB) tries to bid -> 422.
+        state = self.client.get("/api/v1/draft-state").json()
+        resp = self.client.post(
+            "/api/v1/bid",
+            json={
+                "owner_id": 2,
+                "bid_amount": 2,
+                "expected_version": state["version"],
+            },
+        )
+        assert resp.status_code == 422
+        assert "position" in resp.json()["detail"].lower()
+
+    def test_admin_draft_overrides_position_max(self):
+        """admin/draft is an unbounded override and ignores position maximums."""
+        import json
+
+        config_data = {
+            "initial_budget": 200,
+            "min_bid": 1,
+            "position_maximums": {"QB": 1, "RB": 4, "WR": 6, "TE": 2, "K": 1},
+            "total_rounds": 19,
+        }
+        self.config_file.write_text(json.dumps(config_data))
+        players = json.loads(self.players_file.read_text())
+        players.append(
+            {
+                "id": 5,
+                "first_name": "Lamar",
+                "last_name": "Jackson",
+                "team": "BAL",
+                "position": "QB",
+            }
+        )
+        self.players_file.write_text(json.dumps(players))
+        ds = json.loads(self.draft_state_file.read_text())
+        ds["available_player_ids"].append(5)
+        self.draft_state_file.write_text(json.dumps(ds))
+
+        # Owner 1 admin-drafts QB player 1 -> at the QB cap of 1.
+        state = self.client.get("/api/v1/draft-state").json()
+        first = self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 1,
+                "player_id": 1,
+                "price": 5,
+                "expected_version": state["version"],
+            },
+        )
+        assert first.status_code == 200
+
+        # Admin-draft a SECOND QB onto the same team -> still succeeds (unbounded).
+        state = self.client.get("/api/v1/draft-state").json()
+        second = self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 1,
+                "player_id": 5,
+                "price": 5,
+                "expected_version": state["version"],
+            },
+        )
+        assert second.status_code == 200
+
+        # Owner 1 now holds 2 QBs, exceeding the configured maximum of 1.
+        state = self.client.get("/api/v1/draft-state").json()
+        team1 = next(t for t in state["teams"] if t["owner_id"] == 1)
+        assert sum(1 for p in team1["picks"] if p["player_id"] in (1, 5)) == 2
+
+    def test_bid_rejected_when_roster_full(self):
+        """A full-roster team's bid is rejected with a clean message (no negatives)."""
+        import json
+
+        config_data = {
+            "initial_budget": 200,
+            "min_bid": 1,
+            "position_maximums": {"QB": 2, "RB": 4, "WR": 6, "TE": 2, "K": 1},
+            "total_rounds": 1,
+        }
+        self.config_file.write_text(json.dumps(config_data))
+
+        # Owner 1 admin-drafts a player -> roster full (1/1).
+        state = self.client.get("/api/v1/draft-state").json()
+        self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 1,
+                "player_id": 1,
+                "price": 5,
+                "expected_version": state["version"],
+            },
+        )
+        # Owner 2 nominates a different player.
+        state = self.client.get("/api/v1/draft-state").json()
+        self.client.post(
+            "/api/v1/nominate",
+            json={
+                "owner_id": 2,
+                "player_id": 2,
+                "initial_bid": 1,
+                "expected_version": state["version"],
+            },
+        )
+        # Owner 1 (full roster) tries to bid -> 422 with a sensible message.
+        state = self.client.get("/api/v1/draft-state").json()
+        resp = self.client.post(
+            "/api/v1/bid",
+            json={
+                "owner_id": 1,
+                "bid_amount": 2,
+                "expected_version": state["version"],
+            },
+        )
+        assert resp.status_code == 422
+        detail = resp.json()["detail"]
+        assert "full" in detail.lower()
+        assert "-1" not in detail
+
+    def test_draft_advances_to_next_owner(self):
+        """After a draft, next_to_nominate moves to the next eligible owner."""
+        self.client.post(
+            "/api/v1/nominate",
+            json={
+                "owner_id": 1,
+                "player_id": 1,
+                "initial_bid": 5,
+                "expected_version": 1,
+            },
+        )
+        state = self.client.get("/api/v1/draft-state").json()
+        self.client.post(
+            "/api/v1/draft",
+            json={
+                "owner_id": 1,
+                "player_id": 1,
+                "final_price": 5,
+                "expected_version": state["version"],
+            },
+        )
+        state = self.client.get("/api/v1/draft-state").json()
+        assert state["next_to_nominate"] == 2  # advanced from 1
+
+    def test_admin_draft_skips_filled_nominator(self):
+        """If admin-draft fills the current nominator's roster, the turn passes."""
+        import json
+
+        # Tiny roster so a single admin-draft completes owner 1.
+        config_data = {
+            "initial_budget": 200,
+            "min_bid": 1,
+            "position_maximums": {"QB": 2, "RB": 4, "WR": 6, "TE": 2, "K": 1},
+            "total_rounds": 1,
+        }
+        self.config_file.write_text(json.dumps(config_data))
+        # next_to_nominate is 1; admin-draft a player onto owner 1 -> roster full.
+        state = self.client.get("/api/v1/draft-state").json()
+        assert state["next_to_nominate"] == 1
+        self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 1,
+                "player_id": 1,
+                "price": 5,
+                "expected_version": state["version"],
+            },
+        )
+        state = self.client.get("/api/v1/draft-state").json()
+        assert state["next_to_nominate"] == 2  # owner 1 now full -> advance
+
+    def test_patch_team_marks_done(self):
+        """PATCH sets manually_done and bumps the version."""
+        state = self.client.get("/api/v1/draft-state").json()
+        resp = self.client.patch(
+            "/api/v1/teams/1",
+            json={
+                "manually_done": True,
+                "expected_version": state["version"],
+            },
+        )
+        assert resp.status_code == 200
+        assert resp.json()["manually_done"] is True
+        new_state = self.client.get("/api/v1/draft-state").json()
+        team1 = next(t for t in new_state["teams"] if t["owner_id"] == 1)
+        assert team1["manually_done"] is True
+
+    def test_patch_team_marking_current_nominator_advances_turn(self):
+        """Marking the current nominator done passes the turn on."""
+        state = self.client.get("/api/v1/draft-state").json()
+        assert state["next_to_nominate"] == 1
+        self.client.patch(
+            "/api/v1/teams/1",
+            json={
+                "manually_done": True,
+                "expected_version": state["version"],
+            },
+        )
+        state = self.client.get("/api/v1/draft-state").json()
+        assert state["next_to_nominate"] == 2
+
+    def test_patch_team_can_clear_done(self):
+        """manually_done can be toggled back off."""
+        state = self.client.get("/api/v1/draft-state").json()
+        self.client.patch(
+            "/api/v1/teams/1",
+            json={
+                "manually_done": True,
+                "expected_version": state["version"],
+            },
+        )
+        state = self.client.get("/api/v1/draft-state").json()
+        resp = self.client.patch(
+            "/api/v1/teams/1",
+            json={
+                "manually_done": False,
+                "expected_version": state["version"],
+            },
+        )
+        assert resp.status_code == 200
+        assert resp.json()["manually_done"] is False
+
+    def test_patch_team_version_conflict(self):
+        """A stale expected_version yields 409."""
+        resp = self.client.patch(
+            "/api/v1/teams/1",
+            json={
+                "manually_done": True,
+                "expected_version": 999,
+            },
+        )
+        assert resp.status_code == 409
+
+    def test_patch_unknown_team_404(self):
+        state = self.client.get("/api/v1/draft-state").json()
+        resp = self.client.patch(
+            "/api/v1/teams/999",
+            json={
+                "manually_done": True,
+                "expected_version": state["version"],
+            },
+        )
+        assert resp.status_code == 404
+
+    def test_draft_state_exposes_max_bid_and_up_next(self):
+        """draft-state carries per-team max_bid + manually_done and up_next."""
+        state = self.client.get("/api/v1/draft-state").json()
+        # total_rounds=19, budget 200, 0 picks -> max_bid = 200 - 18 = 182.
+        team1 = next(t for t in state["teams"] if t["owner_id"] == 1)
+        assert team1["max_bid"] == 182
+        assert team1["manually_done"] is False
+        # Two eligible teams (owners 1 and 2); from owner 1 up_next is 2.
+        assert state["up_next"] == 2
+
+    def test_max_bid_none_when_roster_full(self):
+        """A full roster reports max_bid = null."""
+        import json
+
+        config_data = {
+            "initial_budget": 200,
+            "min_bid": 1,
+            "position_maximums": {"QB": 2, "RB": 4, "WR": 6, "TE": 2, "K": 1},
+            "total_rounds": 1,
+        }
+        self.config_file.write_text(json.dumps(config_data))
+        state = self.client.get("/api/v1/draft-state").json()
+        self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 1,
+                "player_id": 1,
+                "price": 5,
+                "expected_version": state["version"],
+            },
+        )
+        state = self.client.get("/api/v1/draft-state").json()
+        team1 = next(t for t in state["teams"] if t["owner_id"] == 1)
+        assert team1["max_bid"] is None
+
+    def test_up_next_null_with_one_eligible_team(self):
+        """up_next is null when only one team can still nominate."""
+        import json
+
+        config_data = {
+            "initial_budget": 200,
+            "min_bid": 1,
+            "position_maximums": {"QB": 2, "RB": 4, "WR": 6, "TE": 2, "K": 1},
+            "total_rounds": 1,
+        }
+        self.config_file.write_text(json.dumps(config_data))
+        # Fill owner 2's roster -> only owner 1 eligible.
+        state = self.client.get("/api/v1/draft-state").json()
+        self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 2,
+                "player_id": 2,
+                "price": 5,
+                "expected_version": state["version"],
+            },
+        )
+        state = self.client.get("/api/v1/draft-state").json()
+        assert state["next_to_nominate"] == 1
+        assert state["up_next"] is None
+
+    def test_owners_include_default_color(self):
+        """Owners without a seeded color report the default gray."""
+        owners = self.client.get("/api/v1/owners").json()
+        assert all("color" in o for o in owners)
+        assert owners[0]["color"] == "#888888"
+
+    def test_owner_color_passthrough(self):
+        """A seeded color is returned verbatim."""
+        import json
+
+        owners_data = [
+            {
+                "id": 1,
+                "owner_name": "Rick",
+                "team_name": "Portal Gunners",
+                "color": "#21D4FD",
+            },
+            {
+                "id": 2,
+                "owner_name": "Morty",
+                "team_name": "Aw Geez",
+                "color": "#FF5CA8",
+            },
+        ]
+        self.owners_file.write_text(json.dumps(owners_data))
+        owner = self.client.get("/api/v1/owners/1").json()
+        assert owner["color"] == "#21D4FD"
+
+    def test_root_injects_config_into_context(self):
+        """root() passes the full config object into the template context."""
+        from unittest.mock import MagicMock
+
+        from fastapi.responses import HTMLResponse
+
+        import main
+
+        with patch.object(
+            main.templates,
+            "TemplateResponse",
+            MagicMock(return_value=HTMLResponse("ok")),
+        ) as m:
+            self.client.get("/")
+        context = m.call_args.args[2]
+        assert "config" in context
+        assert context["config"]["total_rounds"] == 19  # from the test fixture
+
+    def test_viewer_injects_config_into_context(self):
+        """team_viewer() passes the full config object into the template context."""
+        from unittest.mock import MagicMock
+
+        from fastapi.responses import HTMLResponse
+        from fastapi.testclient import TestClient
+
+        import main
+
+        viewer_client = TestClient(main.viewer_app)
+        with patch.object(
+            main.templates,
+            "TemplateResponse",
+            MagicMock(return_value=HTMLResponse("ok")),
+        ) as m:
+            viewer_client.get("/")
+        context = m.call_args.args[2]
+        assert "config" in context
+        assert context["config"]["total_rounds"] == 19

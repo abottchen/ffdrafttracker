@@ -36,7 +36,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DraftState"
+                  "$ref": "#/components/schemas/DraftStateResponse"
                 }
               }
             }
@@ -207,6 +207,52 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update Team",
+        "description": "Set or clear a team's manually-done flag (admin action).",
+        "operationId": "update_team_api_v1_teams__owner_id__patch",
+        "parameters": [
+          {
+            "name": "owner_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Owner Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamUpdateRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -664,7 +710,7 @@
         ],
         "title": "DraftRequest"
       },
-      "DraftState": {
+      "DraftStateResponse": {
         "properties": {
           "nominated": {
             "anyOf": [
@@ -685,7 +731,7 @@
           },
           "teams": {
             "items": {
-              "$ref": "#/components/schemas/Team"
+              "$ref": "#/components/schemas/TeamView"
             },
             "type": "array",
             "title": "Teams"
@@ -698,13 +744,24 @@
             "type": "integer",
             "title": "Version",
             "default": 1
+          },
+          "up_next": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Up Next"
           }
         },
         "type": "object",
         "required": [
           "next_to_nominate"
         ],
-        "title": "DraftState"
+        "title": "DraftStateResponse"
       },
       "HTTPValidationError": {
         "properties": {
@@ -877,6 +934,12 @@
           "team_name": {
             "type": "string",
             "title": "Team Name"
+          },
+          "color": {
+            "type": "string",
+            "pattern": "^#[0-9A-Fa-f]{6}$",
+            "title": "Color",
+            "default": "#888888"
           }
         },
         "type": "object",
@@ -1208,7 +1271,25 @@
         "title": "RushingStats",
         "description": "Rushing statistics for running backs, wide receivers, and quarterbacks."
       },
-      "Team": {
+      "TeamUpdateRequest": {
+        "properties": {
+          "manually_done": {
+            "type": "boolean",
+            "title": "Manually Done"
+          },
+          "expected_version": {
+            "type": "integer",
+            "title": "Expected Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "manually_done",
+          "expected_version"
+        ],
+        "title": "TeamUpdateRequest"
+      },
+      "TeamView": {
         "properties": {
           "owner_id": {
             "type": "integer",
@@ -1224,6 +1305,22 @@
             },
             "type": "array",
             "title": "Picks"
+          },
+          "manually_done": {
+            "type": "boolean",
+            "title": "Manually Done",
+            "default": false
+          },
+          "max_bid": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Bid"
           }
         },
         "type": "object",
@@ -1231,7 +1328,7 @@
           "owner_id",
           "budget_remaining"
         ],
-        "title": "Team"
+        "title": "TeamView"
       },
       "ValidationError": {
         "properties": {
@@ -1256,6 +1353,13 @@
           "type": {
             "type": "string",
             "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
           }
         },
         "type": "object",

@@ -241,9 +241,7 @@ class TestGetEndpoints(TestMainApp):
         ]
 
         mock_draft_state.return_value = self.create_mock_draft_state(
-            nominated=None,
-            available_player_ids=[3],
-            teams=teams_with_picks
+            nominated=None, available_player_ids=[3], teams=teams_with_picks
         )
 
         response = self.client.get("/api/v1/export/csv")
@@ -587,9 +585,7 @@ class TestPostEndpoints(TestMainApp):
             player_id=1, current_bidder_id=1, nominating_owner_id=1, current_bid=3
         )
         mock_draft_state.return_value = self.create_mock_draft_state(
-            nominated=nomination,
-            available_player_ids=[1, 3],
-            teams=low_budget_teams
+            nominated=nomination, available_player_ids=[1, 3], teams=low_budget_teams
         )
 
         response = self.client.post(
@@ -636,7 +632,7 @@ class TestPostEndpoints(TestMainApp):
         mock_draft_state.return_value = self.create_mock_draft_state(
             nominated=nomination,
             available_player_ids=[1, 3],
-            teams=sufficient_budget_teams
+            teams=sufficient_budget_teams,
         )
 
         response = self.client.post(
@@ -683,7 +679,7 @@ class TestPostEndpoints(TestMainApp):
         mock_draft_state.return_value = self.create_mock_draft_state(
             nominated=nomination,
             available_player_ids=[1, 3],
-            teams=teams_with_one_spot_left
+            teams=teams_with_one_spot_left,
         )
 
         response = self.client.post(
@@ -730,7 +726,7 @@ class TestPostEndpoints(TestMainApp):
         mock_draft_state.return_value = self.create_mock_draft_state(
             nominated=nomination,
             available_player_ids=[1, 3],
-            teams=teams_ready_to_complete
+            teams=teams_ready_to_complete,
         )
 
         response = self.client.post(

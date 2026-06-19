@@ -91,3 +91,13 @@ class TestTeam:
                     },  # Invalid
                 ],
             )
+
+    def test_manually_done_defaults_to_false(self):
+        """manually_done defaults to False so existing data needs no migration."""
+        team = Team(owner_id=3, budget_remaining=200)
+        assert team.manually_done is False
+
+    def test_manually_done_can_be_set(self):
+        """manually_done is a settable, persisted bool."""
+        team = Team(owner_id=3, budget_remaining=200, manually_done=True)
+        assert team.manually_done is True

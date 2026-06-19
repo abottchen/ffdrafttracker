@@ -272,6 +272,7 @@ Pydantic Models (Python) → FastAPI Endpoints → OpenAPI Schema
 - `id: int` - Unique identifier for the owner
 - `owner_name: str` - Name of the person who owns the team
 - `team_name: str` - Name of their fantasy team
+- `color: str` - Team identity hex color (`#RRGGBB`), reference data seeded in `owners.json`; defaults to `#888888`
 
 **Nominated** (`nominated.py`): Currently nominated player for auction
 - `player_id: int` - ID of the nominated player
@@ -289,6 +290,7 @@ Pydantic Models (Python) → FastAPI Endpoints → OpenAPI Schema
 - `owner_id: int` - ID of the team owner
 - `budget_remaining: int` - Money left to spend
 - `picks: List[DraftPick]` - List of all drafted players with prices
+- `manually_done: bool` - Commissioner-set "team is finished drafting" flag (default `False`); combined client-side with roster-full to derive `is_done`
 
 **DraftState** (`draft_state.py`): Complete draft state
 - `nominated: Optional[Nominated]` - Currently nominated player (if any)
@@ -296,6 +298,11 @@ Pydantic Models (Python) → FastAPI Endpoints → OpenAPI Schema
 - `teams: List[Team]` - All teams with their rosters
 - `next_to_nominate: int` - Owner ID of next person to nominate (in numerical order)
 - `version: int` - Version for optimistic locking (default 1)
+
+**Computed read-only fields on `GET /api/v1/draft-state`** (not persisted; layered over `DraftState`):
+- `teams[].max_bid: int | null` - Most this team may bid and still reserve $1 per other open roster slot (`budget_remaining - (remaining_spots - 1)`); `null` when the roster is full
+- `teams[].manually_done: bool` - Persisted mark-done flag (see Team)
+- `up_next: int | null` - Owner ID of the next *distinct* eligible nominator after `next_to_nominate`; `null` when fewer than two teams can still nominate
 
 **ActionLog** (`action_log.py`): Audit trail for undo capability
 - `timestamp: datetime` - When the action occurred
@@ -335,9 +342,11 @@ Pydantic Models (Python) → FastAPI Endpoints → OpenAPI Schema
 ## Validation Rules
 
 **Position Limits:**
-- Bids rejected (HTTP 409) if owner already at position maximum
-- Frontend should disable bid buttons for players when limits reached
-- Position maximums configurable in config.json
+- `POST /api/v1/nominate` rejected (HTTP 422) if the nominating team is already at the position maximum for the player's position
+- `POST /api/v1/bid` rejected (HTTP 422) if the bidding team is already at the position maximum for the nominated player's position
+- `POST /api/v1/admin/draft` is an unbounded override and does NOT enforce position limits
+- Positions with no entry in `config.position_maximums` are unlimited
+- Frontend also greys the per-team Bid button at the maximum (backstop)
 
 **Draft Completion:**
 - Frontend tracks 19 roster spots per team (configurable)
@@ -345,9 +354,12 @@ Pydantic Models (Python) → FastAPI Endpoints → OpenAPI Schema
 - Backend remains stateless - frontend handles completion logic
 
 **Nomination Order:**
-- Proceeds in numerical order by owner_id
-- Cycles back to lowest owner_id after highest
-- next_to_nominate field tracks current turn
+- Proceeds in numerical order by owner_id, cycling back to the lowest after the highest
+- `next_to_nominate` is authoritative and skips teams that are roster-full OR `manually_done`
+- Recomputed after `POST /api/v1/draft`, `POST /api/v1/admin/draft`, and `PATCH /api/v1/teams/{owner_id}`
+
+**Mark Team Done:**
+- `PATCH /api/v1/teams/{owner_id}` body `{ "manually_done": bool, "expected_version": N }` sets/clears the flag (version-locked); repairs `next_to_nominate` if the current nominator was just marked done
 
 ## Expected State Flow
 
