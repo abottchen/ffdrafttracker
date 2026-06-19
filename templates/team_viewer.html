@@ -879,6 +879,7 @@
             return t._picks.map(normPlayer).filter(Boolean)
                 .sort((a, b) => (POSORDER[a.pos] - POSORDER[b.pos]) || (b.price - a.price));
         }
+        function posCounts(roster) { const c = {}; roster.forEach(p => c[p.pos] = (c[p.pos] || 0) + 1); return c; }
         // The 3 card stat boxes per position (matches the mockup's statCells shape).
         function statCells(p) {
             if (p.pos === 'QB') return [['Yds', p.stats.YDS, STATMAX.YDS], ['TD', p.stats.TD, STATMAX.TD], ['Int', p.stats.INT, STATMAX.INT]];
@@ -1117,8 +1118,28 @@
                 <div class="tt-zline" style="color:${above ? 'var(--live)' : 'var(--turf)'}">${above ? '+' : ''}${z.toFixed(1)}σ ${above ? 'above' : 'below'} median</div>`;
             tip.style.display = 'block'; moveTip(e);
         }
-        function renderDominance() {} // stub displaced by T10
-        function renderBudgetPower() {} // stub displaced by T10
+        function renderDominance() {
+            const order = ['QB', 'RB', 'WR', 'TE', 'K', 'D/ST'];
+            const rs = TEAMS.map(t => ({ t, c: posCounts(rosterFor(t)) }));
+            document.getElementById('dominance').innerHTML = order.map(pos => {
+                let leader = null, empties = [];
+                rs.forEach(r => { const n = r.c[pos] || 0; if (n > 0 && (!leader || n > leader.n)) leader = { t: r.t, n }; if (n === 0) empties.push(ab2(r.t.owner)); });
+                const segs = rs.filter(r => (r.c[pos] || 0) > 0).sort((a, b) => (b.c[pos] || 0) - (a.c[pos] || 0))
+                    .map(r => `<div class="battle-seg" style="flex-grow:${r.c[pos]};background:linear-gradient(180deg,${r.t.color},${hexA(r.t.color, .72)})" title="${r.t.team}: ${r.c[pos]}"></div>`).join('');
+                const emptyTxt = empties.length ? (empties.length <= 4 ? 'open: ' + empties.join(', ') : empties.length + ' teams need one') : 'all rostered';
+                const note = leader ? `led by <b>${leader.t.owner}</b> (${leader.n}) · ${emptyTxt}` : 'none drafted yet';
+                return `<div class="battle-row"><div class="battle-head"><span class="battle-pos" style="color:${POSCOLOR[pos]}">${pos}</span><span class="battle-note">${note}</span></div>
+      <div class="battle-bar">${segs}${empties.length ? '<div class="battle-empty"></div>' : ''}</div></div>`;
+            }).join('');
+        }
+        function renderBudgetPower() {
+            const ranked = [...TEAMS].sort((a, b) => b.budget - a.budget);
+            document.getElementById('budgetPower').innerHTML = ranked.map((t, i) => `
+                <div class="bp-row"><span class="bp-rank cond">${i + 1}</span>
+                  <span class="bp-name"><span class="bp-dot" style="background:${t.color}"></span><span class="nm">${t.team}</span></span>
+                  <span class="bp-track"><span class="bp-fill" style="width:${t.budget / INITIAL * 100}%"></span></span>
+                  <span class="bp-val tnum">$${t.budget}</span></div>`).join('');
+        }
 
         init();
     </script>
