@@ -830,10 +830,28 @@
             if (e.key === 'ArrowRight') navTeam(1);
         });
 
-        // stubs filled by remaining tasks
-        function renderTeamsView(){}
-        function renderStatusView(){}
-        function setupTargetBoard(){}
+        function renderIdentity() {
+            const t = TEAMS[selected], bc = budgetClass(t.budget), spent = INITIAL - t.budget;
+            const el = document.getElementById('identity'); el.style.setProperty('--tc', t.color);
+            el.innerHTML = `
+    <div class="id-main"><div class="id-eyebrow">Managed by ${t.owner}</div><div class="id-name cond">${t.team}</div></div>
+    <div class="id-stats">
+      <div class="idstat"><span class="k">Budget</span><b class="v money ${bc} tnum">$${t.budget}</b><div class="mini ${bc}"><div class="f" style="width:${t.budget / INITIAL * 100}%"></div></div></div>
+      <div class="idstat"><span class="k">Max Bid</span><b class="v max tnum">${t.picks >= TOTAL ? '—' : '$' + maxBid(t)}</b></div>
+      <div class="idstat"><span class="k">Spent</span><b class="v tnum">$${spent}</b></div>
+      <div class="idstat"><span class="k">Roster</span><b class="v tnum">${t.picks}/${TOTAL}</b><div class="mini roster"><div class="f" style="width:${t.picks / TOTAL * 100}%"></div></div></div>
+    </div>`;
+        }
+        function renderTeamsView() {
+            if (!TEAMS.length) return;
+            renderIdentity();
+            renderRoster();      // Task 5
+            renderRail();        // Task 6 (radar)
+        }
+        function renderRoster() {}  // stub displaced by T5
+        function renderRail() {}    // stub displaced by T6
+        function renderStatusView() {}
+        function setupTargetBoard() {}
 
         init();
     </script>
