@@ -941,7 +941,60 @@
           }
           requestAnimationFrame(step);
         }
-        function renderStatusView() {}
+        function renderStatusView() {
+            renderLiveAuction();
+            renderRecent();
+            renderCostChart();     // Task 9
+            renderDominance();     // Task 10
+            renderBudgetPower();   // Task 10
+        }
+
+        /* ── Live Auction ── */
+        function renderLiveAuction() {
+            const el = document.getElementById('liveAuction');
+            const nom = lastDraftState && lastDraftState.nominated;
+            if (!nom) { el.innerHTML = '<div class="la-empty">Awaiting nomination…</div>'; return; }
+            const p = normPlayer({ player_id: nom.player_id, price: nom.current_bid });
+            const bidder = ownersById[nom.current_bidder_id];
+            if (!p) { el.innerHTML = '<div class="la-empty">Awaiting nomination…</div>'; return; }
+            el.innerHTML = `<div class="la-body">
+                <div class="la-photo"><span class="la-pos" style="background:${POSCOLOR[p.pos]}">${p.pos}</span>${shotImg(p, '')}</div>
+                <div class="la-info"><div class="la-eyebrow">Now Auctioning <span class="la-live"><span class="d"></span>LIVE</span></div>
+                  <div class="la-name cond">${p.fn} ${p.ln}</div><div class="la-sub">${p.nfl} · ${p.pos}</div></div>
+                <div class="la-bid"><div class="k">Current Bid</div><div class="v tnum">$${nom.current_bid}</div>
+                  <div class="la-bidder"><span class="dot" style="background:${bidder ? bidder.color : '#888'}"></span>${bidder ? bidder.team_name : '—'}</div></div>
+            </div>`;
+        }
+
+        /* ── Recent Picks ── */
+        function recentRow(p, tm, price) {
+            return `<div class="rp-row"><div class="rp-av">${shotImg(p, '')}</div>
+    <div class="rp-id"><div class="rp-name">${p.fn} ${p.ln}</div><div class="rp-sub">${p.pos} · ${p.nfl}</div></div>
+    <div class="rp-to"><span class="bp-dot" style="background:${tm.color}"></span>${tm.team}</div>
+    <div class="rp-price tnum">$${price}</div></div>`;
+        }
+        function allPicksDesc() {
+            const rows = [];
+            (lastDraftState ? lastDraftState.teams : []).forEach(t => {
+                const tm = TEAMS.find(x => x.owner_id === t.owner_id);
+                t.picks.forEach(pk => {
+                    const p = normPlayer(pk);
+                    if (p && tm) rows.push({ pickId: pk.pick_id, p, tm, price: pk.price });
+                });
+            });
+            return rows.sort((a, b) => b.pickId - a.pickId);
+        }
+        function renderRecent() {
+            const list = document.getElementById('recentPicks');
+            const rows = allPicksDesc().slice(0, 10);
+            const newMax = rows.length ? rows[0].pickId : lastSeenMaxPickId;
+            list.innerHTML = rows.map(r => {
+                const isNew = r.pickId > lastSeenMaxPickId;
+                const html = recentRow(r.p, r.tm, r.price);
+                return isNew ? html.replace('class="rp-row"', 'class="rp-row rp-new"') : html;
+            }).join('');
+            lastSeenMaxPickId = Math.max(lastSeenMaxPickId, newMax);
+        }
 
         /* ── Target Board ── */
         let targets = []; try { targets = JSON.parse(localStorage.getItem('ffdraft_targets') || '[]'); } catch (e) {}
@@ -1011,6 +1064,10 @@
             tip.style.left = x + 'px'; tip.style.top = Math.max(8, y) + 'px';
         }
         function hideTip() { document.getElementById('ptip').style.display = 'none'; }
+
+        function renderCostChart() {} // stub displaced by T9
+        function renderDominance() {} // stub displaced by T10
+        function renderBudgetPower() {} // stub displaced by T10
 
         init();
     </script>
