@@ -82,6 +82,7 @@
         let selected = 0;               // index into TEAMS
         let curRoster = [], prevFrac = [0,0,0,0,0,0];
         let lastSeenMaxPickId = 0;      // for recent-picks animation
+        let __recentSince = 0;          // watermark snapshot each poll for renderRecent
         const INITIAL_TEAM_ID = {{ selected_team_id }};
         let AVAILABLE = [];
 
@@ -198,6 +199,11 @@
                 if (TEAMS.length) {
                     if (selected >= TEAMS.length) selected = 0;
                 }
+                // Advance the watermark every poll regardless of which view is active,
+                // so picks that land while on the Teams view don't all animate rp-new
+                // when the user switches to Draft Status.
+                __recentSince = lastSeenMaxPickId;
+                lastSeenMaxPickId = Math.max(lastSeenMaxPickId, maxPickId(ds));
                 renderChrome();                         // strip + clocknote + completion (Task 3)
                 if (document.getElementById('view-teams').classList.contains('active')) renderTeamsView();
                 else renderStatusView();
@@ -216,6 +222,7 @@
             const idx = TEAMS.findIndex(t => t.owner_id === INITIAL_TEAM_ID);
             selected = idx >= 0 ? idx : 0;
             lastSeenMaxPickId = maxPickId(ds);
+            __recentSince = lastSeenMaxPickId;
             renderChrome(); renderTeamsView();
             setupTargetBoard();                          // Task 7
             setInterval(pollState, 5000);
@@ -349,7 +356,7 @@
         ${shotImg(p, 'pc-shot')}
         <span class="pc-pos ${LIGHTPOS[p.pos] ? 'light' : ''}">${p.pos}</span>
         <span class="pc-price tnum">$${p.price}</span>
-        <div class="pc-scrim"><div class="pc-name">${p.fn} ${p.ln}</div><div class="pc-sub">${p.nfl} · Bye ${p.bye}</div></div>
+        <div class="pc-scrim"><div class="pc-name">${p.fn} ${p.ln}</div><div class="pc-sub">${p.nfl}${p.bye ? ' · Bye '+p.bye : ''}</div></div>
       </div>
       <div class="pc-stats">${cells}</div>
     </div>`;
@@ -437,13 +444,12 @@
         function renderRecent() {
             const list = document.getElementById('recentPicks');
             const rows = allPicksDesc().slice(0, 10);
-            const newMax = rows.length ? rows[0].pickId : lastSeenMaxPickId;
             list.innerHTML = rows.map(r => {
-                const isNew = r.pickId > lastSeenMaxPickId;
+                const isNew = r.pickId > __recentSince;
                 const html = recentRow(r.p, r.tm, r.price);
                 return isNew ? html.replace('class="rp-row"', 'class="rp-row rp-new"') : html;
             }).join('');
-            lastSeenMaxPickId = Math.max(lastSeenMaxPickId, newMax);
+            // Watermark is advanced in pollState(), not here.
         }
 
         /* ── Target Board ── */
@@ -502,7 +508,7 @@
             tip.style.setProperty('--pc', POSCOLOR[p.pos]);
             const rows = statCells(p).map(c => { const n=parseFloat(String(c[1]).replace(/,/g,'')); return `<div class="tt-stat"><span class="l">${c[0]}</span><span class="bar"><i style="width:${!isNaN(n) ? Math.min(n/c[2]*100,100) : 0}%"></i></span><span class="n tnum">${c[1]}</span></div>`; }).join('');
             tip.innerHTML = `<div class="tt-head"><span class="tt-pos ${LIGHTPOS[p.pos] ? 'light' : ''}" style="background:${POSCOLOR[p.pos]}">${p.pos}</span><span class="tt-name">${p.fn} ${p.ln}</span></div>
-    <div class="tt-sub">${p.nfl} · Bye ${p.bye} · Drafted for <b style="color:var(--turf)">$${p.price}</b></div>${rows}`;
+    <div class="tt-sub">${p.nfl}${p.bye ? ' · Bye '+p.bye : ''} · Drafted for <b style="color:var(--turf)">$${p.price}</b></div>${rows}`;
             tip.style.display = 'block'; moveTip(e);
         }
         function moveTip(e) {
