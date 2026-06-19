@@ -4,264 +4,242 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description"
-          content="Fantasy Football Auction Draft Tracker - Manage live fantasy football auctions with real-time bidding and player nominations">
+          content="Fantasy Football Auction Draft Tracker - live auction control console">
     <meta name="keywords"
-          content="fantasy football, auction draft, draft tracker, fantasy sports, football, bidding, nominations">
+          content="fantasy football, auction draft, draft tracker, fantasy sports, bidding, nominations">
     <title>Fantasy Football Draft Tracker</title>
-    <link rel="stylesheet" href="/static/css/common.css">
-    <link rel="stylesheet" href="/static/css/draft.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap"
+          rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/draft-set-admin.css">
   </head>
   <body>
-    <div class="draft-progress-container">
-      <div class="draft-progress-bar-container">
-        <div class="draft-progress-bar" id="draft-progress-bar">
-          <span class="draft-progress-percentage" id="draft-percentage">0%</span>
+    <div id="stage">
+      <!-- TOP BAR -->
+      <div class="topbar">
+        <div class="wordmark"><span class="yr cond">DRAFT</span><span class="tag">'25</span></div>
+        <div class="progress-wrap">
+          <span class="progress-label">Draft Complete</span>
+          <div class="progress-track">
+            <div class="progress-fill" id="progress-fill"></div>
+          </div>
+          <span class="progress-pct tnum" id="progress-pct">0%</span>
         </div>
-        <div class="draft-progress-markers" id="draft-markers">
-          <!-- Round markers will be added dynamically -->
+        <div class="gear" onclick="openDrawer()" title="Admin controls">⚙</div>
+      </div>
+      <!-- NOMINATE BAR -->
+      <div class="nominate-bar">
+        <span class="lead">Nominate</span>
+        <div class="player-search-container search">
+          <input class="search"
+                 id="player-search"
+                 placeholder="Type a player name…"
+                 autocomplete="off">
+          <div id="player-dropdown" class="player-dropdown"></div>
+        </div>
+        <input class="bid tnum" id="nomination-bid" type="number" min="1" value="1">
+        <button class="btn-nominate" onclick="nominateSelected()">Nominate</button>
+        <span class="ondeck" id="ondeck"></span>
+      </div>
+      <!-- HERO (active nomination) -->
+      <div class="hero active">
+        <div class="hero-photo">
+          <span class="posbadge" id="hero-posbadge"></span>
+          <img id="hero-photo-img" src="" alt="" width="350" height="254">
+        </div>
+        <div class="hero-body">
+          <img class="hero-logo"
+               id="hero-logo"
+               src=""
+               alt=""
+               width="500"
+               height="500">
+          <div class="hero-eyebrow">
+            <span class="auctioning">Now Auctioning</span>
+            <span class="live"><span class="dot"></span>LIVE</span>
+            <div class="timer tnum" id="hero-timer" title="Time on this nomination">0:00</div>
+          </div>
+          <div class="hero-name cond" id="hero-name"></div>
+          <div class="hero-meta cond" id="hero-meta"></div>
+        </div>
+        <div class="hero-right">
+          <span class="bid-label">Current Bid</span>
+          <span class="bid-amt tnum" id="bid-amt">$0</span>
+          <div class="bidder">
+            <span class="chip" id="bidder-chip"></span><span class="nm cond" id="bidder-nm"></span>
+          </div>
+          <div class="hero-actions">
+            <button class="sold" onclick="completeDraft()">Draft</button>
+          </div>
+        </div>
+        <button class="hero-dismiss"
+                onclick="cancelNomination()"
+                title="Cancel nomination">✕</button>
+      </div>
+      <!-- HERO (standby — no active nomination) -->
+      <div class="hero standby">
+        <div class="hero-photo">
+          <svg class="sil"
+               id="standby-sil"
+               viewBox="0 0 120 120"
+               preserveAspectRatio="xMidYMid meet"
+               aria-hidden="true">
+            <circle cx="60" cy="42" r="23" fill="#8A9BB5" opacity="0.16" />
+            <path d="M20 118 C20 84 38 72 60 72 C82 72 100 84 100 118 Z" fill="#8A9BB5" opacity="0.16" />
+          </svg>
+        </div>
+        <div class="hero-body">
+          <div class="hero-eyebrow"><span class="standby-eyebrow">On the Clock</span></div>
+          <div class="standby-name cond" id="standby-name"></div>
+          <div class="hero-meta cond" id="standby-meta"></div>
+          <div class="standby-hint cond"><span class="arrow">↑</span> Nominate a player above to start the auction</div>
+        </div>
+        <div class="hero-right standby-right">
+          <span class="bid-label">Current Bid</span>
+          <span class="bid-amt muted tnum">—</span>
+          <div class="standby-cap">No active auction</div>
         </div>
       </div>
+      <!-- RAIL -->
+      <div class="rail-head">
+        <h2>Participants · Draft Order</h2>
+        <div class="rule"></div>
+      </div>
+      <div class="rail" id="rail"></div>
+      <!-- INTEL (blank reserved pane) -->
+      <div class="intel">
+        <span class="badge">Draft Intel</span>
+        <span class="note">reserved — AI draft commentary</span>
+      </div>
+      <!-- TICKER -->
+      <div class="ticker is-hidden" id="ticker">
+        <span class="tag">DRAFT WIRE</span>
+        <div class="crawl-wrap">
+          <div class="crawl" id="ticker-crawl"></div>
+        </div>
+        <button class="hide"
+                title="Hide ticker"
+                onclick="document.getElementById('ticker').classList.add('is-hidden');document.getElementById('showWire').style.display='block';">✕</button>
+      </div>
+      <button class="show-wire"
+              id="showWire"
+              onclick="document.getElementById('ticker').classList.remove('is-hidden');this.style.display='none';">▴ Draft Wire</button>
     </div>
-    <div class="players-grid">
-      <div id="nomination-panel" class="nomination-panel">
-        <div id="nomination-details" class="nomination-details-flex"></div>
+    <!-- /#stage -->
+    <!-- TOAST -->
+    <div id="message" class="toast"></div>
+    <!-- ADMIN DRAWER -->
+    <div class="scrim" id="scrim" onclick="closeDrawer()"></div>
+    <aside class="drawer" id="drawer" aria-hidden="true">
+      <div class="drawer-head">
+        <h2>Admin Controls</h2>
+        <button class="drawer-close" onclick="closeDrawer()" title="Close">✕</button>
       </div>
-      <div class="status-panel">
-        <div class="nomination-inputs">
-          <div class="player-search-container">
-            <input type="text"
-                   id="player-search"
-                   class="player-search"
-                   placeholder="Type player name..."
-                   autocomplete="off">
-            <div id="player-dropdown" class="player-dropdown">
-              <!-- Populated by JavaScript -->
+      <div class="drawer-body">
+        <div class="dsec">
+          <h3>Draft</h3>
+          <div class="drow">
+            <button class="dbtn ghost" onclick="refreshData()">↻ Refresh</button>
+            <button class="dbtn danger" id="reset-btn">Reset Draft</button>
+          </div>
+        </div>
+        <div class="dsec">
+          <h3>Teams</h3>
+          <div class="drow">
+            <select class="dselect" id="done-select"></select>
+            <button class="dbtn" onclick="markTeamDone()">Mark Done</button>
+          </div>
+          <div class="drow">
+            <button class="dbtn ghost" onclick="clearDoneTeams()">Clear All Done</button>
+          </div>
+        </div>
+        <div class="dsec">
+          <h3>Admin Draft</h3>
+          <div class="drow">
+            <span class="dlabel">Player</span>
+            <div class="player-search-container drawer-search">
+              <input class="dinput"
+                     id="admin-player-search"
+                     placeholder="Search player…"
+                     autocomplete="off">
+              <div id="admin-player-dropdown" class="player-dropdown"></div>
             </div>
           </div>
-          <input type="number"
-                 id="nomination-bid"
-                 class="bid-input"
-                 placeholder="Initial bid"
-                 min="1"
-                 value="1">
-          <button class="button" onclick="nominateSelected()">Nominate</button>
-          <div id="message" class="message-hidden"></div>
-          <div id="nomination-timer"
-               class="nomination-timer nomination-timer-hidden">00:00</div>
-        </div>
-      </div>
-    </div>
-    <div class="teams-horizontal" id="teams-list">
-      <!-- Teams will be populated by JavaScript -->
-    </div>
-    <div class="drafted-players-panel">
-      <div class="drafted-players-grid" id="drafted-players-grid">
-        <!-- Team rosters will be populated by JavaScript -->
-      </div>
-    </div>
-    <div class="api-links">
-      <h3>Admin Controls</h3>
-      <button class="button" onclick="refreshData()">🔄 Refresh</button>
-      <button class="button" onclick="resetDraft()">🔄 Reset Draft</button>
-      <br>
-      <br>
-      <select id="team-select" class="team-select">
-        <option value="">Select team to mark done...</option>
-      </select>
-      <button class="button" onclick="markTeamDone()">Mark Team Done</button>
-      <button class="button" onclick="clearDoneTeams()">Clear All Done</button>
-      <br>
-      <br>
-      <button class="button admin-cancel-hidden"
-              onclick="cancelNomination()"
-              id="admin-cancel-nomination">Cancel Nomination</button>
-      <br>
-      <br>
-      <select id="drafted-player-select" class="team-select">
-        <option value="">Select drafted player to remove...</option>
-      </select>
-      <button class="button" onclick="removeDraftedPlayer()">Remove</button>
-      <br>
-      <br>
-      <h3>Admin Draft</h3>
-      <div class="admin-draft-section">
-        <div class="form-group">
-          <label for="admin-player-search">Player:</label>
-          <div class="player-search-container">
-            <input type="text"
-                   id="admin-player-search"
-                   class="player-search"
-                   placeholder="Search for player..."
-                   autocomplete="off">
-            <div id="admin-player-dropdown" class="player-dropdown"></div>
+          <div class="drow">
+            <span class="dlabel">Owner</span>
+            <select class="dselect" id="admin-owner-select"></select>
+          </div>
+          <div class="drow">
+            <span class="dlabel">Price</span>
+            <input class="dinput price-narrow"
+                   id="admin-price-input"
+                   type="number"
+                   min="1"
+                   placeholder="$">
+            <button class="dbtn" onclick="adminDraftPlayer()">Insert</button>
           </div>
         </div>
-        <div class="form-group">
-          <label for="admin-owner-select">Owner:</label>
-          <select id="admin-owner-select" class="team-select">
-            <option value="">Select owner...</option>
-          </select>
+        <div class="dsec">
+          <h3>Remove / Transfer Pick</h3>
+          <div class="drow">
+            <select class="dselect" id="remove-select"></select>
+          </div>
+          <div class="drow">
+            <button class="dbtn danger" onclick="removeDraftedPlayer()">Remove</button>
+            <select class="dselect" id="transfer-select"></select>
+            <button class="dbtn" onclick="transferSelectedPick()">Transfer</button>
+          </div>
         </div>
-        <div class="form-group">
-          <label for="admin-price-input">Price:</label>
-          <input type="number"
-                 id="admin-price-input"
-                 class="price-input"
-                 placeholder="Enter price..."
-                 min="1">
+        <div class="dsec">
+          <h3>Ticker</h3>
+          <div class="drow" id="ticker-speed-row">
+            <button class="dbtn ghost" data-speed="50s" onclick="setTickerSpeed('50s')">Slow</button>
+            <button class="dbtn ghost" data-speed="26s" onclick="setTickerSpeed('26s')">Normal</button>
+            <button class="dbtn ghost" data-speed="14s" onclick="setTickerSpeed('14s')">Fast</button>
+          </div>
         </div>
-        <button class="button" onclick="adminDraftPlayer()">Insert Player</button>
-      </div>
-      <br>
-      <br>
-      <h3>API Documentation</h3>
-      <a href="/docs" target="_blank">📚 Interactive API Docs (Swagger)</a>
-      <a href="/redoc" target="_blank">📖 ReDoc Documentation</a>
-      <a href="/api/v1/draft-state" target="_blank">🔗 Draft State JSON</a>
-      <a href="/api/v1/players" target="_blank">🔗 Players JSON</a>
-      <a href="/api/v1/owners" target="_blank">🔗 Owners JSON</a>
-    </div>
-    <!-- Context Menu -->
-    <div id="context-menu" class="context-menu">
-      <div class="context-menu-item" id="context-delete">Delete</div>
-      <div class="context-menu-item has-submenu" id="context-move">
-        Move to Team
-        <div id="context-submenu" class="context-submenu">
-          <!-- Team options will be populated dynamically -->
+        <div class="dsec">
+          <h3>API &amp; Docs</h3>
+          <div class="dlinks">
+            <a href="/docs" target="_blank">📚 Swagger API Docs</a>
+            <a href="/redoc" target="_blank">📖 ReDoc</a>
+            <a href="/api/v1/draft-state" target="_blank">🔗 Draft State JSON</a>
+            <a href="/api/v1/players" target="_blank">🔗 Players JSON</a>
+            <a href="/api/v1/owners" target="_blank">🔗 Owners JSON</a>
+          </div>
         </div>
       </div>
-    </div>
+    </aside>
     <script>
+        // Server-injected (change F): config is authoritative; no hardcoded fallbacks.
+        let config = {{ config | tojson }};
         let currentVersion = {{ draft_state.version }};
-        let selectedPlayerId = null;
-        let selectedPlayerName = null;
         let players = [];
         let owners = [];
-        let availablePlayerIds = [];
-        let highlightedIndex = -1;
-        let lastDraftedPlayerId = null;
-        let currentDraftState = null;
         let playerStats = {};
+        let availablePlayerIds = [];
+        let currentDraftState = null;
+        let selectedPlayerId = null;
+        let selectedPlayerName = null;
+        let highlightedIndex = -1;
+        let nominationTimerInterval = null;
+        let nominationStartTime = null;
+        let adminSelectedPlayerId = null;
+        let adminSelectedPlayerName = null;
+        let adminHighlightedIndex = -1;
 
-        // NFL Team Logo URLs - using ESPN's CDN
-        function formatPlayerStats(playerId, position) {
-            try {
-                const stats = playerStats[playerId];
-                if (!stats || !stats.stats_summary) {
-                    return `
-                        <div class="stats-header">
-                            <div class="stat-column"><span class="stat-header">No 2024 Stats</span></div>
-                        </div>
-                        <div class="stats-values">
-                            <div class="stat-column"><span class="stat-value">-</span></div>
-                        </div>
-                    `;
-                }
-
-                // Parse detailed stats based on position
-                if (position === 'QB' && stats.passing) {
-                    const p = stats.passing;
-                    return `
-                        <div class="stats-header">
-                            <div class="stat-column"><span class="stat-header">Comp</span></div>
-                            <div class="stat-column"><span class="stat-header">Att</span></div>
-                            <div class="stat-column"><span class="stat-header">Yds</span></div>
-                            <div class="stat-column"><span class="stat-header">TD</span></div>
-                            <div class="stat-column"><span class="stat-header">Int</span></div>
-                            <div class="stat-column"><span class="stat-header">Rate</span></div>
-                        </div>
-                        <div class="stats-values">
-                            <div class="stat-column"><span class="stat-value">${p.completions}</span></div>
-                            <div class="stat-column"><span class="stat-value">${p.attempts}</span></div>
-                            <div class="stat-column"><span class="stat-value">${p.yards}</span></div>
-                            <div class="stat-column"><span class="stat-value">${p.tds}</span></div>
-                            <div class="stat-column"><span class="stat-value">${p.ints}</span></div>
-                            <div class="stat-column"><span class="stat-value">${p.rating || '--'}</span></div>
-                        </div>
-                    `;
-                } else if (position === 'RB' && (stats.rushing || stats.receiving)) {
-                    const r = stats.rushing || {};
-                    const rec = stats.receiving || {};
-                    return `
-                        <div class="stats-header">
-                            <div class="stat-column"><span class="stat-header">Car</span></div>
-                            <div class="stat-column"><span class="stat-header">Ryds</span></div>
-                            <div class="stat-column"><span class="stat-header">RTD</span></div>
-                            <div class="stat-column"><span class="stat-header">Rec</span></div>
-                            <div class="stat-column"><span class="stat-header">Recyds</span></div>
-                            <div class="stat-column"><span class="stat-header">Rectd</span></div>
-                        </div>
-                        <div class="stats-values">
-                            <div class="stat-column"><span class="stat-value">${r.carries || '--'}</span></div>
-                            <div class="stat-column"><span class="stat-value">${r.yards || '--'}</span></div>
-                            <div class="stat-column"><span class="stat-value">${r.tds || '--'}</span></div>
-                            <div class="stat-column"><span class="stat-value">${rec.receptions || '--'}</span></div>
-                            <div class="stat-column"><span class="stat-value">${rec.yards || '--'}</span></div>
-                            <div class="stat-column"><span class="stat-value">${rec.tds || '--'}</span></div>
-                        </div>
-                    `;
-                } else if ((position === 'WR' || position === 'TE') && stats.receiving) {
-                    const rec = stats.receiving;
-                    return `
-                        <div class="stats-header">
-                            <div class="stat-column"><span class="stat-header">Rec</span></div>
-                            <div class="stat-column"><span class="stat-header">Tgts</span></div>
-                            <div class="stat-column"><span class="stat-header">Yds</span></div>
-                            <div class="stat-column"><span class="stat-header">TD</span></div>
-                            <div class="stat-column"><span class="stat-header">Avg</span></div>
-                            <div class="stat-column"><span class="stat-header">Long</span></div>
-                        </div>
-                        <div class="stats-values">
-                            <div class="stat-column"><span class="stat-value">${rec.receptions}</span></div>
-                            <div class="stat-column"><span class="stat-value">${rec.targets}</span></div>
-                            <div class="stat-column"><span class="stat-value">${rec.yards}</span></div>
-                            <div class="stat-column"><span class="stat-value">${rec.tds}</span></div>
-                            <div class="stat-column"><span class="stat-value">${rec.avg || '--'}</span></div>
-                            <div class="stat-column"><span class="stat-value">${rec.long || '--'}</span></div>
-                        </div>
-                    `;
-                } else if (position === 'K' && stats.kicking) {
-                    const k = stats.kicking;
-                    return `
-                        <div class="stats-header">
-                            <div class="stat-column"><span class="stat-header">FGM</span></div>
-                            <div class="stat-column"><span class="stat-header">FGA</span></div>
-                            <div class="stat-column"><span class="stat-header">FG%</span></div>
-                            <div class="stat-column"><span class="stat-header">XPM</span></div>
-                            <div class="stat-column"><span class="stat-header">XPA</span></div>
-                            <div class="stat-column"><span class="stat-header">Pts</span></div>
-                        </div>
-                        <div class="stats-values">
-                            <div class="stat-column"><span class="stat-value">${k.fgm}</span></div>
-                            <div class="stat-column"><span class="stat-value">${k.fga}</span></div>
-                            <div class="stat-column"><span class="stat-value">${k.fg_pct}%</span></div>
-                            <div class="stat-column"><span class="stat-value">${k.xpm}</span></div>
-                            <div class="stat-column"><span class="stat-value">${k.xpa}</span></div>
-                            <div class="stat-column"><span class="stat-value">${k.points}</span></div>
-                        </div>
-                    `;
-                }
-
-                // Fallback to stats_summary for D/ST or when detailed stats unavailable
-                return `
-                    <div class="stats-header">
-                        <div class="stat-column"><span class="stat-header">2024 Season</span></div>
-                    </div>
-                    <div class="stats-values">
-                        <div class="stat-column"><span class="stat-value">${stats.stats_summary}</span></div>
-                    </div>
-                `;
-            } catch (error) {
-                return `
-                    <div class="stats-header">
-                        <div class="stat-column"><span class="stat-header">Error</span></div>
-                    </div>
-                    <div class="stats-values">
-                        <div class="stat-column"><span class="stat-value">--</span></div>
-                    </div>
-                `;
-            }
+        function openDrawer() {
+            document.getElementById('scrim').classList.add('open');
+            document.getElementById('drawer').classList.add('open');
+            document.getElementById('drawer').setAttribute('aria-hidden', 'false');
         }
+        function closeDrawer() {
+            document.getElementById('scrim').classList.remove('open');
+            document.getElementById('drawer').classList.remove('open');
+            document.getElementById('drawer').setAttribute('aria-hidden', 'true');
+        }
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
 
         function getTeamLogoUrl(teamAbbr) {
             const teamMappings = {
@@ -300,58 +278,19 @@
             };
             return teamMappings[teamAbbr] || 'https://a.espncdn.com/i/teamlogos/nfl/500/nfl.png';
         }
-        let doneTeams = new Set();
-        let config = null;
-        let nominationTimerInterval = null;
-        let nominationStartTime = null;
-        let adminSelectedPlayerId = null;
-        let adminSelectedPlayerName = null;
-        let adminHighlightedIndex = -1;
-        
-        // Context menu variables
-        let contextMenuPickId = null;
-        let contextMenuPlayerId = null;
-        let contextMenuPlayerName = null;
-        let contextMenuOwnerId = null;
-        let contextMenuPrice = null;
-
-        // Load initial data
         async function loadData() {
             try {
-                // Load players
-                const playersResponse = await fetch('/api/v1/players');
-                players = await playersResponse.json();
-
-                // Load player stats
+                players = await (await fetch('/api/v1/players')).json();
                 try {
-                    const statsResponse = await fetch('/api/v1/player/stats');
-                    if (statsResponse.ok) {
-                        playerStats = await statsResponse.json();
-                        console.log('Loaded player stats for', Object.keys(playerStats).length, 'players');
-                    }
-                } catch (error) {
-                    console.warn('Failed to load player stats:', error.message);
-                    playerStats = {};
-                }
-                
-                // Load owners
-                const ownersResponse = await fetch('/api/v1/owners');
-                owners = await ownersResponse.json();
-                
-                // Load configuration
-                const configResponse = await fetch('/api/v1/config');
-                config = await configResponse.json();
-                
-                // Load draft state
+                    const statsResp = await fetch('/api/v1/player/stats');
+                    if (statsResp.ok) playerStats = await statsResp.json();
+                } catch (e) { playerStats = {}; }
+                owners = await (await fetch('/api/v1/owners')).json();
+                // config already injected; no fetch needed.
                 await refreshData();
-                
-                // Set up player search
                 setupPlayerSearch();
-                
-                // Set up admin draft functionality
                 setupAdminPlayerSearch();
                 populateAdminOwnerSelect();
-                
             } catch (error) {
                 showMessage('Error loading data: ' + error.message, 'error');
             }
@@ -359,33 +298,17 @@
 
         async function refreshData() {
             try {
-                const response = await fetch('/api/v1/draft-state');
-                const draftState = await response.json();
-                
+                const draftState = await (await fetch('/api/v1/draft-state')).json();
                 currentVersion = draftState.version;
                 currentDraftState = draftState;
-                
-                
-                // Update nomination panel
-                updateNominationPanel(draftState.nominated);
-                
-                // Update available players for search
                 availablePlayerIds = draftState.available_player_ids;
-                
-                // Update teams (use our custom next-to-nominate logic)
-                const effectiveNextToNominate = getNextToNominate(draftState.teams);
-                updateTeams(draftState.teams, effectiveNextToNominate, draftState.nominated);
-                
-                // Update drafted players
-                console.log('Updating drafted players, teams:', draftState.teams);
-                updateDraftedPlayers(draftState.teams, draftState);
-                
-                // Populate team select dropdown
-                populateTeamSelect(draftState.teams);
-                
-                // Update draft progress
-                updateDraftProgress(draftState.teams);
-                
+
+                updateNominationPanel(draftState);          // hero active/standby (Task 4/5)
+                updateTeams(draftState);                    // rail (Task 3)
+                updateDraftProgress(draftState.teams);      // top bar (Task 6)
+                updateOnDeck(draftState);                   // nominate-bar hint (Task 5)
+                updateTicker(draftState);                   // draft wire (Task 9)
+                populateDrawerSelects(draftState);          // drawer selects (Task 8)
             } catch (error) {
                 showMessage('Error refreshing data: ' + error.message, 'error');
             }
@@ -393,140 +316,122 @@
 
         function startNominationTimer() {
             nominationStartTime = Date.now();
-            const timerElement = document.getElementById('nomination-timer');
-            timerElement.style.display = 'block';
-            
-            // Clear any existing timer
-            if (nominationTimerInterval) {
-                clearInterval(nominationTimerInterval);
-            }
-            
-            // Update timer every second
-            nominationTimerInterval = setInterval(() => {
-                const elapsed = Date.now() - nominationStartTime;
-                const seconds = Math.floor(elapsed / 1000);
-                const minutes = Math.floor(seconds / 60);
-                const displaySeconds = seconds % 60;
-                
-                timerElement.textContent = 
-                    `${String(minutes).padStart(2, '0')}:${String(displaySeconds).padStart(2, '0')}`;
-            }, 1000);
+            if (nominationTimerInterval) clearInterval(nominationTimerInterval);
+            const el = document.getElementById('hero-timer');
+            const tick = () => {
+                const secs = Math.floor((Date.now() - nominationStartTime) / 1000);
+                const m = Math.floor(secs / 60), s = secs % 60;
+                el.textContent = `${m}:${String(s).padStart(2, '0')}`;
+            };
+            tick();
+            nominationTimerInterval = setInterval(tick, 1000);
         }
-        
+
         function stopNominationTimer() {
-            if (nominationTimerInterval) {
-                clearInterval(nominationTimerInterval);
-                nominationTimerInterval = null;
-            }
-            const timerElement = document.getElementById('nomination-timer');
-            timerElement.style.display = 'none';
-            timerElement.textContent = '00:00';
+            if (nominationTimerInterval) { clearInterval(nominationTimerInterval); nominationTimerInterval = null; }
+            const el = document.getElementById('hero-timer');
+            if (el) el.textContent = '0:00';
         }
         
         function updateDraftProgress(teams) {
-            if (!config) return;
-            
-            // Calculate total players drafted
-            let totalPlayersDrafted = 0;
-            teams.forEach(team => {
-                totalPlayersDrafted += team.picks.length;
-            });
-            
-            // Calculate total possible players
-            const totalPossiblePlayers = config.total_rounds * teams.length;
-            
-            // Calculate percentage
-            const percentage = totalPossiblePlayers > 0 
-                ? Math.round((totalPlayersDrafted / totalPossiblePlayers) * 100) 
-                : 0;
-            
-            // Calculate current round (1-based)
-            const currentRound = totalPlayersDrafted > 0 
-                ? Math.ceil((totalPlayersDrafted) / teams.length)
-                : 0;
-            
-            // Stats elements removed - no longer needed
-            
-            // Update progress bar
-            const progressBar = document.getElementById('draft-progress-bar');
-            progressBar.style.width = percentage + '%';
-            document.getElementById('draft-percentage').textContent = percentage + '%';
-            
-            // Add round markers if not already added
-            const markersContainer = document.getElementById('draft-markers');
-            if (markersContainer.children.length === 0 && config.total_rounds > 0) {
-                for (let i = 0; i < config.total_rounds; i++) {
-                    const marker = document.createElement('div');
-                    marker.className = 'draft-progress-marker';
-                    markersContainer.appendChild(marker);
-                }
-            }
-            
-            // Change bar color based on progress (red to green)
-            if (percentage >= 90) {
-                progressBar.style.background = 'linear-gradient(90deg, #4caf50 0%, #8bc34a 100%)';  // Green - nearly complete
-            } else if (percentage >= 75) {
-                progressBar.style.background = 'linear-gradient(90deg, #66bb6a 0%, #81c784 100%)';  // Light green
-            } else if (percentage >= 50) {
-                progressBar.style.background = 'linear-gradient(90deg, #ff9800 0%, #ffc107 100%)';  // Orange - midway
-            } else if (percentage >= 25) {
-                progressBar.style.background = 'linear-gradient(90deg, #ff6b6b 0%, #ff9800 100%)';  // Orange-red
-            } else {
-                progressBar.style.background = 'linear-gradient(90deg, #d32f2f 0%, #ff6b6b 100%)';  // Red - just starting
-            }
+            const drafted = teams.reduce((n, t) => n + t.picks.length, 0);
+            const totalPossible = config.total_rounds * teams.length;
+            const pct = totalPossible > 0 ? Math.round(drafted / totalPossible * 100) : 0;
+            document.getElementById('progress-fill').style.width = pct + '%';
+            document.getElementById('progress-pct').textContent = pct + '%';
         }
         
-        function updateNominationPanel(nominated) {
-            const cancelButton = document.getElementById('admin-cancel-nomination');
-            const nominationDetails = document.getElementById('nomination-details');
-            
+        // Short, position-appropriate stat suffix for the hero meta line.
+        function heroStatLine(playerId, position) {
+            const s = playerStats[playerId];
+            if (!s) return '';
+            if (position === 'QB' && s.passing) return ` · ${s.passing.yards} yds · ${s.passing.tds} TD`;
+            if (position === 'RB' && s.rushing) return ` · ${s.rushing.yards} yds · ${s.rushing.tds} TD`;
+            if ((position === 'WR' || position === 'TE') && s.receiving) return ` · ${s.receiving.yards} yds · ${s.receiving.tds} TD`;
+            if (position === 'K' && s.kicking) return ` · ${s.kicking.points} pts`;
+            return s.stats_summary ? ` · ${s.stats_summary}` : '';
+        }
+
+        function updateNominationPanel(draftState) {
+            const nominated = draftState.nominated;
             if (nominated) {
-                // Start the timer for new nomination
-                if (!nominationTimerInterval) {
-                    startNominationTimer();
-                }
+                document.body.classList.remove('standby');
+                if (!nominationTimerInterval) startNominationTimer();
                 const player = players.find(p => p.id === nominated.player_id);
                 const bidder = owners.find(o => o.id === nominated.current_bidder_id);
-                
                 if (player) {
-                    // Get team logo for background
-                    const teamLogoUrl = getTeamLogoUrl(player.team);
-                    
-                    // Use team logo for defenses, player headshot for individual players
-                    let imageUrl;
-                    if (player.position === 'D/ST') {
-                        imageUrl = teamLogoUrl;
-                    } else {
-                        imageUrl = `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${player.id}.png&w=350&h=254`;
-                    }
-                    
-                    nominationDetails.innerHTML = `
-                        <div class="nominated-player-image-container" style="background-image: url(${teamLogoUrl});">
-                            <img src="${imageUrl}" alt="${player.last_name}" class="nominated-player-image" onerror="this.style.display='none'">
-                        </div>
-                        <div class="nominated-player-info">
-                            <div class="nominated-player-name"><span class="position-badge position-${player.position === 'D/ST' ? 'DEF' : player.position}">${player.position}</span> ${player.position === 'D/ST' ? `${player.first_name} ${player.last_name}` : `${player.last_name}, ${player.first_name}`}</div>
-                        </div>
-                        <div class="nominated-player-stats">
-                            <div class="stats-table">
-                                ${formatPlayerStats(player.id, player.position)}
-                            </div>
-                        </div>
-                        <div class="nominated-bidder-info">
-                            <div class="nominated-bidder-name">${bidder ? bidder.team_name : 'Unknown'}</div>
-                            <div class="nominated-bidder-amount">$${nominated.current_bid}</div>
-                        </div>
-                        <button class="button" onclick="completeDraft()">Draft Player</button>
-                    `;
-                } else {
-                    nominationDetails.innerHTML = '<div>Unknown player nominated</div>';
+                    const logo = getTeamLogoUrl(player.team);
+                    const img = player.position === 'D/ST'
+                        ? logo
+                        : `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${player.id}.png&w=350&h=254`;
+                    const name = player.position === 'D/ST'
+                        ? `${player.first_name} ${player.last_name}`
+                        : `${player.last_name}, ${player.first_name}`;
+                    document.getElementById('hero-posbadge').textContent = player.position;
+                    const photo = document.getElementById('hero-photo-img');
+                    photo.style.display = ''; photo.src = img; photo.alt = player.last_name; photo.onerror = function(){ this.style.display='none'; };
+                    document.getElementById('hero-logo').src = logo;
+                    document.getElementById('hero-name').textContent = name;
+                    document.getElementById('hero-meta').innerHTML =
+                        `${player.position} · <b>${player.team}</b>${heroStatLine(player.id, player.position)}`;
+                    document.getElementById('bid-amt').textContent = `$${nominated.current_bid}`;
+                    document.getElementById('bidder-chip').style.background = bidder ? bidder.color : '#8A9BB5';
+                    document.getElementById('bidder-nm').textContent = bidder ? bidder.team_name : 'Unknown';
                 }
-                cancelButton.style.display = 'inline-block';
             } else {
-                nominationDetails.innerHTML = '<div style="width: 100%; text-align: center; color: #c0c0c0;">No player currently nominated</div>';
-                cancelButton.style.display = 'none';
-                // Stop the timer when no player is nominated
                 stopNominationTimer();
+                updateStandbyHero(draftState);   // Task 5
+                document.body.classList.add('standby');
+            }
+        }
+
+        function updateStandbyHero(draftState) {
+            const team = owners.find(o => o.id === draftState.next_to_nominate);
+            const color = team ? team.color : '#8A9BB5';
+            const nameEl = document.getElementById('standby-name');
+            nameEl.textContent = team ? team.team_name : '—';
+            nameEl.style.color = color;
+            document.getElementById('standby-meta').innerHTML =
+                `${team ? team.owner_name : ''} · <b>awaiting nomination</b>`;
+            const sil = document.getElementById('standby-sil');
+            sil.querySelectorAll('[fill]').forEach(node => node.setAttribute('fill', color));
+        }
+
+        function updateOnDeck(draftState) {
+            const onClock = owners.find(o => o.id === draftState.next_to_nominate);
+            const upNext = draftState.up_next ? owners.find(o => o.id === draftState.up_next) : null;
+            let html = '';
+            if (onClock) html = `On the clock: <b>${onClock.team_name}</b>`;
+            if (upNext) html += ` · Up Next <b>${upNext.team_name}</b>`;
+            document.getElementById('ondeck').innerHTML = html;
+        }
+
+        function updateTicker(draftState) {
+            const ticker = document.getElementById('ticker');
+            const crawl = document.getElementById('ticker-crawl');
+            // Flatten picks, newest first (pick_id is reliably chronological).
+            const picks = [];
+            draftState.teams.forEach(t => {
+                const o = owners.find(ow => ow.id === t.owner_id);
+                t.picks.forEach(pk => {
+                    const p = players.find(pl => pl.id === pk.player_id);
+                    if (p) picks.push({ id: pk.pick_id,
+                        html: `<b>${p.first_name} ${p.last_name}</b> (${p.position}) → ${o ? o.team_name : '?'} <span class="amt">$${pk.price}</span>` });
+                });
+            });
+            picks.sort((a, b) => b.id - a.id);
+            const recent = picks.slice(0, 12);
+            if (recent.length === 0) {
+                crawl.innerHTML = '';
+                ticker.classList.add('is-hidden');
+                document.getElementById('showWire').style.display = 'none';
+                return;
+            }
+            crawl.innerHTML = recent.map(r => r.html).join('<span class="sep">●</span>');
+            // Respect a prior manual hide: only auto-reveal if neither ticker nor pill is showing.
+            const pill = document.getElementById('showWire');
+            if (ticker.classList.contains('is-hidden') && pill.style.display !== 'block') {
+                ticker.classList.remove('is-hidden');
             }
         }
 
@@ -658,346 +563,136 @@
             highlightedIndex = -1;
         }
 
-        function getBudgetClass(budget) {
-            if (!config) return ''; // If config not loaded yet, no class
-            
-            const percentage = (budget / config.initial_budget) * 100;
-            
-            if (percentage <= 5) return 'critical';   // 5% or less remaining
-            if (percentage <= 15) return 'low';       // 15% or less remaining
-            return '';
+        function teamPositionCount(team, position) {
+            return team.picks.reduce((n, pick) => {
+                const p = players.find(pl => pl.id === pick.player_id);
+                return n + (p && p.position === position ? 1 : 0);
+            }, 0);
         }
-        
-        function getRosterProgressDegrees(pickCount) {
-            if (!config) return 0; // If config not loaded yet, no progress
-            
-            const percentage = (pickCount / config.total_rounds) * 100;
-            return (percentage / 100) * 360; // Convert to degrees for conic-gradient
+        function nominatedPosition(draftState) {
+            if (!draftState.nominated) return null;
+            const p = players.find(pl => pl.id === draftState.nominated.player_id);
+            return p ? p.position : null;
         }
-        
-        function getRosterProgressColor(pickCount) {
-            if (!config) return '#4a90e2'; // Default blue if config not loaded
-            
-            const percentage = pickCount / config.total_rounds;
-            
-            if (percentage <= 0.33) {
-                // Red to orange (0% to 33%)
-                const localPercent = percentage / 0.33;
-                const red = 244;
-                const green = Math.round(67 + (152 * localPercent)); // 67 to 219
-                const blue = 54;
-                return `rgb(${red}, ${green}, ${blue})`;
-            } else if (percentage <= 0.66) {
-                // Orange to yellow (33% to 66%)
-                const localPercent = (percentage - 0.33) / 0.33;
-                const red = Math.round(244 - (21 * localPercent)); // 244 to 223
-                const green = Math.round(219 + (24 * localPercent)); // 219 to 243
-                const blue = 54;
-                return `rgb(${red}, ${green}, ${blue})`;
-            } else {
-                // Yellow to green (66% to 100%)
-                const localPercent = (percentage - 0.66) / 0.34;
-                const red = Math.round(223 - (147 * localPercent)); // 223 to 76
-                const green = 243; // Stay bright
-                const blue = Math.round(54 + (121 * localPercent)); // 54 to 175
-                return `rgb(${red}, ${green}, ${blue})`;
-            }
-        }
-        
-        function adjustFontSize(element) {
-            const maxHeight = 20; // Maximum height for single line in pixels
-            const minFontSize = 0.7; // Minimum font size in em
-            const maxFontSize = 1.1; // Default font size in em
-            
-            // Reset to default size first
-            element.style.fontSize = maxFontSize + 'em';
-            
-            // Check if text is wrapping
-            if (element.scrollHeight > maxHeight) {
-                let fontSize = maxFontSize;
-                
-                // Gradually decrease font size until it fits
-                while (element.scrollHeight > maxHeight && fontSize > minFontSize) {
-                    fontSize -= 0.05;
-                    element.style.fontSize = fontSize + 'em';
-                }
-            }
+        function budgetClass(team) {
+            const pct = (team.budget_remaining / config.initial_budget) * 100;
+            if (pct <= 15) return 'crit';
+            if (pct <= 35) return 'warn';
+            return 'ok';
         }
 
-        function validateBidAmount(ownerId, bidAmount, teams) {
-            if (!config) return true; // If config not loaded yet, allow bid
-            
-            const team = teams.find(t => t.owner_id === ownerId);
-            if (!team) return false;
-            
-            const remainingBudgetAfterBid = team.budget_remaining - bidAmount;
-            const currentRosterSize = team.picks.length;
-            const remainingRosterSpots = config.total_rounds - currentRosterSize;
-            const minBudgetNeeded = remainingRosterSpots - 1; // -1 because current bid counts as one spot
-            
-            return remainingBudgetAfterBid >= minBudgetNeeded;
-        }
-        
-        function updateBidButtonState(ownerId, teams, nominated) {
-            const bidInput = document.getElementById(`bid-input-${ownerId}`);
-            const bidButton = document.querySelector(`button[onclick="placeBidForOwner(${ownerId})"]`);
-            
-            if (!bidInput || !bidButton) return;
-            
-            const bidAmount = parseInt(bidInput.value) || 0;
-            const minBid = nominated ? nominated.current_bid + 1 : 1;
-            
-            // Check basic constraints
-            const team = teams.find(t => t.owner_id === ownerId);
-            if (!team) return;
-            
-            const hasBasicBudget = bidAmount <= team.budget_remaining;
-            const meetsMinBid = bidAmount >= minBid;
-            const canCompleteRoster = validateBidAmount(ownerId, bidAmount, teams);
-            
-            const isValid = hasBasicBudget && meetsMinBid && canCompleteRoster;
-            
-            bidButton.disabled = !isValid;
-            
-            // Add visual feedback for invalid bids
-            if (!canCompleteRoster && hasBasicBudget && meetsMinBid) {
-                bidButton.title = "Bid would prevent completing roster";
-                bidInput.style.borderColor = "#ff6b6b";
-            } else {
-                bidButton.title = "";
-                bidInput.style.borderColor = "#4a4a4a";
+        // Valid bid (parity with backend): min next bid <= amount <= max_bid (roster-safe
+        // budget reservation), amount <= budget, and team not at position max for nominee.
+        function updateBidButtonState(team, nextBid, nomPos, inp, btn) {
+            const amt = parseInt(inp.value) || 0;
+            const maxBid = (team.max_bid === null || team.max_bid === undefined) ? -1 : team.max_bid;
+            const meetsMin = amt >= nextBid;
+            const withinBudget = amt <= team.budget_remaining;
+            const withinMax = amt <= maxBid;
+            let posOk = true;
+            if (nomPos && config.position_maximums[nomPos] !== undefined) {
+                posOk = teamPositionCount(team, nomPos) < config.position_maximums[nomPos];
             }
+            const valid = meetsMin && withinBudget && withinMax && posOk;
+            btn.disabled = !valid;
+            inp.classList.toggle('over-max', amt > maxBid);
+            btn.title = !posOk ? `At position maximum for ${nomPos}`
+                : (!withinMax && meetsMin && withinBudget) ? 'Bid would prevent completing roster' : '';
         }
 
-        function updateTeams(teams, nextToNominate, nominated = null) {
-            const list = document.getElementById('teams-list');
-            list.innerHTML = '';
-            
-            // Check if there's an active nomination to show bid controls
-            const hasNomination = nominated !== null;
-            
-            let tabIndex = 1; // Start tabindex counter
-            
-            teams.forEach(team => {
+        function updateTeams(draftState) {
+            const teams = draftState.teams;
+            const nominated = draftState.nominated;
+            const rail = document.getElementById('rail');
+            rail.innerHTML = '';
+
+            const nextBid = nominated ? nominated.current_bid + 1 : config.min_bid;
+            const nomPos = nominatedPosition(draftState);
+
+            teams.forEach((team, idx) => {
                 const owner = owners.find(o => o.id === team.owner_id);
-                const teamDiv = document.createElement('div');
-                teamDiv.className = 'team';
-                
-                // Determine if roster is full
-                const rosterLimit = config ? config.total_rounds : 16;
-                const isRosterFull = team.picks.length >= rosterLimit;
-                
-                // Check if team is done (either marked done or roster full)
-                const isDone = doneTeams.has(team.owner_id) || isRosterFull;
-                
-                // Determine badge status
-                let badgeHTML = '';
-                if (isDone) {
-                    badgeHTML = '<span class="team-badge done">DONE</span>';
-                } else if (team.owner_id === nextToNominate) {
-                    badgeHTML = '<span class="team-badge nominating">NOMINATING</span>';
+                const color = owner ? owner.color : '#8A9BB5';
+                const total = config.total_rounds;
+                const isRosterFull = team.picks.length >= total;
+                const isDone = team.manually_done || isRosterFull;
+                const isHigh = nominated && nominated.current_bidder_id === team.owner_id;
+                const isClock = team.owner_id === draftState.next_to_nominate && !isDone;
+
+                const pct = Math.round(team.picks.length / total * 100);
+                const budgetPct = Math.round(team.budget_remaining / config.initial_budget * 100);
+                const bcls = budgetClass(team);
+                const maxBid = team.max_bid;  // server: int | null
+                const maxEl = (maxBid === null || maxBid === undefined)
+                    ? '<span class="v max">—</span>'
+                    : `<span class="v max tnum">$${maxBid}</span>`;
+
+                let plateCls = 'plate';
+                if (isClock) plateCls += ' is-clock';
+                else if (isHigh) plateCls += ' is-high';
+                if (isDone) plateCls += ' is-done';
+
+                const statusEl = isDone ? '<span class="status done">Done</span>'
+                    : isClock ? '<span class="status clock">On the Clock</span>'
+                    : isHigh ? '<span class="status high">High Bid</span>' : '';
+
+                // Bid control only when there is an active nomination and team isn't done.
+                let bidEl = '';
+                if (nominated && !isDone) {
+                    bidEl = `<div class="bidctl" data-owner="${team.owner_id}">
+                        <input class="tnum" id="bid-input-${team.owner_id}" value="${nextBid}" inputmode="numeric">
+                        <button onclick="placeBidForOwner(${team.owner_id})">Bid</button>
+                    </div>`;
                 }
-                
-                // Get minimum bid amount
-                let minBid = 1;
-                if (hasNomination && nominated) {
-                    minBid = nominated.current_bid + 1;
-                }
-                
-                // Check if this team is the current bidder (only if there's an active nomination)
-                const isCurrentBidder = hasNomination && nominated && nominated.current_bidder_id === team.owner_id;
-                const bidButtonClass = isCurrentBidder ? 'team-bid-button current-bidder' : 'team-bid-button';
-                
-                // Only show bid controls if team is not done and there's an active nomination
-                const showBidControls = hasNomination && !isDone;
-                
-                // Check if team can actually place a bid (has sufficient budget)
-                const canBid = showBidControls && team.budget_remaining >= minBid;
-                
-                // Assign tabindex for teams that can bid, increment counter
-                const inputTabIndex = canBid ? tabIndex++ : -1;
-                
-                teamDiv.innerHTML = `
-                    ${badgeHTML}
-                    <div class="team-name" id="team-name-${team.owner_id}" title="${owner ? owner.owner_name : 'Unknown Owner'} - ${team.picks.length} players, $${team.budget_remaining} remaining">${owner ? owner.team_name : 'Unknown Team'}</div>
-                    <div class="owner-name">${owner ? owner.owner_name : 'Unknown Owner'}</div>
-                    <div class="team-stats">
-                        <span class="budget-amount ${getBudgetClass(team.budget_remaining)}" title="Budget: $${team.budget_remaining} remaining">$${team.budget_remaining}</span>
-                        <span class="roster-count ${team.picks.length >= (config ? config.total_rounds : 16) ? 'complete' : ''}" title="Roster: ${team.picks.length} / ${config ? config.total_rounds : '?'} players drafted">${team.picks.length}/${config ? config.total_rounds : '16'}</span>
-                    </div>
-                    <div class="team-bid-controls ${showBidControls ? 'visible' : ''}">
-                        <input type="number" class="team-bid-input" value="${minBid}" min="${minBid}" id="bid-input-${team.owner_id}" title="Enter bid amount" tabindex="${inputTabIndex}">
-                        <button class="${bidButtonClass}" onclick="placeBidForOwner(${team.owner_id})" ${team.budget_remaining < minBid ? 'disabled' : ''} title="${team.budget_remaining < minBid ? 'Insufficient budget' : 'Place bid'}">Bid</button>
-                    </div>
-                `;
-                list.appendChild(teamDiv);
-                
-                // Add click handler to focus bid input when clicking anywhere on team card
-                if (canBid) {
-                    teamDiv.classList.add('clickable-for-bid');
-                    teamDiv.addEventListener('click', (e) => {
-                        // Don't interfere if they clicked directly on the input or button
-                        if (e.target.classList.contains('team-bid-input') || e.target.classList.contains('team-bid-button')) {
-                            return;
-                        }
-                        
-                        const bidInput = document.getElementById(`bid-input-${team.owner_id}`);
-                        if (bidInput) {
-                            bidInput.focus();
-                            bidInput.select(); // Select all text for easy replacement
-                        }
-                    });
-                    
-                    // Add visual hover indicator for clickable teams
-                    teamDiv.style.cursor = 'pointer';
-                }
-                
-                // Add event listener for bid input changes (only for teams that aren't done)
-                if (showBidControls) {
-                    const bidInput = document.getElementById(`bid-input-${team.owner_id}`);
-                    if (bidInput) {
-                        bidInput.addEventListener('input', () => {
-                            updateBidButtonState(team.owner_id, teams, nominated);
-                        });
-                        // Allow Enter key to submit bid
-                        bidInput.addEventListener('keypress', (e) => {
-                            if (e.key === 'Enter') {
-                                e.preventDefault();
-                                placeBidForOwner(team.owner_id);
-                            }
-                        });
-                        // Initial validation
-                        updateBidButtonState(team.owner_id, teams, nominated);
-                    }
-                }
+
+                rail.insertAdjacentHTML('beforeend', `
+                    <div class="${plateCls}" id="plate-${team.owner_id}" style="--tc:${color}">
+                        ${statusEl}
+                        <span class="ord cond">#${idx + 1}</span>
+                        <span class="tname">${owner ? owner.team_name : 'Unknown Team'}</span>
+                        <span class="owner">${owner ? owner.owner_name : 'Unknown'}</span>
+                        <span class="spacer"></span>
+                        <div class="stat-row">
+                            <div class="stat"><span class="k">Budget</span><span class="v money ${bcls} tnum">$${team.budget_remaining}</span></div>
+                            <div class="stat right"><span class="k">Max Bid</span>${maxEl}</div>
+                        </div>
+                        <div class="budget-meter ${bcls}"><div class="fill" style="width:${budgetPct}%"></div></div>
+                        <div class="picks-line">
+                            <div class="picks-fill" style="width:${pct}%;--pct:${pct || 1}"></div>
+                            <div class="picks-lbl"><span class="k">Picks</span><span class="v tnum">${team.picks.length}<span class="of">/${total}</span></span></div>
+                        </div>
+                        ${bidEl}
+                    </div>`);
             });
-            
-            // Focus first available bid input if there's a nomination
-            if (hasNomination) {
-                setTimeout(() => {
-                    const firstBidInput = document.querySelector('.team-bid-input[tabindex="1"]');
-                    if (firstBidInput) {
-                        firstBidInput.focus();
-                        firstBidInput.select(); // Select the default value for easy replacement
+
+            // Wire bid controls (validate, click-to-focus, Enter-to-submit) — parity.
+            if (nominated) {
+                teams.forEach(team => {
+                    const plate = document.getElementById(`plate-${team.owner_id}`);
+                    const ctl = plate ? plate.querySelector('.bidctl') : null;
+                    if (!ctl) return;
+                    const inp = ctl.querySelector('input');
+                    const btn = ctl.querySelector('button');
+                    if (team.owner_id === (nominated && nominated.current_bidder_id)) {
+                        plate.classList.add('is-high');
                     }
+                    const revalidate = () => updateBidButtonState(team, nextBid, nomPos, inp, btn);
+                    inp.addEventListener('input', revalidate);
+                    inp.addEventListener('keydown', e => {
+                        if (e.key === 'Enter') { e.preventDefault(); if (!btn.disabled) placeBidForOwner(team.owner_id); }
+                    });
+                    plate.addEventListener('click', e => {
+                        if (e.target.closest('button') || e.target.closest('input')) return;
+                        inp.focus(); inp.select();
+                    });
+                    revalidate();
+                });
+                // focus the first eligible bid input for fast keyboard bidding
+                setTimeout(() => {
+                    const first = document.querySelector('.bidctl input');
+                    if (first) { first.focus(); first.select(); }
                 }, 100);
             }
-            
-            teams.forEach(team => {
-                // Auto-resize team name if it would wrap
-                setTimeout(() => {
-                    const nameElement = document.getElementById(`team-name-${team.owner_id}`);
-                    if (nameElement) {
-                        adjustFontSize(nameElement);
-                    }
-                }, 0);
-            });
         }
-
-        function updateDraftedPlayers(teams, draftState) {
-            const grid = document.getElementById('drafted-players-grid');
-            grid.innerHTML = '';
-            
-            // Find the most recently drafted player
-            let mostRecentPlayerId = null;
-            let mostRecentPickId = -1;
-            
-            teams.forEach(team => {
-                team.picks.forEach(pick => {
-                    if (pick.pick_id > mostRecentPickId) {
-                        mostRecentPickId = pick.pick_id;
-                        mostRecentPlayerId = pick.player_id;
-                    }
-                });
-            });
-            
-            // Check if we have a new draft
-            const isNewDraft = lastDraftedPlayerId !== null && lastDraftedPlayerId !== mostRecentPlayerId;
-            lastDraftedPlayerId = mostRecentPlayerId;
-            
-            teams.forEach(team => {
-                const owner = owners.find(o => o.id === team.owner_id);
-                const teamDiv = document.createElement('div');
-                teamDiv.className = 'team-roster';
-                
-                teamDiv.innerHTML = `
-                    <div id="roster-${team.owner_id}"></div>
-                `;
-                
-                // Add drafted players grouped by position
-                const rosterDiv = teamDiv.querySelector(`#roster-${team.owner_id}`);
-                
-                // Group players by position
-                const positionOrder = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
-                const playersByPosition = {};
-                
-                // Initialize position groups
-                positionOrder.forEach(pos => {
-                    playersByPosition[pos] = [];
-                });
-                
-                // Group picks by position
-                team.picks.forEach(pick => {
-                    const player = players.find(p => p.id === pick.player_id);
-                    if (player) {
-                        const position = player.position === 'D/ST' ? 'DEF' : player.position;
-                        if (playersByPosition[position]) {
-                            playersByPosition[position].push({ pick, player });
-                        }
-                    }
-                });
-                
-                // Render players by position
-                positionOrder.forEach(position => {
-                    const positionPlayers = playersByPosition[position];
-                    if (positionPlayers.length > 0) {
-                        positionPlayers.forEach(({ pick, player }) => {
-                            const playerDiv = document.createElement('div');
-                            const isNewlyDrafted = isNewDraft && pick.player_id === mostRecentPlayerId;
-                            const positionClass = `position-${player.position === 'D/ST' ? 'DEF' : player.position}`;
-                            playerDiv.className = isNewlyDrafted 
-                                ? `drafted-player ${positionClass} newly-drafted` 
-                                : `drafted-player ${positionClass}`;
-                            
-                            // Add data attributes for context menu
-                            playerDiv.dataset.pickId = pick.pick_id;
-                            playerDiv.dataset.playerId = pick.player_id;
-                            playerDiv.dataset.playerName = `${player.first_name} ${player.last_name}`;
-                            playerDiv.dataset.ownerId = team.owner_id;
-                            playerDiv.dataset.price = pick.price;
-                            
-                            // Get team logo URL
-                            const teamLogoUrl = getTeamLogoUrl(player.team);
-                            
-                            playerDiv.title = `${player.first_name} ${player.last_name} - ${player.position}, ${player.team} - Drafted for $${pick.price} (Pick #${pick.pick_id})`;
-                            
-                            playerDiv.innerHTML = `
-                                <img src="${teamLogoUrl}" alt="${player.team}" class="drafted-player-image" onerror="this.style.display='none'">
-                                <div class="drafted-player-info">
-                                    <div class="drafted-player-name">${player.first_name} ${player.last_name}</div>
-                                    <div class="drafted-player-details">${player.position} ($${pick.price})</div>
-                                </div>
-                            `;
-                            
-                            // Add context menu event listener
-                            playerDiv.addEventListener('contextmenu', showContextMenu);
-                            
-                            rosterDiv.appendChild(playerDiv);
-                            
-                            // Remove the highlight after a brief delay
-                            if (isNewlyDrafted) {
-                                setTimeout(() => {
-                                    playerDiv.classList.remove('newly-drafted');
-                                }, 1500);
-                            }
-                        });
-                    }
-                });
-                
-                grid.appendChild(teamDiv);
-            });
-        }
-
 
         async function nominateSelected() {
             if (!selectedPlayerId) {
@@ -1016,7 +711,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        owner_id: currentDraftState ? getNextToNominate(currentDraftState.teams) : 1,
+                        owner_id: currentDraftState ? currentDraftState.next_to_nominate : 1,
                         player_id: selectedPlayerId,
                         initial_bid: bid,
                         expected_version: currentVersion
@@ -1041,31 +736,6 @@
             }
         }
 
-        async function quickBid(ownerId, bidAmount) {
-            try {
-                const response = await fetch('/api/v1/bid', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        owner_id: ownerId,
-                        bid_amount: bidAmount,
-                        expected_version: currentVersion
-                    })
-                });
-                
-                if (response.ok) {
-                    const result = await response.json();
-                    currentVersion = result.version;
-                    refreshData();
-                } else {
-                    const error = await response.json();
-                    showMessage(error.detail || 'Failed to place bid', 'error');
-                }
-            } catch (err) {
-                showMessage('Network error: ' + err.message, 'error');
-            }
-        }
-        
         async function placeBidForOwner(ownerId) {
             const bidInput = document.getElementById(`bid-input-${ownerId}`);
             const bid = parseInt(bidInput.value);
@@ -1090,39 +760,6 @@
                     showMessage('Bid placed successfully!', 'success');
                     currentVersion = result.new_version;
                     await refreshData();
-                } else {
-                    const error = await response.json();
-                    showMessage('Bid failed: ' + error.detail, 'error');
-                }
-            } catch (error) {
-                showMessage('Error placing bid: ' + error.message, 'error');
-            }
-        }
-
-        async function placeBid() {
-            const bid = parseInt(document.getElementById('bid-amount').value);
-            if (!bid) {
-                showMessage('Please enter a bid amount', 'error');
-                return;
-            }
-            
-            try {
-                const response = await fetch('/api/v1/bid', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        owner_id: 2, // Default to Morty for now
-                        bid_amount: bid,
-                        expected_version: currentVersion
-                    })
-                });
-                
-                if (response.ok) {
-                    const result = await response.json();
-                    showMessage('Bid placed successfully!', 'success');
-                    currentVersion = result.new_version;
-                    await refreshData();
-                    document.getElementById('bid-amount').value = '';
                 } else {
                     const error = await response.json();
                     showMessage('Bid failed: ' + error.detail, 'error');
@@ -1189,197 +826,158 @@
             }
         }
 
-        async function resetDraft() {
-            if (!confirm('Are you sure you want to reset the draft? This will clear all picks and nominations.')) {
-                return;
-            }
-            
+        function setTickerSpeed(s) {
+            document.documentElement.style.setProperty('--ticker-speed', s);
+            localStorage.setItem('tickerSpeed', s);
+            document.querySelectorAll('#ticker-speed-row [data-speed]').forEach(b => {
+                b.classList.toggle('ghost', b.dataset.speed !== s);
+            });
+        }
+        setTickerSpeed(localStorage.getItem('tickerSpeed') || '26s');
+
+        (function setupResetHold() {
+            const btn = document.getElementById('reset-btn');
+            let timer = null, start = 0;
+            const HOLD = 1200;
+            const cancel = () => {
+                if (timer) { clearInterval(timer); timer = null; }
+                btn.classList.remove('holding'); btn.style.removeProperty('--hold');
+            };
+            const begin = () => {
+                start = Date.now();
+                btn.classList.add('holding');
+                timer = setInterval(() => {
+                    const pct = Math.min(100, (Date.now() - start) / HOLD * 100);
+                    btn.style.setProperty('--hold', pct + '%');
+                    if (pct >= 100) { cancel(); doReset(); }
+                }, 40);
+            };
+            btn.addEventListener('mousedown', begin);
+            btn.addEventListener('touchstart', e => { e.preventDefault(); begin(); });
+            ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(ev => btn.addEventListener(ev, cancel));
+        })();
+
+        async function doReset() {
             try {
-                const response = await fetch('/api/v1/reset', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        force: true
-                    })
+                const resp = await fetch('/api/v1/reset', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ force: true })
                 });
-                
-                if (response.ok) {
-                    showMessage('Draft reset successfully!', 'success');
-                    await refreshData();
-                } else {
-                    const error = await response.json();
-                    showMessage('Reset failed: ' + error.detail, 'error');
-                }
-            } catch (error) {
-                showMessage('Error resetting draft: ' + error.message, 'error');
-            }
+                if (resp.ok) { showMessage('Draft reset', 'success'); closeDrawer(); await refreshData(); }
+                else { const e = await resp.json(); showMessage('Reset failed: ' + e.detail, 'error'); }
+            } catch (err) { showMessage('Error resetting: ' + err.message, 'error'); }
         }
 
         function showMessage(text, type) {
-            const messageDiv = document.getElementById('message');
-            messageDiv.textContent = text;
-            messageDiv.className = type;
-            messageDiv.style.display = 'block';
-            
-            setTimeout(() => {
-                messageDiv.style.display = 'none';
-            }, 5000);
+            const el = document.getElementById('message');
+            el.textContent = text;
+            el.className = 'toast show ' + (type || '');
+            clearTimeout(el._t);
+            el._t = setTimeout(() => { el.className = 'toast ' + (type || ''); }, 4000);
         }
 
-        function populateTeamSelect(teams) {
-            const select = document.getElementById('team-select');
-            select.innerHTML = '<option value="">Select team to mark done...</option>';
-            
-            teams.forEach(team => {
-                const owner = owners.find(o => o.id === team.owner_id);
-                if (owner && !doneTeams.has(team.owner_id)) {
-                    const option = document.createElement('option');
-                    option.value = team.owner_id;
-                    option.textContent = owner.team_name;
-                    select.appendChild(option);
-                }
+        function populateDrawerSelects(draftState) {
+            const teams = draftState.teams;
+            // Mark-done: teams not already done
+            const doneSel = document.getElementById('done-select');
+            doneSel.innerHTML = '<option value="">Select team…</option>';
+            teams.forEach(t => {
+                const o = owners.find(ow => ow.id === t.owner_id);
+                if (o && !t.manually_done) doneSel.insertAdjacentHTML('beforeend', `<option value="${t.owner_id}">${o.team_name}</option>`);
             });
-            
-            // Also populate drafted players dropdown
-            populateDraftedPlayersSelect(teams);
-        }
-        
-        function populateDraftedPlayersSelect(teams) {
-            const select = document.getElementById('drafted-player-select');
-            select.innerHTML = '<option value="">Select drafted player to remove...</option>';
-            
-            // Collect all drafted players with their pick IDs
-            const draftedPlayers = [];
-            teams.forEach(team => {
-                const owner = owners.find(o => o.id === team.owner_id);
-                team.picks.forEach(pick => {
-                    const player = players.find(p => p.id === pick.player_id);
-                    if (player) {
-                        draftedPlayers.push({
-                            pickId: pick.pick_id,
-                            firstName: player.first_name,
-                            lastName: player.last_name,
-                            ownerName: owner ? owner.team_name : 'Unknown',
-                            price: pick.price
-                        });
-                    }
+            // Transfer target: all teams
+            const transferSel = document.getElementById('transfer-select');
+            transferSel.innerHTML = '<option value="">Transfer to…</option>';
+            teams.forEach(t => {
+                const o = owners.find(ow => ow.id === t.owner_id);
+                if (o) transferSel.insertAdjacentHTML('beforeend', `<option value="${t.owner_id}">${o.team_name}</option>`);
+            });
+            // Remove/Transfer source: every drafted pick, sorted by last name
+            const removeSel = document.getElementById('remove-select');
+            removeSel.innerHTML = '<option value="">Select drafted player…</option>';
+            const picks = [];
+            teams.forEach(t => {
+                const o = owners.find(ow => ow.id === t.owner_id);
+                t.picks.forEach(pk => {
+                    const p = players.find(pl => pl.id === pk.player_id);
+                    if (p) picks.push({ pickId: pk.pick_id, playerId: pk.player_id, price: pk.price,
+                        label: `${p.last_name}, ${p.first_name} · ${o ? o.team_name : '?'} ($${pk.price})` });
                 });
             });
-            
-            // Sort alphabetically by last name, then first name
-            draftedPlayers.sort((a, b) => {
-                const lastNameCompare = a.lastName.localeCompare(b.lastName);
-                if (lastNameCompare !== 0) return lastNameCompare;
-                return a.firstName.localeCompare(b.firstName);
-            });
-            
-            // Add options to dropdown
-            draftedPlayers.forEach(item => {
-                const option = document.createElement('option');
-                option.value = item.pickId;
-                option.textContent = `${item.lastName}, ${item.firstName} (${item.ownerName} - $${item.price})`;
-                select.appendChild(option);
-            });
+            picks.sort((a, b) => a.label.localeCompare(b.label));
+            picks.forEach(pk => removeSel.insertAdjacentHTML('beforeend',
+                `<option value="${pk.pickId}" data-player="${pk.playerId}" data-price="${pk.price}">${pk.label}</option>`));
         }
 
-        function markTeamDone() {
-            const select = document.getElementById('team-select');
-            const ownerId = parseInt(select.value);
-            
-            if (ownerId) {
-                doneTeams.add(ownerId);
-                showMessage('Team marked as done', 'success');
-                
-                // Refresh display
-                if (currentDraftState) {
-                    updateTeams(currentDraftState.teams, getNextToNominate(currentDraftState.teams), currentDraftState.nominated);
-                    populateTeamSelect(currentDraftState.teams);
-                }
-            } else {
-                showMessage('Please select a team first', 'error');
-            }
+        async function markTeamDone() {
+            const ownerId = parseInt(document.getElementById('done-select').value);
+            if (!ownerId) { showMessage('Please select a team first', 'error'); return; }
+            await patchTeamDone(ownerId, true);
         }
-
-        function clearDoneTeams() {
-            doneTeams.clear();
-            showMessage('All done teams cleared', 'success');
-            
-            // Refresh display
-            if (currentDraftState) {
-                updateTeams(currentDraftState.teams, getNextToNominate(currentDraftState.teams), currentDraftState.nominated);
-                populateTeamSelect(currentDraftState.teams);
-            }
+        async function clearDoneTeams() {
+            // Clear every currently-done team (server is the source of truth).
+            const done = currentDraftState.teams.filter(t => t.manually_done);
+            let ok = true;
+            for (const t of done) { ok = (await patchTeamDone(t.owner_id, false)) && ok; }
+            if (ok) showMessage('All done teams cleared', 'success');
         }
-        
-        async function removeDraftedPlayer() {
-            const select = document.getElementById('drafted-player-select');
-            const pickId = parseInt(select.value);
-            
-            if (!pickId) {
-                showMessage('Please select a player to remove', 'error');
-                return;
-            }
-            
-            if (!confirm('Are you sure you want to remove this drafted player?')) {
-                return;
-            }
-            
+        async function patchTeamDone(ownerId, value) {
             try {
-                const response = await fetch(`/api/v1/draft/${pickId}`, {
-                    method: 'DELETE',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'If-Match': `"${currentVersion}"`
-                    }
+                const resp = await fetch(`/api/v1/teams/${ownerId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ manually_done: value, expected_version: currentVersion })
                 });
-                
-                if (response.ok) {
-                    showMessage('Player removed successfully!', 'success');
+                if (resp.ok) {
+                    const r = await resp.json();
+                    currentVersion = r.new_version;
+                    if (value) showMessage('Team marked done', 'success');
                     await refreshData();
-                    select.value = '';
+                    return true;
                 } else {
-                    const error = await response.json();
-                    showMessage('Remove failed: ' + error.detail, 'error');
+                    const e = await resp.json();
+                    showMessage('Update failed: ' + e.detail, 'error');
+                    return false;
                 }
-            } catch (error) {
-                showMessage('Error removing player: ' + error.message, 'error');
-            }
+            } catch (err) { showMessage('Error: ' + err.message, 'error'); return false; }
         }
 
-        function getNextToNominate(teams) {
-            // Get the actual next_to_nominate from draft state
-            const actualNext = currentDraftState ? currentDraftState.next_to_nominate : 1;
-            
-            // Find teams that aren't done (either manually marked done OR roster full)
-            const rosterLimit = config ? config.total_rounds : 16;
-            const availableTeams = teams.filter(team => {
-                const isManuallyDone = doneTeams.has(team.owner_id);
-                const isRosterFull = team.picks.length >= rosterLimit;
-                return !isManuallyDone && !isRosterFull;
-            });
-            
-            if (availableTeams.length === 0) {
-                // All teams are done - return first team ID as fallback
-                return teams.length > 0 ? teams[0].owner_id : 1;
-            }
-            
-            // Get sorted list of available team IDs
-            const availableIds = availableTeams.map(t => t.owner_id).sort((a, b) => a - b);
-            
-            // Check if the actual next team is available (not done)
-            if (availableIds.includes(actualNext)) {
-                return actualNext;
-            }
-            
-            // If the actual next team is done, find the next available team
-            let nextTeam = availableIds.find(id => id > actualNext);
-            
-            // If no team found after current, wrap around to first available
-            if (!nextTeam) {
-                nextTeam = availableIds[0];
-            }
-            
-            return nextTeam;
+        async function removeDraftedPlayer() {
+            const sel = document.getElementById('remove-select');
+            const pickId = parseInt(sel.value);
+            if (!pickId) { showMessage('Please select a player to remove', 'error'); return; }
+            try {
+                const resp = await fetch(`/api/v1/draft/${pickId}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json', 'If-Match': `"${currentVersion}"` }
+                });
+                if (resp.ok) { const r = await resp.json(); currentVersion = r.new_version; showMessage('Player removed', 'success'); await refreshData(); }
+                else { const e = await resp.json(); showMessage('Remove failed: ' + e.detail, 'error'); }
+            } catch (err) { showMessage('Error removing: ' + err.message, 'error'); }
+        }
+
+        // Transfer = delete from source, then admin-draft to target at the same price.
+        async function transferSelectedPick() {
+            const sel = document.getElementById('remove-select');
+            const opt = sel.options[sel.selectedIndex];
+            const pickId = parseInt(sel.value);
+            const targetOwnerId = parseInt(document.getElementById('transfer-select').value);
+            if (!pickId || !targetOwnerId) { showMessage('Select a player and a target team', 'error'); return; }
+            const playerId = parseInt(opt.dataset.player);
+            const price = parseInt(opt.dataset.price) || 1;
+            try {
+                const del = await fetch(`/api/v1/draft/${pickId}`, {
+                    method: 'DELETE', headers: { 'Content-Type': 'application/json', 'If-Match': `"${currentVersion}"` }
+                });
+                if (!del.ok) { const e = await del.json(); showMessage('Transfer (remove) failed: ' + e.detail, 'error'); return; }
+                currentVersion = (await del.json()).new_version;
+                const add = await fetch('/api/v1/admin/draft', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ owner_id: targetOwnerId, player_id: playerId, price: price, expected_version: currentVersion })
+                });
+                if (add.ok) { currentVersion = (await add.json()).new_version; showMessage('Player transferred', 'success'); await refreshData(); }
+                else { const e = await add.json(); showMessage('Transfer (add) failed: ' + e.detail, 'error'); await refreshData(); }
+            } catch (err) { showMessage('Error transferring: ' + err.message, 'error'); }
         }
 
         // Admin draft functionality
@@ -1475,7 +1073,7 @@
             const select = document.getElementById('admin-owner-select');
             select.innerHTML = '<option value="">Select owner...</option>';
             
-            Object.values(owners).forEach(owner => {
+            owners.forEach(owner => {
                 const option = document.createElement('option');
                 option.value = owner.id;
                 option.textContent = owner.team_name;
@@ -1552,196 +1150,23 @@
             }
         }
 
-        // Context Menu Functions
-        function showContextMenu(event) {
-            event.preventDefault();
-            
-            const playerDiv = event.currentTarget;
-            contextMenuPickId = parseInt(playerDiv.dataset.pickId);
-            contextMenuPlayerId = parseInt(playerDiv.dataset.playerId);
-            contextMenuPlayerName = playerDiv.dataset.playerName;
-            contextMenuOwnerId = parseInt(playerDiv.dataset.ownerId);
-            contextMenuPrice = parseInt(playerDiv.dataset.price);
-            
-            const contextMenu = document.getElementById('context-menu');
-            const submenu = document.getElementById('context-submenu');
-            
-            // Populate submenu with other teams
-            submenu.innerHTML = '';
-            if (currentDraftState && currentDraftState.teams) {
-                currentDraftState.teams.forEach(team => {
-                    // Don't include the current team
-                    if (team.owner_id !== contextMenuOwnerId) {
-                        const owner = owners.find(o => o.id === team.owner_id);
-                        if (owner) {
-                            const teamOption = document.createElement('div');
-                            teamOption.className = 'context-menu-item';
-                            teamOption.textContent = owner.team_name;
-                            teamOption.onclick = () => movePlayerToTeam(team.owner_id);
-                            submenu.appendChild(teamOption);
-                        }
-                    }
-                });
-            }
-            
-            // Position the context menu
-            contextMenu.style.left = event.pageX + 'px';
-            contextMenu.style.top = event.pageY + 'px';
-            contextMenu.style.display = 'block';
-            
-            // Set up event handlers
-            document.getElementById('context-delete').onclick = deletePlayer;
-        }
-        
-        function hideContextMenu() {
-            document.getElementById('context-menu').style.display = 'none';
-            document.getElementById('context-submenu').style.display = 'none';
-        }
-        
-        async function deletePlayer() {
-            hideContextMenu();
-            
-            if (!contextMenuPickId) {
-                showMessage('No player selected', 'error');
-                return;
-            }
-            
-            if (!confirm(`Are you sure you want to delete ${contextMenuPlayerName}?`)) {
-                return;
-            }
-            
-            try {
-                const response = await fetch(`/api/v1/draft/${contextMenuPickId}`, {
-                    method: 'DELETE',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'If-Match': `"${currentVersion}"`
-                    }
-                });
-                
-                if (response.ok) {
-                    const result = await response.json();
-                    currentVersion = result.new_version;
-                    showMessage(`${contextMenuPlayerName} deleted successfully!`, 'success');
-                    await refreshData();
-                } else {
-                    const error = await response.json();
-                    showMessage('Delete failed: ' + error.detail, 'error');
-                }
-            } catch (error) {
-                showMessage('Error deleting player: ' + error.message, 'error');
-            }
-        }
-        
-        async function movePlayerToTeam(targetOwnerId) {
-            hideContextMenu();
-            
-            if (!contextMenuPickId || !contextMenuPlayerId) {
-                showMessage('No player selected', 'error');
-                return;
-            }
-            
-            const targetOwner = owners.find(o => o.id === targetOwnerId);
-            if (!targetOwner) {
-                showMessage('Target team not found', 'error');
-                return;
-            }
-            
-            if (!confirm(`Move ${contextMenuPlayerName} to ${targetOwner.team_name}?`)) {
-                return;
-            }
-            
-            const originalPrice = contextMenuPrice || 1;
-            
-            try {
-                // Step 1: Delete the player from current team
-                const deleteResponse = await fetch(`/api/v1/draft/${contextMenuPickId}`, {
-                    method: 'DELETE',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'If-Match': `"${currentVersion}"`
-                    }
-                });
-                
-                if (!deleteResponse.ok) {
-                    const error = await deleteResponse.json();
-                    showMessage('Delete failed: ' + error.detail, 'error');
-                    return;
-                }
-                
-                const deleteResult = await deleteResponse.json();
-                currentVersion = deleteResult.new_version;
-                
-                // Step 2: Add player to target team using admin draft
-                const adminDraftResponse = await fetch('/api/v1/admin/draft', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        owner_id: targetOwnerId,
-                        player_id: contextMenuPlayerId,
-                        price: originalPrice,
-                        expected_version: currentVersion
-                    })
-                });
-                
-                if (adminDraftResponse.ok) {
-                    const adminResult = await adminDraftResponse.json();
-                    currentVersion = adminResult.new_version;
-                    showMessage(`${contextMenuPlayerName} moved to ${targetOwner.team_name} successfully!`, 'success');
-                    await refreshData();
-                } else {
-                    const error = await adminDraftResponse.json();
-                    showMessage('Admin draft failed: ' + error.detail, 'error');
-                    // Note: Player has been deleted but not re-added - this is an error state
-                }
-                
-            } catch (error) {
-                showMessage('Error moving player: ' + error.message, 'error');
-            }
-        }
-        
-        // Set up submenu hover behavior
-        document.addEventListener('DOMContentLoaded', function() {
-            const moveItem = document.getElementById('context-move');
-            const submenu = document.getElementById('context-submenu');
-            
-            moveItem.addEventListener('mouseenter', function() {
-                submenu.style.display = 'block';
-            });
-            
-            moveItem.addEventListener('mouseleave', function(e) {
-                // Only hide if not moving to submenu
-                setTimeout(() => {
-                    if (!submenu.matches(':hover') && !moveItem.matches(':hover')) {
-                        submenu.style.display = 'none';
-                    }
-                }, 100);
-            });
-            
-            submenu.addEventListener('mouseleave', function() {
-                submenu.style.display = 'none';
-            });
-        });
-        
-        // Hide context menu on click outside
-        document.addEventListener('click', function(event) {
-            const contextMenu = document.getElementById('context-menu');
-            if (!contextMenu.contains(event.target)) {
-                hideContextMenu();
-            }
-        });
-        
-        // Hide context menu on escape key
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape') {
-                hideContextMenu();
-            }
-        });
+        // FOUT guard: reveal once webfonts are ready (--hu/cqw layout depends on metrics).
+        const stage = document.getElementById('stage');
+        function revealStage() { stage.classList.add('ready'); }
+        if (document.fonts && document.fonts.ready) { document.fonts.ready.then(revealStage); }
+        setTimeout(revealStage, 1500);
 
-        // Load data when page loads
+        // Hero height unit: --hu = 1% of the hero's rendered height, so calc(N*var(--hu))
+        // in the CSS behaves like the old Ncqh — but works in Firefox, where cqh on a
+        // size-container flex layout mis-resolves to min-height and squishes the photo.
+        const heroSizer = new ResizeObserver(entries => {
+            for (const entry of entries) {
+                entry.target.style.setProperty('--hu', (entry.contentRect.height / 100) + 'px');
+            }
+        });
+        document.querySelectorAll('.hero').forEach(hero => heroSizer.observe(hero));
+
         loadData();
-        
-        // Auto-refresh every 30 seconds
         setInterval(refreshData, 30000);
     </script>
   </body>
