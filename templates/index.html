@@ -396,34 +396,21 @@
 
         function startNominationTimer() {
             nominationStartTime = Date.now();
-            const timerElement = document.getElementById('nomination-timer');
-            timerElement.style.display = 'block';
-            
-            // Clear any existing timer
-            if (nominationTimerInterval) {
-                clearInterval(nominationTimerInterval);
-            }
-            
-            // Update timer every second
-            nominationTimerInterval = setInterval(() => {
-                const elapsed = Date.now() - nominationStartTime;
-                const seconds = Math.floor(elapsed / 1000);
-                const minutes = Math.floor(seconds / 60);
-                const displaySeconds = seconds % 60;
-                
-                timerElement.textContent = 
-                    `${String(minutes).padStart(2, '0')}:${String(displaySeconds).padStart(2, '0')}`;
-            }, 1000);
+            if (nominationTimerInterval) clearInterval(nominationTimerInterval);
+            const el = document.getElementById('hero-timer');
+            const tick = () => {
+                const secs = Math.floor((Date.now() - nominationStartTime) / 1000);
+                const m = Math.floor(secs / 60), s = secs % 60;
+                el.textContent = `${m}:${String(s).padStart(2, '0')}`;
+            };
+            tick();
+            nominationTimerInterval = setInterval(tick, 1000);
         }
-        
+
         function stopNominationTimer() {
-            if (nominationTimerInterval) {
-                clearInterval(nominationTimerInterval);
-                nominationTimerInterval = null;
-            }
-            const timerElement = document.getElementById('nomination-timer');
-            timerElement.style.display = 'none';
-            timerElement.textContent = '00:00';
+            if (nominationTimerInterval) { clearInterval(nominationTimerInterval); nominationTimerInterval = null; }
+            const el = document.getElementById('hero-timer');
+            if (el) el.textContent = '0:00';
         }
         
         function updateDraftProgress(teams) {
@@ -479,57 +466,47 @@
             }
         }
         
-        function updateNominationPanel(nominated) {
-            const cancelButton = document.getElementById('admin-cancel-nomination');
-            const nominationDetails = document.getElementById('nomination-details');
-            
+        // Short, position-appropriate stat suffix for the hero meta line.
+        function heroStatLine(playerId, position) {
+            const s = playerStats[playerId];
+            if (!s) return '';
+            if (position === 'QB' && s.passing) return ` · ${s.passing.yards} yds · ${s.passing.tds} TD`;
+            if (position === 'RB' && s.rushing) return ` · ${s.rushing.yards} yds · ${s.rushing.tds} TD`;
+            if ((position === 'WR' || position === 'TE') && s.receiving) return ` · ${s.receiving.yards} yds · ${s.receiving.tds} TD`;
+            if (position === 'K' && s.kicking) return ` · ${s.kicking.points} pts`;
+            return s.stats_summary ? ` · ${s.stats_summary}` : '';
+        }
+
+        function updateNominationPanel(draftState) {
+            const nominated = draftState.nominated;
             if (nominated) {
-                // Start the timer for new nomination
-                if (!nominationTimerInterval) {
-                    startNominationTimer();
-                }
+                document.body.classList.remove('standby');
+                if (!nominationTimerInterval) startNominationTimer();
                 const player = players.find(p => p.id === nominated.player_id);
                 const bidder = owners.find(o => o.id === nominated.current_bidder_id);
-                
                 if (player) {
-                    // Get team logo for background
-                    const teamLogoUrl = getTeamLogoUrl(player.team);
-                    
-                    // Use team logo for defenses, player headshot for individual players
-                    let imageUrl;
-                    if (player.position === 'D/ST') {
-                        imageUrl = teamLogoUrl;
-                    } else {
-                        imageUrl = `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${player.id}.png&w=350&h=254`;
-                    }
-                    
-                    nominationDetails.innerHTML = `
-                        <div class="nominated-player-image-container" style="background-image: url(${teamLogoUrl});">
-                            <img src="${imageUrl}" alt="${player.last_name}" class="nominated-player-image" onerror="this.style.display='none'">
-                        </div>
-                        <div class="nominated-player-info">
-                            <div class="nominated-player-name"><span class="position-badge position-${player.position === 'D/ST' ? 'DEF' : player.position}">${player.position}</span> ${player.position === 'D/ST' ? `${player.first_name} ${player.last_name}` : `${player.last_name}, ${player.first_name}`}</div>
-                        </div>
-                        <div class="nominated-player-stats">
-                            <div class="stats-table">
-                                ${formatPlayerStats(player.id, player.position)}
-                            </div>
-                        </div>
-                        <div class="nominated-bidder-info">
-                            <div class="nominated-bidder-name">${bidder ? bidder.team_name : 'Unknown'}</div>
-                            <div class="nominated-bidder-amount">$${nominated.current_bid}</div>
-                        </div>
-                        <button class="button" onclick="completeDraft()">Draft Player</button>
-                    `;
-                } else {
-                    nominationDetails.innerHTML = '<div>Unknown player nominated</div>';
+                    const logo = getTeamLogoUrl(player.team);
+                    const img = player.position === 'D/ST'
+                        ? logo
+                        : `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${player.id}.png&w=350&h=254`;
+                    const name = player.position === 'D/ST'
+                        ? `${player.first_name} ${player.last_name}`
+                        : `${player.last_name}, ${player.first_name}`;
+                    document.getElementById('hero-posbadge').textContent = player.position;
+                    const photo = document.getElementById('hero-photo-img');
+                    photo.src = img; photo.alt = player.last_name; photo.onerror = function(){ this.style.display='none'; };
+                    document.getElementById('hero-logo').src = logo;
+                    document.getElementById('hero-name').textContent = name;
+                    document.getElementById('hero-meta').innerHTML =
+                        `${player.position} · <b>${player.team}</b>${heroStatLine(player.id, player.position)}`;
+                    document.getElementById('bid-amt').textContent = `$${nominated.current_bid}`;
+                    document.getElementById('bidder-chip').style.background = bidder ? bidder.color : '#8A9BB5';
+                    document.getElementById('bidder-nm').textContent = bidder ? bidder.team_name : 'Unknown';
                 }
-                cancelButton.style.display = 'inline-block';
             } else {
-                nominationDetails.innerHTML = '<div style="width: 100%; text-align: center; color: #c0c0c0;">No player currently nominated</div>';
-                cancelButton.style.display = 'none';
-                // Stop the timer when no player is nominated
                 stopNominationTimer();
+                updateStandbyHero(draftState);   // Task 5
+                document.body.classList.add('standby');
             }
         }
 
