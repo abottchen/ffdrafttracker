@@ -10,35 +10,38 @@
     <title>Draft Set — Admin</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap"
+          rel="stylesheet">
     <link rel="stylesheet" href="/static/css/draft-set-admin.css">
   </head>
   <body>
     <div id="stage">
-
       <!-- TOP BAR -->
       <div class="topbar">
         <div class="wordmark"><span class="yr cond">DRAFT</span><span class="tag">'25</span></div>
         <div class="progress-wrap">
           <span class="progress-label">Draft Complete</span>
-          <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+          <div class="progress-track">
+            <div class="progress-fill" id="progress-fill"></div>
+          </div>
           <span class="progress-pct tnum" id="progress-pct">0%</span>
         </div>
         <div class="gear" onclick="openDrawer()" title="Admin controls">⚙</div>
       </div>
-
       <!-- NOMINATE BAR -->
       <div class="nominate-bar">
         <span class="lead">Nominate</span>
         <div class="player-search-container search">
-          <input class="search" id="player-search" placeholder="Type a player name…" autocomplete="off">
+          <input class="search"
+                 id="player-search"
+                 placeholder="Type a player name…"
+                 autocomplete="off">
           <div id="player-dropdown" class="player-dropdown"></div>
         </div>
         <input class="bid tnum" id="nomination-bid" type="number" min="1" value="1">
         <button class="btn-nominate" onclick="nominateSelected()">Nominate</button>
         <span class="ondeck" id="ondeck"></span>
       </div>
-
       <!-- HERO (active nomination) -->
       <div class="hero active">
         <div class="hero-photo">
@@ -46,7 +49,12 @@
           <img id="hero-photo-img" src="" alt="" width="350" height="254">
         </div>
         <div class="hero-body">
-          <img class="hero-logo" id="hero-logo" src="" alt="" width="500" height="500">
+          <img class="hero-logo"
+               id="hero-logo"
+               src=""
+               alt=""
+               width="500"
+               height="500">
           <div class="hero-eyebrow">
             <span class="auctioning">Now Auctioning</span>
             <span class="live"><span class="dot"></span>LIVE</span>
@@ -58,20 +66,27 @@
         <div class="hero-right">
           <span class="bid-label">Current Bid</span>
           <span class="bid-amt tnum" id="bid-amt">$0</span>
-          <div class="bidder"><span class="chip" id="bidder-chip"></span><span class="nm cond" id="bidder-nm"></span></div>
+          <div class="bidder">
+            <span class="chip" id="bidder-chip"></span><span class="nm cond" id="bidder-nm"></span>
+          </div>
           <div class="hero-actions">
             <button class="sold" onclick="completeDraft()">Draft</button>
           </div>
         </div>
-        <button class="hero-dismiss" onclick="cancelNomination()" title="Cancel nomination">✕</button>
+        <button class="hero-dismiss"
+                onclick="cancelNomination()"
+                title="Cancel nomination">✕</button>
       </div>
-
       <!-- HERO (standby — no active nomination) -->
       <div class="hero standby">
         <div class="hero-photo">
-          <svg class="sil" id="standby-sil" viewBox="0 0 120 120" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-            <circle cx="60" cy="42" r="23" fill="#8A9BB5" opacity="0.16"/>
-            <path d="M20 118 C20 84 38 72 60 72 C82 72 100 84 100 118 Z" fill="#8A9BB5" opacity="0.16"/>
+          <svg class="sil"
+               id="standby-sil"
+               viewBox="0 0 120 120"
+               preserveAspectRatio="xMidYMid meet"
+               aria-hidden="true">
+            <circle cx="60" cy="42" r="23" fill="#8A9BB5" opacity="0.16" />
+            <path d="M20 118 C20 84 38 72 60 72 C82 72 100 84 100 118 Z" fill="#8A9BB5" opacity="0.16" />
           </svg>
         </div>
         <div class="hero-body">
@@ -86,35 +101,34 @@
           <div class="standby-cap">No active auction</div>
         </div>
       </div>
-
       <!-- RAIL -->
       <div class="rail-head">
         <h2>Participants · Draft Order</h2>
         <div class="rule"></div>
       </div>
       <div class="rail" id="rail"></div>
-
       <!-- INTEL (blank reserved pane) -->
       <div class="intel">
         <span class="badge">Draft Intel</span>
         <span class="note">reserved — AI draft commentary</span>
       </div>
-
       <!-- TICKER -->
       <div class="ticker is-hidden" id="ticker">
         <span class="tag">DRAFT WIRE</span>
-        <div class="crawl-wrap"><div class="crawl" id="ticker-crawl"></div></div>
-        <button class="hide" title="Hide ticker"
+        <div class="crawl-wrap">
+          <div class="crawl" id="ticker-crawl"></div>
+        </div>
+        <button class="hide"
+                title="Hide ticker"
                 onclick="document.getElementById('ticker').classList.add('is-hidden');document.getElementById('showWire').style.display='block';">✕</button>
       </div>
-      <button class="show-wire" id="showWire"
+      <button class="show-wire"
+              id="showWire"
               onclick="document.getElementById('ticker').classList.remove('is-hidden');this.style.display='none';">▴ Draft Wire</button>
-
-    </div><!-- /#stage -->
-
+    </div>
+    <!-- /#stage -->
     <!-- TOAST -->
     <div id="message" class="toast"></div>
-
     <!-- ADMIN DRAWER -->
     <div class="scrim" id="scrim" onclick="closeDrawer()"></div>
     <aside class="drawer" id="drawer" aria-hidden="true">
@@ -132,24 +146,50 @@
         </div>
         <div class="dsec">
           <h3>Teams</h3>
-          <div class="drow"><select class="dselect" id="done-select"></select><button class="dbtn" onclick="markTeamDone()">Mark Done</button></div>
-          <div class="drow"><button class="dbtn ghost" onclick="clearDoneTeams()">Clear All Done</button></div>
+          <div class="drow">
+            <select class="dselect" id="done-select"></select>
+            <button class="dbtn" onclick="markTeamDone()">Mark Done</button>
+          </div>
+          <div class="drow">
+            <button class="dbtn ghost" onclick="clearDoneTeams()">Clear All Done</button>
+          </div>
         </div>
         <div class="dsec">
           <h3>Admin Draft</h3>
-          <div class="drow"><span class="dlabel">Player</span>
+          <div class="drow">
+            <span class="dlabel">Player</span>
             <div class="player-search-container drawer-search">
-              <input class="dinput" id="admin-player-search" placeholder="Search player…" autocomplete="off">
+              <input class="dinput"
+                     id="admin-player-search"
+                     placeholder="Search player…"
+                     autocomplete="off">
               <div id="admin-player-dropdown" class="player-dropdown"></div>
             </div>
           </div>
-          <div class="drow"><span class="dlabel">Owner</span><select class="dselect" id="admin-owner-select"></select></div>
-          <div class="drow"><span class="dlabel">Price</span><input class="dinput price-narrow" id="admin-price-input" type="number" min="1" placeholder="$"><button class="dbtn" onclick="adminDraftPlayer()">Insert</button></div>
+          <div class="drow">
+            <span class="dlabel">Owner</span>
+            <select class="dselect" id="admin-owner-select"></select>
+          </div>
+          <div class="drow">
+            <span class="dlabel">Price</span>
+            <input class="dinput price-narrow"
+                   id="admin-price-input"
+                   type="number"
+                   min="1"
+                   placeholder="$">
+            <button class="dbtn" onclick="adminDraftPlayer()">Insert</button>
+          </div>
         </div>
         <div class="dsec">
           <h3>Remove / Transfer Pick</h3>
-          <div class="drow"><select class="dselect" id="remove-select"></select></div>
-          <div class="drow"><button class="dbtn danger" onclick="removeDraftedPlayer()">Remove</button><select class="dselect" id="transfer-select"></select><button class="dbtn" onclick="transferSelectedPick()">Transfer</button></div>
+          <div class="drow">
+            <select class="dselect" id="remove-select"></select>
+          </div>
+          <div class="drow">
+            <button class="dbtn danger" onclick="removeDraftedPlayer()">Remove</button>
+            <select class="dselect" id="transfer-select"></select>
+            <button class="dbtn" onclick="transferSelectedPick()">Transfer</button>
+          </div>
         </div>
         <div class="dsec">
           <h3>API &amp; Docs</h3>
