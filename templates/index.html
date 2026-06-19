@@ -661,240 +661,135 @@
             highlightedIndex = -1;
         }
 
-        function getBudgetClass(budget) {
-            if (!config) return ''; // If config not loaded yet, no class
-            
-            const percentage = (budget / config.initial_budget) * 100;
-            
-            if (percentage <= 5) return 'critical';   // 5% or less remaining
-            if (percentage <= 15) return 'low';       // 15% or less remaining
-            return '';
+        function teamPositionCount(team, position) {
+            return team.picks.reduce((n, pick) => {
+                const p = players.find(pl => pl.id === pick.player_id);
+                return n + (p && p.position === position ? 1 : 0);
+            }, 0);
         }
-        
-        function getRosterProgressDegrees(pickCount) {
-            if (!config) return 0; // If config not loaded yet, no progress
-            
-            const percentage = (pickCount / config.total_rounds) * 100;
-            return (percentage / 100) * 360; // Convert to degrees for conic-gradient
+        function nominatedPosition(draftState) {
+            if (!draftState.nominated) return null;
+            const p = players.find(pl => pl.id === draftState.nominated.player_id);
+            return p ? p.position : null;
         }
-        
-        function getRosterProgressColor(pickCount) {
-            if (!config) return '#4a90e2'; // Default blue if config not loaded
-            
-            const percentage = pickCount / config.total_rounds;
-            
-            if (percentage <= 0.33) {
-                // Red to orange (0% to 33%)
-                const localPercent = percentage / 0.33;
-                const red = 244;
-                const green = Math.round(67 + (152 * localPercent)); // 67 to 219
-                const blue = 54;
-                return `rgb(${red}, ${green}, ${blue})`;
-            } else if (percentage <= 0.66) {
-                // Orange to yellow (33% to 66%)
-                const localPercent = (percentage - 0.33) / 0.33;
-                const red = Math.round(244 - (21 * localPercent)); // 244 to 223
-                const green = Math.round(219 + (24 * localPercent)); // 219 to 243
-                const blue = 54;
-                return `rgb(${red}, ${green}, ${blue})`;
-            } else {
-                // Yellow to green (66% to 100%)
-                const localPercent = (percentage - 0.66) / 0.34;
-                const red = Math.round(223 - (147 * localPercent)); // 223 to 76
-                const green = 243; // Stay bright
-                const blue = Math.round(54 + (121 * localPercent)); // 54 to 175
-                return `rgb(${red}, ${green}, ${blue})`;
-            }
-        }
-        
-        function adjustFontSize(element) {
-            const maxHeight = 20; // Maximum height for single line in pixels
-            const minFontSize = 0.7; // Minimum font size in em
-            const maxFontSize = 1.1; // Default font size in em
-            
-            // Reset to default size first
-            element.style.fontSize = maxFontSize + 'em';
-            
-            // Check if text is wrapping
-            if (element.scrollHeight > maxHeight) {
-                let fontSize = maxFontSize;
-                
-                // Gradually decrease font size until it fits
-                while (element.scrollHeight > maxHeight && fontSize > minFontSize) {
-                    fontSize -= 0.05;
-                    element.style.fontSize = fontSize + 'em';
-                }
-            }
+        function budgetClass(team) {
+            const pct = (team.budget_remaining / config.initial_budget) * 100;
+            if (pct <= 15) return 'crit';
+            if (pct <= 35) return 'warn';
+            return 'ok';
         }
 
-        function validateBidAmount(ownerId, bidAmount, teams) {
-            if (!config) return true; // If config not loaded yet, allow bid
-            
-            const team = teams.find(t => t.owner_id === ownerId);
-            if (!team) return false;
-            
-            const remainingBudgetAfterBid = team.budget_remaining - bidAmount;
-            const currentRosterSize = team.picks.length;
-            const remainingRosterSpots = config.total_rounds - currentRosterSize;
-            const minBudgetNeeded = remainingRosterSpots - 1; // -1 because current bid counts as one spot
-            
-            return remainingBudgetAfterBid >= minBudgetNeeded;
-        }
-        
-        function updateBidButtonState(ownerId, teams, nominated) {
-            const bidInput = document.getElementById(`bid-input-${ownerId}`);
-            const bidButton = document.querySelector(`button[onclick="placeBidForOwner(${ownerId})"]`);
-            
-            if (!bidInput || !bidButton) return;
-            
-            const bidAmount = parseInt(bidInput.value) || 0;
-            const minBid = nominated ? nominated.current_bid + 1 : 1;
-            
-            // Check basic constraints
-            const team = teams.find(t => t.owner_id === ownerId);
-            if (!team) return;
-            
-            const hasBasicBudget = bidAmount <= team.budget_remaining;
-            const meetsMinBid = bidAmount >= minBid;
-            const canCompleteRoster = validateBidAmount(ownerId, bidAmount, teams);
-            
-            const isValid = hasBasicBudget && meetsMinBid && canCompleteRoster;
-            
-            bidButton.disabled = !isValid;
-            
-            // Add visual feedback for invalid bids
-            if (!canCompleteRoster && hasBasicBudget && meetsMinBid) {
-                bidButton.title = "Bid would prevent completing roster";
-                bidInput.style.borderColor = "#ff6b6b";
-            } else {
-                bidButton.title = "";
-                bidInput.style.borderColor = "#4a4a4a";
+        // Valid bid (parity with backend): min next bid <= amount <= max_bid (roster-safe
+        // budget reservation), amount <= budget, and team not at position max for nominee.
+        function updateBidButtonState(team, nextBid, nomPos, inp, btn) {
+            const amt = parseInt(inp.value) || 0;
+            const maxBid = (team.max_bid === null || team.max_bid === undefined) ? -1 : team.max_bid;
+            const meetsMin = amt >= nextBid;
+            const withinBudget = amt <= team.budget_remaining;
+            const withinMax = amt <= maxBid;
+            let posOk = true;
+            if (nomPos && config.position_maximums[nomPos] !== undefined) {
+                posOk = teamPositionCount(team, nomPos) < config.position_maximums[nomPos];
             }
+            const valid = meetsMin && withinBudget && withinMax && posOk;
+            btn.disabled = !valid;
+            inp.classList.toggle('over-max', amt > maxBid);
+            btn.title = !posOk ? `At position maximum for ${nomPos}`
+                : (!withinMax && meetsMin && withinBudget) ? 'Bid would prevent completing roster' : '';
         }
 
-        function updateTeams(teams, nextToNominate, nominated = null) {
-            const list = document.getElementById('teams-list');
-            list.innerHTML = '';
-            
-            // Check if there's an active nomination to show bid controls
-            const hasNomination = nominated !== null;
-            
-            let tabIndex = 1; // Start tabindex counter
-            
-            teams.forEach(team => {
+        function updateTeams(draftState) {
+            const teams = draftState.teams;
+            const nominated = draftState.nominated;
+            const rail = document.getElementById('rail');
+            rail.innerHTML = '';
+
+            const nextBid = nominated ? nominated.current_bid + 1 : config.min_bid;
+            const nomPos = nominatedPosition(draftState);
+
+            teams.forEach((team, idx) => {
                 const owner = owners.find(o => o.id === team.owner_id);
-                const teamDiv = document.createElement('div');
-                teamDiv.className = 'team';
-                
-                // Determine if roster is full
-                const rosterLimit = config ? config.total_rounds : 16;
-                const isRosterFull = team.picks.length >= rosterLimit;
-                
-                // Check if team is done (either marked done or roster full)
-                const isDone = doneTeams.has(team.owner_id) || isRosterFull;
-                
-                // Determine badge status
-                let badgeHTML = '';
-                if (isDone) {
-                    badgeHTML = '<span class="team-badge done">DONE</span>';
-                } else if (team.owner_id === nextToNominate) {
-                    badgeHTML = '<span class="team-badge nominating">NOMINATING</span>';
+                const color = owner ? owner.color : '#8A9BB5';
+                const total = config.total_rounds;
+                const isRosterFull = team.picks.length >= total;
+                const isDone = team.manually_done || isRosterFull;
+                const isHigh = nominated && nominated.current_bidder_id === team.owner_id;
+                const isClock = team.owner_id === draftState.next_to_nominate && !isDone;
+
+                const pct = Math.round(team.picks.length / total * 100);
+                const budgetPct = Math.round(team.budget_remaining / config.initial_budget * 100);
+                const bcls = budgetClass(team);
+                const maxBid = team.max_bid;  // server: int | null
+                const maxEl = (maxBid === null || maxBid === undefined)
+                    ? '<span class="v max">—</span>'
+                    : `<span class="v max tnum">$${maxBid}</span>`;
+
+                let plateCls = 'plate';
+                if (isClock) plateCls += ' is-clock';
+                else if (isHigh) plateCls += ' is-high';
+                if (isDone) plateCls += ' is-done';
+
+                const statusEl = isDone ? '<span class="status done">Done</span>'
+                    : isClock ? '<span class="status clock">On the Clock</span>'
+                    : isHigh ? '<span class="status high">High Bid</span>' : '';
+
+                // Bid control only when there is an active nomination and team isn't done.
+                let bidEl = '';
+                if (nominated && !isDone) {
+                    bidEl = `<div class="bidctl" data-owner="${team.owner_id}">
+                        <input class="tnum" id="bid-input-${team.owner_id}" value="${nextBid}" inputmode="numeric">
+                        <button onclick="placeBidForOwner(${team.owner_id})">Bid</button>
+                    </div>`;
                 }
-                
-                // Get minimum bid amount
-                let minBid = 1;
-                if (hasNomination && nominated) {
-                    minBid = nominated.current_bid + 1;
-                }
-                
-                // Check if this team is the current bidder (only if there's an active nomination)
-                const isCurrentBidder = hasNomination && nominated && nominated.current_bidder_id === team.owner_id;
-                const bidButtonClass = isCurrentBidder ? 'team-bid-button current-bidder' : 'team-bid-button';
-                
-                // Only show bid controls if team is not done and there's an active nomination
-                const showBidControls = hasNomination && !isDone;
-                
-                // Check if team can actually place a bid (has sufficient budget)
-                const canBid = showBidControls && team.budget_remaining >= minBid;
-                
-                // Assign tabindex for teams that can bid, increment counter
-                const inputTabIndex = canBid ? tabIndex++ : -1;
-                
-                teamDiv.innerHTML = `
-                    ${badgeHTML}
-                    <div class="team-name" id="team-name-${team.owner_id}" title="${owner ? owner.owner_name : 'Unknown Owner'} - ${team.picks.length} players, $${team.budget_remaining} remaining">${owner ? owner.team_name : 'Unknown Team'}</div>
-                    <div class="owner-name">${owner ? owner.owner_name : 'Unknown Owner'}</div>
-                    <div class="team-stats">
-                        <span class="budget-amount ${getBudgetClass(team.budget_remaining)}" title="Budget: $${team.budget_remaining} remaining">$${team.budget_remaining}</span>
-                        <span class="roster-count ${team.picks.length >= (config ? config.total_rounds : 16) ? 'complete' : ''}" title="Roster: ${team.picks.length} / ${config ? config.total_rounds : '?'} players drafted">${team.picks.length}/${config ? config.total_rounds : '16'}</span>
-                    </div>
-                    <div class="team-bid-controls ${showBidControls ? 'visible' : ''}">
-                        <input type="number" class="team-bid-input" value="${minBid}" min="${minBid}" id="bid-input-${team.owner_id}" title="Enter bid amount" tabindex="${inputTabIndex}">
-                        <button class="${bidButtonClass}" onclick="placeBidForOwner(${team.owner_id})" ${team.budget_remaining < minBid ? 'disabled' : ''} title="${team.budget_remaining < minBid ? 'Insufficient budget' : 'Place bid'}">Bid</button>
-                    </div>
-                `;
-                list.appendChild(teamDiv);
-                
-                // Add click handler to focus bid input when clicking anywhere on team card
-                if (canBid) {
-                    teamDiv.classList.add('clickable-for-bid');
-                    teamDiv.addEventListener('click', (e) => {
-                        // Don't interfere if they clicked directly on the input or button
-                        if (e.target.classList.contains('team-bid-input') || e.target.classList.contains('team-bid-button')) {
-                            return;
-                        }
-                        
-                        const bidInput = document.getElementById(`bid-input-${team.owner_id}`);
-                        if (bidInput) {
-                            bidInput.focus();
-                            bidInput.select(); // Select all text for easy replacement
-                        }
-                    });
-                    
-                    // Add visual hover indicator for clickable teams
-                    teamDiv.style.cursor = 'pointer';
-                }
-                
-                // Add event listener for bid input changes (only for teams that aren't done)
-                if (showBidControls) {
-                    const bidInput = document.getElementById(`bid-input-${team.owner_id}`);
-                    if (bidInput) {
-                        bidInput.addEventListener('input', () => {
-                            updateBidButtonState(team.owner_id, teams, nominated);
-                        });
-                        // Allow Enter key to submit bid
-                        bidInput.addEventListener('keypress', (e) => {
-                            if (e.key === 'Enter') {
-                                e.preventDefault();
-                                placeBidForOwner(team.owner_id);
-                            }
-                        });
-                        // Initial validation
-                        updateBidButtonState(team.owner_id, teams, nominated);
-                    }
-                }
+
+                rail.insertAdjacentHTML('beforeend', `
+                    <div class="${plateCls}" id="plate-${team.owner_id}" style="--tc:${color}">
+                        ${statusEl}
+                        <span class="ord cond">#${idx + 1}</span>
+                        <span class="tname">${owner ? owner.team_name : 'Unknown Team'}</span>
+                        <span class="owner">${owner ? owner.owner_name : 'Unknown'}</span>
+                        <span class="spacer"></span>
+                        <div class="stat-row">
+                            <div class="stat"><span class="k">Budget</span><span class="v money ${bcls} tnum">$${team.budget_remaining}</span></div>
+                            <div class="stat right"><span class="k">Max Bid</span>${maxEl}</div>
+                        </div>
+                        <div class="budget-meter ${bcls}"><div class="fill" style="width:${budgetPct}%"></div></div>
+                        <div class="picks-line">
+                            <div class="picks-fill" style="width:${pct}%;--pct:${pct || 1}"></div>
+                            <div class="picks-lbl"><span class="k">Picks</span><span class="v tnum">${team.picks.length}<span class="of">/${total}</span></span></div>
+                        </div>
+                        ${bidEl}
+                    </div>`);
             });
-            
-            // Focus first available bid input if there's a nomination
-            if (hasNomination) {
-                setTimeout(() => {
-                    const firstBidInput = document.querySelector('.team-bid-input[tabindex="1"]');
-                    if (firstBidInput) {
-                        firstBidInput.focus();
-                        firstBidInput.select(); // Select the default value for easy replacement
+
+            // Wire bid controls (validate, click-to-focus, Enter-to-submit) — parity.
+            if (nominated) {
+                teams.forEach(team => {
+                    const plate = document.getElementById(`plate-${team.owner_id}`);
+                    const ctl = plate ? plate.querySelector('.bidctl') : null;
+                    if (!ctl) return;
+                    const inp = ctl.querySelector('input');
+                    const btn = ctl.querySelector('button');
+                    if (team.owner_id === (nominated && nominated.current_bidder_id)) {
+                        plate.classList.add('is-high');
                     }
+                    const revalidate = () => updateBidButtonState(team, nextBid, nomPos, inp, btn);
+                    inp.addEventListener('input', revalidate);
+                    inp.addEventListener('keydown', e => {
+                        if (e.key === 'Enter') { e.preventDefault(); if (!btn.disabled) placeBidForOwner(team.owner_id); }
+                    });
+                    plate.addEventListener('click', e => {
+                        if (e.target.closest('button') || e.target.closest('input')) return;
+                        inp.focus(); inp.select();
+                    });
+                    revalidate();
+                });
+                // focus the first eligible bid input for fast keyboard bidding
+                setTimeout(() => {
+                    const first = document.querySelector('.bidctl input');
+                    if (first) { first.focus(); first.select(); }
                 }, 100);
             }
-            
-            teams.forEach(team => {
-                // Auto-resize team name if it would wrap
-                setTimeout(() => {
-                    const nameElement = document.getElementById(`team-name-${team.owner_id}`);
-                    if (nameElement) {
-                        adjustFontSize(nameElement);
-                    }
-                }, 0);
-            });
         }
 
         function updateDraftedPlayers(teams, draftState) {
@@ -1283,17 +1178,15 @@
         }
 
         function markTeamDone() {
-            const select = document.getElementById('team-select');
+            const select = document.getElementById('done-select');
             const ownerId = parseInt(select.value);
-            
+
             if (ownerId) {
-                doneTeams.add(ownerId);
                 showMessage('Team marked as done', 'success');
-                
+
                 // Refresh display
                 if (currentDraftState) {
-                    updateTeams(currentDraftState.teams, getNextToNominate(currentDraftState.teams), currentDraftState.nominated);
-                    populateTeamSelect(currentDraftState.teams);
+                    updateTeams(currentDraftState);
                 }
             } else {
                 showMessage('Please select a team first', 'error');
@@ -1301,13 +1194,11 @@
         }
 
         function clearDoneTeams() {
-            doneTeams.clear();
             showMessage('All done teams cleared', 'success');
-            
+
             // Refresh display
             if (currentDraftState) {
-                updateTeams(currentDraftState.teams, getNextToNominate(currentDraftState.teams), currentDraftState.nominated);
-                populateTeamSelect(currentDraftState.teams);
+                updateTeams(currentDraftState);
             }
         }
         
