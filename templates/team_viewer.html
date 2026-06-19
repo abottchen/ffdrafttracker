@@ -897,7 +897,41 @@
             });
             document.getElementById('roster').innerHTML = html;
         }
-        function renderRail() {}    // stub displaced by T6
+        function renderRail(){
+          const counts={}; curRoster.forEach(p=>counts[p.pos]=(counts[p.pos]||0)+1);
+          const newFrac=RADAR_ORDER.map(pos=>Math.min((counts[pos]||0)/POSMAX[pos],1));
+          document.getElementById('radarwrap').innerHTML=renderRadar(counts,TEAMS[selected].color,prevFrac);
+          animateRadarTo(prevFrac.slice(),newFrac);
+          prevFrac=newFrac;
+        }
+        const RADAR_GEO={cx:120,cy:120,rO:82,n:6};
+        function radarPoint(i,frac){const{cx,cy,rO,n}=RADAR_GEO;const a=-Math.PI/2+i/n*2*Math.PI;return[cx+Math.cos(a)*frac*rO,cy+Math.sin(a)*frac*rO];}
+        function renderRadar(counts,color,shapeFrac){
+          const{cx,cy,rO,n}=RADAR_GEO, size=240,rings=3;
+          const pt=(a,r)=>[cx+Math.cos(a)*r,cy+Math.sin(a)*r];
+          let s=`<svg class="radar" viewBox="0 0 ${size} ${size}" preserveAspectRatio="xMidYMid meet">`;
+          for(let ring=1;ring<=rings;ring++){const rr=rO/rings*ring;let pts=[];for(let i=0;i<n;i++){const a=-Math.PI/2+i/n*2*Math.PI;const p=pt(a,rr);pts.push(p[0].toFixed(1)+','+p[1].toFixed(1));}s+=`<polygon class="r-grid ${ring===rings?'r-outer':''}" points="${pts.join(' ')}"/>`;}
+          for(let i=0;i<n;i++){const a=-Math.PI/2+i/n*2*Math.PI;const p=pt(a,rO);s+=`<line class="r-axis" x1="${cx}" y1="${cy}" x2="${p[0].toFixed(1)}" y2="${p[1].toFixed(1)}"/>`;}
+          let sp=[],dots='';
+          for(let i=0;i<n;i++){const p=radarPoint(i,shapeFrac[i]);sp.push(p[0].toFixed(1)+','+p[1].toFixed(1));dots+=`<circle class="r-dot" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="${color}"/>`;}
+          s+=`<polygon class="r-shape" points="${sp.join(' ')}" style="fill:${hexA(color,.2)};stroke:${color};filter:drop-shadow(0 0 7px ${hexA(color,.55)})"/>`+dots;
+          for(let i=0;i<n;i++){const pos=RADAR_ORDER[i];const a=-Math.PI/2+i/n*2*Math.PI;const p=pt(a,rO+16);let anc='middle';if(Math.cos(a)>0.4)anc='start';else if(Math.cos(a)<-0.4)anc='end';let dy=4;if(Math.sin(a)>0.5)dy=11;else if(Math.sin(a)<-0.5)dy=-3;
+            s+=`<text class="r-label" x="${p[0].toFixed(1)}" y="${(p[1]+dy).toFixed(1)}" text-anchor="${anc}" fill="${POSCOLOR[pos]}">${pos}</text>`;
+            s+=`<text class="r-cnt" x="${p[0].toFixed(1)}" y="${(p[1]+dy+11).toFixed(1)}" text-anchor="${anc}">${counts[pos]||0}/${POSMAX[pos]}</text>`;}
+          return s+'</svg>';
+        }
+        function animateRadarTo(from,to){
+          const svg=document.querySelector('#radarwrap .radar'); if(!svg)return;
+          const shape=svg.querySelector('.r-shape'), dots=svg.querySelectorAll('.r-dot'), dur=480, t0=performance.now();
+          function step(now){
+            const tt=Math.min(1,(now-t0)/dur), e=1-Math.pow(1-tt,3);
+            let pts=[];
+            for(let i=0;i<RADAR_GEO.n;i++){const f=from[i]+(to[i]-from[i])*e;const p=radarPoint(i,f);pts.push(p[0].toFixed(1)+','+p[1].toFixed(1));if(dots[i]){dots[i].setAttribute('cx',p[0].toFixed(1));dots[i].setAttribute('cy',p[1].toFixed(1));}}
+            shape.setAttribute('points',pts.join(' '));
+            if(tt<1)requestAnimationFrame(step);
+          }
+          requestAnimationFrame(step);
+        }
         function renderStatusView() {}
         function setupTargetBoard() {}
 
