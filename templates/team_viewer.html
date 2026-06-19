@@ -848,10 +848,77 @@
             renderRoster();      // Task 5
             renderRail();        // Task 6 (radar)
         }
-        function renderRoster() {}  // stub displaced by T5
+        // Map real nested player_stats into the flat keys the card/tooltip use; '–' when absent.
+        function flattenStats(pos, st) {
+            const o = { YDS:'–', TD:'–', INT:'–', RUSH:'–', REC:'–', FG:'–', XP:'–', PTS:'–', SACK:'–' };
+            if (!st) return o;
+            if (pos === 'QB' && st.passing) { o.YDS = st.passing.yards; o.TD = st.passing.tds; o.INT = st.passing.ints; }
+            else if (pos === 'RB') { if (st.rushing){ o.RUSH = st.rushing.yards; o.TD = st.rushing.tds; } if (st.receiving) o.REC = st.receiving.receptions; }
+            else if (pos === 'WR' || pos === 'TE') { if (st.receiving){ o.REC = st.receiving.receptions; o.YDS = st.receiving.yards; o.TD = st.receiving.tds; } }
+            else if (pos === 'K' && st.kicking) { o.FG = st.kicking.fgm; o.XP = st.kicking.xpm; o.PTS = st.kicking.points; }
+            return o;  // D/ST has no structured stats in the backend -> all '–'
+        }
+        function normPlayer(pick) {
+            const pl = playersById[pick.player_id];
+            if (!pl) return null;
+            const st = playerStats[pl.id];
+            const bye = (pl.position === 'D/ST') ? defenseBye(pl.team) : (st ? st.bye_week : null);
+            return { id: pl.id, fn: pl.first_name, ln: pl.last_name, pos: pl.position, nfl: pl.team,
+                     bye: bye, price: pick.price, stats: flattenStats(pl.position, st) };
+        }
+        function rosterFor(t) {
+            return t._picks.map(normPlayer).filter(Boolean)
+                .sort((a, b) => (POSORDER[a.pos] - POSORDER[b.pos]) || (b.price - a.price));
+        }
+        // The 3 card stat boxes per position (matches the mockup's statCells shape).
+        function statCells(p) {
+            if (p.pos === 'QB') return [['Yds', p.stats.YDS, STATMAX.YDS], ['TD', p.stats.TD, STATMAX.TD], ['Int', p.stats.INT, STATMAX.INT]];
+            if (p.pos === 'RB') return [['Ru Yds', p.stats.RUSH, STATMAX.RUSH], ['TD', p.stats.TD, STATMAX.TD], ['Rec', p.stats.REC, STATMAX.REC]];
+            if (p.pos === 'WR' || p.pos === 'TE') return [['Rec', p.stats.REC, STATMAX.REC], ['Yds', p.stats.YDS, STATMAX.YDS], ['TD', p.stats.TD, STATMAX.TD]];
+            if (p.pos === 'K') return [['FG', p.stats.FG, STATMAX.FG], ['XP', p.stats.XP, STATMAX.XP], ['Pts', p.stats.PTS, STATMAX.PTS]];
+            return [['Sack', p.stats.SACK, STATMAX.SACK], ['Int', p.stats.INT, STATMAX.INT], ['TD', p.stats.TD, STATMAX.TD]];
+        }
+        function renderRoster() {
+            curRoster = rosterFor(TEAMS[selected]);
+            let html = '', lastPos = null;
+            curRoster.forEach((p, idx) => {
+                if (p.pos !== lastPos) { html += `<div class="posgroup" style="color:${POSCOLOR[p.pos]}"><span class="dot" style="background:${POSCOLOR[p.pos]}"></span>${p.pos}<span class="ln"></span></div>`; lastPos = p.pos; }
+                const cells = statCells(p).map(c => `<div class="st"><b class="tnum">${c[1]}</b><span>${c[0]}</span></div>`).join('');
+                html += `<div class="pcard" style="--pc:${POSCOLOR[p.pos]}" data-idx="${idx}" onmouseenter="showTip(event,${idx})" onmousemove="moveTip(event)" onmouseleave="hideTip()">
+      <div class="pc-photo">
+        <img class="pc-wm" src="${logoUrl(p.nfl)}" alt="">
+        ${shotImg(p, 'pc-shot')}
+        <span class="pc-pos ${LIGHTPOS[p.pos] ? 'light' : ''}">${p.pos}</span>
+        <span class="pc-price tnum">$${p.price}</span>
+        <div class="pc-scrim"><div class="pc-name">${p.fn} ${p.ln}</div><div class="pc-sub">${p.nfl} · Bye ${p.bye}</div></div>
+      </div>
+      <div class="pc-stats">${cells}</div>
+    </div>`;
+            });
+            document.getElementById('roster').innerHTML = html;
+        }
         function renderRail() {}    // stub displaced by T6
         function renderStatusView() {}
         function setupTargetBoard() {}
+
+        /* hover tooltip */
+        function showTip(e, i) {
+            const p = curRoster[i], tip = document.getElementById('ptip');
+            tip.style.setProperty('--pc', POSCOLOR[p.pos]);
+            const rows = statCells(p).map(c => { const n=parseFloat(String(c[1]).replace(/,/g,'')); return `<div class="tt-stat"><span class="l">${c[0]}</span><span class="bar"><i style="width:${!isNaN(n) ? Math.min(n/c[2]*100,100) : 0}%"></i></span><span class="n tnum">${c[1]}</span></div>`; }).join('');
+            tip.innerHTML = `<div class="tt-head"><span class="tt-pos ${LIGHTPOS[p.pos] ? 'light' : ''}" style="background:${POSCOLOR[p.pos]}">${p.pos}</span><span class="tt-name">${p.fn} ${p.ln}</span></div>
+    <div class="tt-sub">${p.nfl} · Bye ${p.bye} · Drafted for <b style="color:var(--turf)">$${p.price}</b></div>${rows}`;
+            tip.style.display = 'block'; moveTip(e);
+        }
+        function moveTip(e) {
+            const tip = document.getElementById('ptip'); if (tip.style.display !== 'block') return;
+            const w = tip.offsetWidth, h = tip.offsetHeight;
+            let x = e.clientX + 18, y = e.clientY + 18;
+            if (x + w > window.innerWidth - 8) x = e.clientX - w - 18;
+            if (y + h > window.innerHeight - 8) y = window.innerHeight - h - 8;
+            tip.style.left = x + 'px'; tip.style.top = Math.max(8, y) + 'px';
+        }
+        function hideTip() { document.getElementById('ptip').style.display = 'none'; }
 
         init();
     </script>
