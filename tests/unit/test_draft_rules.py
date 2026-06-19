@@ -1,10 +1,10 @@
-from src.models import Configuration, DraftPick, DraftState, Team
-from src.services.draft_rules import (
+from src.draft_rules import (
     max_bid,
     next_eligible_nominator,
     position_count,
     remaining_roster_spots,
 )
+from src.models import Configuration, DraftPick, DraftState, Team
 
 
 def _config(total_rounds=17):

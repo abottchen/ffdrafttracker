@@ -11,6 +11,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
+from src.draft_rules import (
+    max_bid,
+    next_eligible_nominator,
+    position_count,
+    remaining_roster_spots,
+)
 from src.models import (
     Configuration,
     DraftPick,
@@ -21,12 +27,6 @@ from src.models import (
     Team,
 )
 from src.models.player_stats import PlayerStatsCollection
-from src.services.draft_rules import (
-    max_bid,
-    next_eligible_nominator,
-    position_count,
-    remaining_roster_spots,
-)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -94,8 +94,6 @@ class DraftRequest(BaseModel):
     player_id: int
     final_price: int
     expected_version: int
-
-
 
 
 class ResetRequest(BaseModel):
@@ -648,9 +646,7 @@ async def place_bid(request: BidRequest):
 
     # Enforce position maximum for the bidding team.
     players = load_players()
-    player = next(
-        (p for p in players if p.id == draft_state.nominated.player_id), None
-    )
+    player = next((p for p in players if p.id == draft_state.nominated.player_id), None)
     if player is not None:
         max_at_pos = config.position_maximums.get(player.position)
         if max_at_pos is not None:
@@ -937,9 +933,7 @@ async def update_team(owner_id: int, request: TeamUpdateRequest):
 
     owners = load_owners()
     owner_name = owners.get(owner_id, {}).get("owner_name", f"ID:{owner_id}")
-    logger.info(
-        f"Team for {owner_name} manually_done set to {team.manually_done}"
-    )
+    logger.info(f"Team for {owner_name} manually_done set to {team.manually_done}")
 
     return {
         "success": True,
@@ -955,7 +949,7 @@ async def update_team(owner_id: int, request: TeamUpdateRequest):
 async def cancel_nomination(
     if_match: str = Header(
         ..., description="ETag for optimistic locking (expected version)"
-    )
+    ),
 ):
     """Cancel current nomination (admin action)."""
     # Load current state
@@ -967,7 +961,7 @@ async def cancel_nomination(
     except ValueError:
         raise HTTPException(
             status_code=400,
-            detail="If-Match header must contain a valid version number"
+            detail="If-Match header must contain a valid version number",
         )
 
     # Check version
@@ -1010,7 +1004,7 @@ async def remove_draft_pick(
     pick_id: int,
     if_match: str = Header(
         ..., description="ETag for optimistic locking (expected version)"
-    )
+    ),
 ):
     """Remove a draft pick and restore player to available pool."""
     # Load current state
@@ -1022,7 +1016,7 @@ async def remove_draft_pick(
     except ValueError:
         raise HTTPException(
             status_code=400,
-            detail="If-Match header must contain a valid version number"
+            detail="If-Match header must contain a valid version number",
         )
 
     check_version(draft_state.version, expected_version)
