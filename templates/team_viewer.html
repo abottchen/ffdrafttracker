@@ -1065,7 +1065,58 @@
         }
         function hideTip() { document.getElementById('ptip').style.display = 'none'; }
 
-        function renderCostChart() {} // stub displaced by T9
+        // Chronological pick log for the cost timeline: one entry per pick, x = pick order.
+        function buildDraftLog() {
+            const picks = [];
+            (lastDraftState ? lastDraftState.teams : []).forEach(t => {
+                const tm = TEAMS.find(x => x.owner_id === t.owner_id);
+                t.picks.forEach(pk => {
+                    const pl = playersById[pk.player_id];
+                    if (pl && tm) picks.push({ pickId: pk.pick_id, pos: pl.position, price: pk.price,
+                        name: `${pl.first_name} ${pl.last_name}`, teamName: tm.team, color: tm.color });
+                });
+            });
+            picks.sort((a, b) => a.pickId - b.pickId);
+            return picks.map((p, i) => ({ no: i + 1, pos: p.pos, price: p.price, name: p.name, teamName: p.teamName, color: p.color }));
+        }
+        function renderCostChart() {
+            const log = buildDraftLog(), order = RADAR_ORDER;
+            const wrap = document.getElementById('costChart');
+            if (!log.length) { wrap.innerHTML = '<div class="la-empty">No picks yet</div>'; document.getElementById('costLegend').innerHTML = ''; return; }
+            const W = 680, H = 280, padL = 46, padR = 16, padT = 14, padB = 28, maxNo = Math.max(2, log.length);
+            const yMax = Math.max(10, Math.ceil(Math.max(...log.map(l => l.price)) / 10) * 10);
+            const X = no => padL + (no - 1) / (maxNo - 1) * (W - padL - padR);
+            const Y = p => H - padB - (p / yMax) * (H - padT - padB);
+            const stats = {};
+            order.forEach(pos => { const a = log.filter(l => l.pos === pos).map(l => l.price);
+                if (a.length) { const m = a.reduce((s, v) => s + v, 0) / a.length;
+                    stats[pos] = { md: median(a), sd: Math.sqrt(a.reduce((s, v) => s + (v - m) ** 2, 0) / a.length) || 1 }; } });
+            let s = `<svg class="cost-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`;
+            const step = Math.max(10, Math.round(yMax / 4 / 5) * 5);
+            for (let g = 0; g <= yMax; g += step) { const yy = Y(g);
+                s += `<line class="c-grid" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W - padR}" y2="${yy.toFixed(1)}"/><text class="c-ytick" x="${padL - 6}" y="${(yy + 3).toFixed(1)}" text-anchor="end">$${g}</text>`; }
+            s += `<line class="c-axis" x1="${padL}" y1="${(H - padB).toFixed(1)}" x2="${W - padR}" y2="${(H - padB).toFixed(1)}"/>`;
+            s += `<text class="c-ytick" x="${padL}" y="${H - 9}" text-anchor="start">EARLY</text><text class="c-ytick" x="${W - padR}" y="${H - 9}" text-anchor="end">LATE</text>`;
+            order.forEach(pos => { const pts = log.filter(l => l.pos === pos); if (!pts.length) return;
+                s += `<polyline class="c-line" points="${pts.map(l => X(l.no).toFixed(1) + ',' + Y(l.price).toFixed(1)).join(' ')}" style="stroke:${POSCOLOR[pos]}"/>`;
+                pts.forEach(l => { const z = stats[pos] ? (l.price - stats[pos].md) / stats[pos].sd : 0;
+                    const cx = X(l.no).toFixed(1), cy = Y(l.price).toFixed(1);
+                    const data = `data-n="${l.name}" data-pos="${pos}" data-pr="${l.price}" data-tm="${l.teamName}" data-z="${z.toFixed(1)}"`;
+                    s += `<circle class="c-dot" cx="${cx}" cy="${cy}" r="3.6" style="fill:${POSCOLOR[pos]}"/>`;
+                    s += `<circle class="c-hit" cx="${cx}" cy="${cy}" r="9" ${data}/>`; }); });
+            s += '</svg>';
+            wrap.innerHTML = s;
+            document.getElementById('costLegend').innerHTML = order.map(p => `<span class="cl-item"><span class="cl-dot" style="background:${POSCOLOR[p]}"></span>${p}</span>`).join('');
+            wrap.querySelectorAll('.c-hit').forEach(c => { c.addEventListener('mouseenter', e => showCostTip(e, c)); c.addEventListener('mousemove', moveTip); c.addEventListener('mouseleave', hideTip); });
+        }
+        function showCostTip(e, c) {
+            const tip = document.getElementById('ptip'), pos = c.dataset.pos, z = parseFloat(c.dataset.z), above = z >= 0;
+            tip.style.setProperty('--pc', POSCOLOR[pos]);
+            tip.innerHTML = `<div class="tt-head"><span class="tt-pos ${LIGHTPOS[pos] ? 'light' : ''}" style="background:${POSCOLOR[pos]}">${pos}</span><span class="tt-name">${c.dataset.n}</span></div>
+                <div class="tt-sub">${c.dataset.tm} · <b style="color:var(--turf)">$${c.dataset.pr}</b></div>
+                <div class="tt-zline" style="color:${above ? 'var(--live)' : 'var(--turf)'}">${above ? '+' : ''}${z.toFixed(1)}σ ${above ? 'above' : 'below'} median</div>`;
+            tip.style.display = 'block'; moveTip(e);
+        }
         function renderDominance() {} // stub displaced by T10
         function renderBudgetPower() {} // stub displaced by T10
 
