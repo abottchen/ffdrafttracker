@@ -1114,8 +1114,9 @@
         async function clearDoneTeams() {
             // Clear every currently-done team (server is the source of truth).
             const done = currentDraftState.teams.filter(t => t.manually_done);
-            for (const t of done) { await patchTeamDone(t.owner_id, false); }
-            showMessage('All done teams cleared', 'success');
+            let ok = true;
+            for (const t of done) { ok = ok && await patchTeamDone(t.owner_id, false); }
+            if (ok) showMessage('All done teams cleared', 'success');
         }
         async function patchTeamDone(ownerId, value) {
             try {
@@ -1129,11 +1130,13 @@
                     currentVersion = r.new_version;
                     if (value) showMessage('Team marked done', 'success');
                     await refreshData();
+                    return true;
                 } else {
                     const e = await resp.json();
                     showMessage('Update failed: ' + e.detail, 'error');
+                    return false;
                 }
-            } catch (err) { showMessage('Error: ' + err.message, 'error'); }
+            } catch (err) { showMessage('Error: ' + err.message, 'error'); return false; }
         }
 
         async function removeDraftedPlayer() {
