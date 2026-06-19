@@ -83,6 +83,7 @@
         let curRoster = [], prevFrac = [0,0,0,0,0,0];
         let lastSeenMaxPickId = 0;      // for recent-picks animation
         const INITIAL_TEAM_ID = {{ selected_team_id }};
+        let AVAILABLE = [];
 
         // NFL Team Logo URLs - using ESPN's CDN
         function getTeamLogoUrl(teamAbbr) {
@@ -148,6 +149,12 @@
                 const r = await fetch(`${API_BASE}/player/stats`);
                 if (r.ok) playerStats = await r.json();
             } catch (e) { playerStats = {}; }
+        }
+        async function loadAvailable() {
+            try {
+                const list = await (await fetch(`${API_BASE}/players/available`)).json();
+                AVAILABLE = list.map(p => ({ id: p.id, fn: p.first_name, ln: p.last_name, pos: p.position, nfl: p.team }));
+            } catch (e) { AVAILABLE = []; }
         }
 
         // Normalize the live draft state into the array shape the mockup renderers expect.
@@ -756,10 +763,12 @@
             } catch (e) {
                 showError('Connection lost — retrying…');
             }
+            try { await loadAvailable(); } catch (e) {}
         }
 
         async function init() {
             await loadStatic();
+            await loadAvailable();
             // first poll establishes TEAMS, then map the injected team id to an index
             const ds = await (await fetch(`${API_BASE}/draft-state`)).json();
             lastDraftState = ds; buildModel(ds);
@@ -933,7 +942,56 @@
           requestAnimationFrame(step);
         }
         function renderStatusView() {}
-        function setupTargetBoard() {}
+
+        /* ── Target Board ── */
+        let targets = []; try { targets = JSON.parse(localStorage.getItem('ffdraft_targets') || '[]'); } catch (e) {}
+        let dragId = null, dragSrc = null;
+        function saveTargets() { try { localStorage.setItem('ffdraft_targets', JSON.stringify(targets)); } catch (e) {} }
+        function pById(id) { return AVAILABLE.find(p => p.id === id); }
+        function tbRow(p, cls, btn) {
+            return `<div class="${cls}" draggable="true" data-id="${p.id}">
+          <span class="tb-pos" style="background:${POSCOLOR[p.pos]}${LIGHTPOS[p.pos] ? ';color:#fff' : ''}">${p.pos}</span>
+          <span class="tb-nm">${p.fn} ${p.ln}</span><span class="tb-meta">${p.nfl}</span>${btn}</div>`;
+        }
+        function renderResults() {
+            const q = document.getElementById('tbSearch').value.trim().toLowerCase(), box = document.getElementById('tbResults');
+            if (!q) { box.style.display = 'none'; box.innerHTML = ''; return; }
+            const m = AVAILABLE.filter(p => !targets.includes(p.id) && (p.fn + ' ' + p.ln).toLowerCase().includes(q)).slice(0, 7);
+            box.style.display = m.length ? 'block' : 'none';
+            box.innerHTML = m.map(p => tbRow(p, 'tb-res', '<button class="tb-add" title="Add to targets">+</button>')).join('');
+            box.querySelectorAll('.tb-res').forEach(el => {
+                const id = +el.dataset.id;
+                el.addEventListener('dragstart', e => { dragId = id; dragSrc = 'res'; e.dataTransfer.effectAllowed = 'copy'; e.dataTransfer.setData('text/plain', id); });
+                el.querySelector('.tb-add').addEventListener('click', ev => { ev.stopPropagation(); addTarget(id); });
+                el.addEventListener('click', () => addTarget(id));
+            });
+        }
+        function addTarget(id) { if (!targets.includes(id)) { targets.push(id); saveTargets(); renderTargets(); } const s = document.getElementById('tbSearch'); s.value = ''; renderResults(); s.focus(); }
+        function removeTarget(id) { targets = targets.filter(t => t !== id); saveTargets(); renderTargets(); }
+        function renderTargets() {
+            const box = document.getElementById('tbTargets');
+            if (!targets.length) { box.innerHTML = '<div class="tb-empty">Search above and drag (or +) players here<br>to build your target list.</div>'; return; }
+            box.innerHTML = targets.map((id, i) => { const p = pById(id); return p ? tbRow(p, 'tb-tgt', '<button class="tb-x" title="Remove">✕</button>').replace('<span class="tb-pos"', `<span class="tb-rank">${i + 1}</span><span class="tb-pos"`) : ''; }).join('');
+            box.querySelectorAll('.tb-tgt').forEach(el => {
+                const id = +el.dataset.id;
+                el.addEventListener('dragstart', e => { dragId = id; dragSrc = 'tgt'; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id); });
+                el.querySelector('.tb-x').addEventListener('click', () => removeTarget(id));
+            });
+        }
+        function tgtAfter(box, y) { return [...box.querySelectorAll('.tb-tgt')].find(r => { const b = r.getBoundingClientRect(); return y < b.top + b.height / 2; }); }
+        function setupTargetBoard() {
+            document.getElementById('tbSearch').addEventListener('input', renderResults);
+            const box = document.getElementById('tbTargets');
+            box.addEventListener('dragover', e => { e.preventDefault(); box.classList.add('drag-over'); box.querySelectorAll('.tb-tgt').forEach(r => r.classList.remove('drop-before')); const a = tgtAfter(box, e.clientY); if (a) a.classList.add('drop-before'); });
+            box.addEventListener('dragleave', () => box.classList.remove('drag-over'));
+            box.addEventListener('drop', e => {
+                e.preventDefault(); box.classList.remove('drag-over');
+                if (dragSrc === 'res') { addTarget(dragId); }
+                else if (dragSrc === 'tgt') { const a = tgtAfter(box, e.clientY); targets = targets.filter(t => t !== dragId); const idx = a ? targets.indexOf(+a.dataset.id) : targets.length; targets.splice(idx < 0 ? targets.length : idx, 0, dragId); saveTargets(); renderTargets(); }
+                dragId = null; dragSrc = null;
+            });
+            renderTargets();
+        }
 
         /* hover tooltip */
         function showTip(e, i) {
