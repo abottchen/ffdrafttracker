@@ -414,56 +414,11 @@
         }
         
         function updateDraftProgress(teams) {
-            if (!config) return;
-            
-            // Calculate total players drafted
-            let totalPlayersDrafted = 0;
-            teams.forEach(team => {
-                totalPlayersDrafted += team.picks.length;
-            });
-            
-            // Calculate total possible players
-            const totalPossiblePlayers = config.total_rounds * teams.length;
-            
-            // Calculate percentage
-            const percentage = totalPossiblePlayers > 0 
-                ? Math.round((totalPlayersDrafted / totalPossiblePlayers) * 100) 
-                : 0;
-            
-            // Calculate current round (1-based)
-            const currentRound = totalPlayersDrafted > 0 
-                ? Math.ceil((totalPlayersDrafted) / teams.length)
-                : 0;
-            
-            // Stats elements removed - no longer needed
-            
-            // Update progress bar
-            const progressBar = document.getElementById('draft-progress-bar');
-            progressBar.style.width = percentage + '%';
-            document.getElementById('draft-percentage').textContent = percentage + '%';
-            
-            // Add round markers if not already added
-            const markersContainer = document.getElementById('draft-markers');
-            if (markersContainer.children.length === 0 && config.total_rounds > 0) {
-                for (let i = 0; i < config.total_rounds; i++) {
-                    const marker = document.createElement('div');
-                    marker.className = 'draft-progress-marker';
-                    markersContainer.appendChild(marker);
-                }
-            }
-            
-            // Change bar color based on progress (red to green)
-            if (percentage >= 90) {
-                progressBar.style.background = 'linear-gradient(90deg, #4caf50 0%, #8bc34a 100%)';  // Green - nearly complete
-            } else if (percentage >= 75) {
-                progressBar.style.background = 'linear-gradient(90deg, #66bb6a 0%, #81c784 100%)';  // Light green
-            } else if (percentage >= 50) {
-                progressBar.style.background = 'linear-gradient(90deg, #ff9800 0%, #ffc107 100%)';  // Orange - midway
-            } else if (percentage >= 25) {
-                progressBar.style.background = 'linear-gradient(90deg, #ff6b6b 0%, #ff9800 100%)';  // Orange-red
-            } else {
-                progressBar.style.background = 'linear-gradient(90deg, #d32f2f 0%, #ff6b6b 100%)';  // Red - just starting
-            }
+            const drafted = teams.reduce((n, t) => n + t.picks.length, 0);
+            const totalPossible = config.total_rounds * teams.length;
+            const pct = totalPossible > 0 ? Math.round(drafted / totalPossible * 100) : 0;
+            document.getElementById('progress-fill').style.width = pct + '%';
+            document.getElementById('progress-pct').textContent = pct + '%';
         }
         
         // Short, position-appropriate stat suffix for the hero meta line.
