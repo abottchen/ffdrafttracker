@@ -778,10 +778,59 @@
         if (document.fonts && document.fonts.ready) document.fonts.ready.then(reveal);
         setTimeout(reveal, 1500);
 
-        // stubs filled by Tasks 3–10
-        // DONE_WITH_CONCERNS: these four stubs must be displaced by their respective tasks.
-        // Task 3 → renderChrome, Task 5 → renderTeamsView, Task 6 → renderStatusView, Task 7 → setupTargetBoard
-        function renderChrome(){}
+        function renderChips(){
+          const {clockIdx,nextIdx}=clockInfo();
+          document.getElementById('chips').innerHTML=TEAMS.map((t,i)=>{
+            const done=isDone(t);
+            const badge=i===clockIdx?'<span class="chip-badge clock">On Clock</span>'
+              :done?'<span class="chip-badge done">Done</span>'
+              :i===nextIdx?'<span class="chip-badge next">Next</span>':'';
+            const cls=`chip ${i===selected?'active':''} ${i===clockIdx?'is-clock':''} ${done?'is-done':''}`;
+            return `<div class="${cls}" style="--tc:${t.color}" onclick="selectTeam(${i})">
+              <div class="ct">${t.team}</div>
+              <div class="chip-foot"><span class="co">${t.owner}</span>${badge}</div></div>`;
+          }).join('');
+        }
+        function renderClockNote(){
+          const {clockIdx,nextIdx}=clockInfo();
+          const c=clockIdx>=0?TEAMS[clockIdx]:null, n=nextIdx>=0?TEAMS[nextIdx]:null;
+          document.getElementById('clocknote').innerHTML=
+            (c?`<span class="cn-clock"><span class="cn-dot"></span>On the Clock <b>${c.team}</b></span>`:'')+
+            (n?`<span class="cn-next">Up Next <b>${n.team}</b></span>`:'');
+        }
+        function renderChrome() {
+            renderChips();
+            renderClockNote();
+            const drafted = TEAMS.reduce((n, t) => n + t.picks, 0);
+            const pct = TEAMS.length ? Math.round(drafted / (TOTAL * TEAMS.length) * 100) : 0;
+            document.getElementById('completion-fill').style.width = pct + '%';
+            document.getElementById('completion-pct').textContent = pct + '%';
+        }
+        function selectTeam(i) {
+            selected = i;
+            const t = TEAMS[i];
+            if (t) {
+                const url = new URL(window.location);
+                url.searchParams.set('team_id', t.owner_id);
+                window.history.pushState({}, '', url);
+            }
+            renderChips();
+            renderTeamsView();
+        }
+        function navTeam(d) {
+            if (!TEAMS.length) return;
+            selected = (selected + d + TEAMS.length) % TEAMS.length;
+            selectTeam(selected);
+            const chip = document.getElementById('chips').children[selected];
+            if (chip) chip.scrollIntoView({ inline: 'center', block: 'nearest' });
+        }
+        document.addEventListener('keydown', e => {
+            if (!document.getElementById('view-teams').classList.contains('active')) return;
+            if (e.key === 'ArrowLeft') navTeam(-1);
+            if (e.key === 'ArrowRight') navTeam(1);
+        });
+
+        // stubs filled by remaining tasks
         function renderTeamsView(){}
         function renderStatusView(){}
         function setupTargetBoard(){}
