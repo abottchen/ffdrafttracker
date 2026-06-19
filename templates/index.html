@@ -510,6 +510,27 @@
             }
         }
 
+        function updateStandbyHero(draftState) {
+            const team = owners.find(o => o.id === draftState.next_to_nominate);
+            const color = team ? team.color : '#8A9BB5';
+            const nameEl = document.getElementById('standby-name');
+            nameEl.textContent = team ? team.team_name : '—';
+            nameEl.style.color = color;
+            document.getElementById('standby-meta').innerHTML =
+                `${team ? team.owner_name : ''} · <b>awaiting nomination</b>`;
+            const sil = document.getElementById('standby-sil');
+            sil.querySelectorAll('[fill]').forEach(node => node.setAttribute('fill', color));
+        }
+
+        function updateOnDeck(draftState) {
+            const onClock = owners.find(o => o.id === draftState.next_to_nominate);
+            const upNext = draftState.up_next ? owners.find(o => o.id === draftState.up_next) : null;
+            let html = '';
+            if (onClock) html = `On the clock: <b>${onClock.team_name}</b>`;
+            if (upNext) html += ` · Up Next <b>${upNext.team_name}</b>`;
+            document.getElementById('ondeck').innerHTML = html;
+        }
+
         function setupPlayerSearch() {
             const searchInput = document.getElementById('player-search');
             const dropdown = document.getElementById('player-dropdown');
@@ -891,7 +912,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        owner_id: currentDraftState ? getNextToNominate(currentDraftState.teams) : 1,
+                        owner_id: currentDraftState ? currentDraftState.next_to_nominate : 1,
                         player_id: selectedPlayerId,
                         initial_bid: bid,
                         expected_version: currentVersion
@@ -1212,42 +1233,6 @@
             } catch (error) {
                 showMessage('Error removing player: ' + error.message, 'error');
             }
-        }
-
-        function getNextToNominate(teams) {
-            // Get the actual next_to_nominate from draft state
-            const actualNext = currentDraftState ? currentDraftState.next_to_nominate : 1;
-            
-            // Find teams that aren't done (either manually marked done OR roster full)
-            const rosterLimit = config ? config.total_rounds : 16;
-            const availableTeams = teams.filter(team => {
-                const isManuallyDone = doneTeams.has(team.owner_id);
-                const isRosterFull = team.picks.length >= rosterLimit;
-                return !isManuallyDone && !isRosterFull;
-            });
-            
-            if (availableTeams.length === 0) {
-                // All teams are done - return first team ID as fallback
-                return teams.length > 0 ? teams[0].owner_id : 1;
-            }
-            
-            // Get sorted list of available team IDs
-            const availableIds = availableTeams.map(t => t.owner_id).sort((a, b) => a - b);
-            
-            // Check if the actual next team is available (not done)
-            if (availableIds.includes(actualNext)) {
-                return actualNext;
-            }
-            
-            // If the actual next team is done, find the next available team
-            let nextTeam = availableIds.find(id => id > actualNext);
-            
-            // If no team found after current, wrap around to first available
-            if (!nextTeam) {
-                nextTeam = availableIds[0];
-            }
-            
-            return nextTeam;
         }
 
         // Admin draft functionality
