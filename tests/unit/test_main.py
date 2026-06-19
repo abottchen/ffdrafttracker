@@ -92,7 +92,7 @@ class TestGetEndpoints(TestMainApp):
 
             assert response.status_code == 200
             assert "text/html" in response.headers["content-type"]
-            assert "Fantasy Football Draft Tracker" in response.text
+            assert "Draft Set" in response.text
 
     @patch("main.load_draft_state")
     def test_get_draft_state(self, mock_load):
