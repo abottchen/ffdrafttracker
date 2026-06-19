@@ -207,6 +207,7 @@ cython_debug/
 CLAUDE.local.md
 #  Project-scoped MCP server config (may contain local/private server definitions)
 .mcp.json
+docs/superpowers/
 
 # Marimo
 marimo/_static/
