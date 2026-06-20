@@ -613,16 +613,17 @@ def _build_retrospective(data: BoothData, slc: AnalystSlice) -> None:
     ]
 
     # Recent pick positions (chronological) for spotting a positional run.
-    all_picks = [
-        (pick, data.players.get(pick.player_id))
+    # Filter unresolved players out BEFORE windowing, so a missing-player pick
+    # in the tail can't shrink or misalign the last-N view.
+    resolved_picks = [
+        (pick, player)
         for team in data.state.teams
         for pick in team.picks
+        if (player := data.players.get(pick.player_id)) is not None
     ]
-    all_picks.sort(key=lambda pp: pp[0].pick_id)
+    resolved_picks.sort(key=lambda pp: pp[0].pick_id)
     slc.recent_pick_positions = [
-        str(player.position)
-        for _, player in all_picks[-RECENT_PICKS_N:]
-        if player is not None
+        str(player.position) for _, player in resolved_picks[-RECENT_PICKS_N:]
     ]
 
 

@@ -677,6 +677,62 @@ class TestRetrospective:
         positions = {b.position for b in slc.best_available}
         assert positions == {"QB", "RB", "WR", "TE"}
 
+    def test_value_board_tiebreak_priciest_last(self, tmp_path):
+        # Add two zero-production rookies at different prices so the board has
+        # >VALUE_BOARD_N entries AND a ratio-0 tie. On the tie, the priciest
+        # must sort LAST (so the "priciest vs production" tail surfaces it).
+        state = _base_state()
+        # Players 21 (Summer) and 99 (Noob) are both rookies -> production 0.
+        state["teams"][1]["picks"] = [
+            {"pick_id": 3, "player_id": 21, "owner_id": 2, "price": 5},
+            {"pick_id": 4, "player_id": 99, "owner_id": 2, "price": 15},
+        ]
+        state["available_player_ids"] = [
+            pid for pid in state["available_player_ids"] if pid not in (21, 99)
+        ]
+        _write_data(tmp_path, state)
+        slc = build_slice(tmp_path, retrospective=True)
+        # Rick 11.33 > Birdperson 6.93 > (ratio-0 tie: cheaper Summer before
+        # pricier Noob).
+        assert [v.name for v in slc.value_board] == [
+            "Rick Sanchez",
+            "Birdperson Phoenix",
+            "Summer Smith",
+            "Noob Noob",
+        ]
+        assert slc.value_board[-1].name == "Noob Noob"
+        assert slc.value_board[-1].price == 15
+        assert slc.value_board[-1].value_ratio == 0.0
+        # The rendered "Priciest vs production" tail leads with the most expensive.
+        tail = render_brief(slc).split("Priciest vs production:")[1]
+        assert tail.index("Noob Noob") < tail.index("Summer Smith")
+
+    def test_recent_pick_positions_skips_missing_then_windows(self, tmp_path):
+        # 9 picks, one referencing a player absent from players.json (id 777) in
+        # the tail. The window must be the last RECENT_PICKS_N=8 *resolved*
+        # picks, so filtering happens BEFORE slicing (else a tail miss truncates).
+        player_ids = [10, 20, 21, 30, 31, 40, 50, 99, 777]
+        state = _base_state()
+        state["teams"][0]["picks"] = [
+            {"pick_id": i + 1, "player_id": pid, "owner_id": 1, "price": 1}
+            for i, pid in enumerate(player_ids)
+        ]
+        state["teams"][1]["picks"] = []
+        state["available_player_ids"] = []
+        _write_data(tmp_path, state)
+        slc = build_slice(tmp_path, retrospective=True)
+        # 777 dropped; the 8 resolved positions remain in pick order.
+        assert slc.recent_pick_positions == [
+            "QB",
+            "RB",
+            "RB",
+            "WR",
+            "WR",
+            "TE",
+            "K",
+            "WR",
+        ]
+
 
 class TestRetrospectiveBrief:
     def test_brief_has_retrospective_sections(self, data_dir):
