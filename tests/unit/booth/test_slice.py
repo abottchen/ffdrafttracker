@@ -483,13 +483,13 @@ class TestNomineeLive:
         slc = build_slice(tmp_path)
         assert len(slc.bid_board) == 3
         beth = next(r for r in slc.bid_board if r.owner_id == 3)
-        # Beth empty roster -> needs WR; max bid 184.
-        assert beth.needs_position is True
+        # Beth empty roster -> has room at WR; max bid 184.
+        assert beth.has_position_room is True
         assert beth.max_legal_bid == 184
 
-    def test_bid_board_needs_position_false_when_full(self, tmp_path):
+    def test_bid_board_has_position_room_false_when_full(self, tmp_path):
         state = _nominee_state(player_id=31)  # nominee is a WR
-        # Fill Jerry to the WR max (8) so he no longer needs WR.
+        # Fill Jerry to the WR max (8) so he has no room at WR.
         state["teams"][1]["picks"] = [
             {"pick_id": 100 + i, "player_id": 30, "owner_id": 2, "price": 1}
             for i in range(8)
@@ -497,7 +497,7 @@ class TestNomineeLive:
         _write_data(tmp_path, state)
         slc = build_slice(tmp_path)
         jerry = next(r for r in slc.bid_board if r.owner_id == 2)
-        assert jerry.needs_position is False
+        assert jerry.has_position_room is False
 
     def test_comparables_same_position_recent_first(self, tmp_path):
         # Draft a couple WRs first so there are same-position comparables.
@@ -594,7 +594,7 @@ class TestRecentLog:
         log.write_text("\n".join(lines) + "\n")
         slc = build_slice(data_dir, recent_log_limit=1)
         assert len(slc.recent_log) == 1
-        assert slc.recent_log[0]["persona"] == "Kimes"
+        assert slc.recent_log[0].persona == "Kimes"
 
     def test_recent_log_drops_uncommitted_tail(self, data_dir):
         log = data_dir / "analyst-comments.jsonl"
@@ -608,7 +608,7 @@ class TestRecentLog:
         log.write_text(committed + "\n" + partial)
         slc = build_slice(data_dir, recent_log_limit=5)
         assert len(slc.recent_log) == 1
-        assert slc.recent_log[0]["text"] == "one"
+        assert slc.recent_log[0].text == "one"
 
     def test_recent_log_keeps_committed_on_torn_tail(self, data_dir):
         # A torn (unparseable) final line must drop only the partial, never the
@@ -619,7 +619,7 @@ class TestRecentLog:
         )
         log.write_text(committed + '\n{"ts":"t2","state_versi')
         slc = build_slice(data_dir, recent_log_limit=5)
-        assert [r["text"] for r in slc.recent_log] == ["one"]
+        assert [r.text for r in slc.recent_log] == ["one"]
 
     def test_no_log_means_empty(self, data_dir):
         slc = build_slice(data_dir, recent_log_limit=5)

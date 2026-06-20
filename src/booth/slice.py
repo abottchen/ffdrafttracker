@@ -21,7 +21,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
-from src.booth.log import read_comments
+from src.booth.log import AnalystComment, read_comments
 from src.draft_rules import max_bid, remaining_roster_spots
 from src.models import Configuration, DraftState, Owner, Player, Team
 from src.models.player_stats import PlayerStats, PlayerStatsCollection
@@ -46,7 +46,7 @@ def _num(value: str | None) -> float:
         return 0.0
     try:
         return float(str(value).strip())
-    except (ValueError, AttributeError):
+    except ValueError:
         return 0.0
 
 
@@ -158,7 +158,7 @@ class BidBoardRow(BaseModel):
     team_name: str
     budget_remaining: int
     max_legal_bid: int | None
-    needs_position: bool  # under the position max for the nominee's position
+    has_position_room: bool  # under the position max (capacity, not strategic need)
 
 
 class Comparable(BaseModel):
@@ -196,7 +196,7 @@ class AnalystSlice(BaseModel):
     total_rounds: int
     approx_round: int
     rules: RulesBlock
-    recent_log: list[dict] = Field(default_factory=list)
+    recent_log: list[AnalystComment] = Field(default_factory=list)
 
     # Mode A — NO NOMINEE
     last_pick: LastPick | None = None
@@ -247,7 +247,7 @@ def load_booth_data(data_dir: Path) -> BoothData:
     )
 
 
-def _read_recent_log(data_dir: Path, limit: int) -> list[dict]:
+def _read_recent_log(data_dir: Path, limit: int) -> list[AnalystComment]:
     """Tail of analyst-comments.jsonl (committed lines only), for callbacks.
 
     Delegates to ``log.read_comments`` so the defensive trailing-tail handling
@@ -258,7 +258,7 @@ def _read_recent_log(data_dir: Path, limit: int) -> list[dict]:
     if limit <= 0:
         return []
     records = read_comments(data_dir / "analyst-comments.jsonl")
-    return [c.model_dump() for c in records[-limit:]]
+    return records[-limit:]
 
 
 # ---------------------------------------------------------------------------
@@ -484,10 +484,10 @@ def _build_nominee_live(data: BoothData, slc: AnalystSlice) -> None:
     for team in data.state.teams:
         owner = data.owners.get(team.owner_id)
         counts = _position_counts(team, data.players)
-        needs_pos = False
+        has_room = False
         if nominee_pos is not None:
             maximum = data.config.position_maximums.get(nominee_pos, 0)
-            needs_pos = counts.get(nominee_pos, 0) < maximum
+            has_room = counts.get(nominee_pos, 0) < maximum
         rows.append(
             BidBoardRow(
                 owner_id=team.owner_id,
@@ -495,7 +495,7 @@ def _build_nominee_live(data: BoothData, slc: AnalystSlice) -> None:
                 team_name=owner.team_name if owner else f"Team {team.owner_id}",
                 budget_remaining=team.budget_remaining,
                 max_legal_bid=max_bid(team, data.config),
-                needs_position=needs_pos,
+                has_position_room=has_room,
             )
         )
     slc.bid_board = rows
@@ -647,9 +647,9 @@ def render_brief(slc: AnalystSlice) -> str:
                 out.append(f"  {c.name} ({c.nfl_team}) — ${c.price}")
         if slc.bid_board:
             out.append("")
-            out.append("BID BOARD (budget / max legal bid / needs position?):")
+            out.append("BID BOARD (budget / max legal bid / position room?):")
             for row in slc.bid_board:
-                flag = "needs" if row.needs_position else "set"
+                flag = "room" if row.has_position_room else "capped"
                 out.append(
                     f"  {row.team_name} ({row.owner_name}): "
                     f"${row.budget_remaining} / max {_fmt_bid(row.max_legal_bid)} "
@@ -660,9 +660,7 @@ def render_brief(slc: AnalystSlice) -> str:
         out.append("")
         out.append("RECENT COMMENTARY:")
         for rec in slc.recent_log:
-            persona = rec.get("persona", "?")
-            text = rec.get("text", "")
-            out.append(f"  [{persona}] {text}")
+            out.append(f"  [{rec.persona}] {rec.text}")
 
     return "\n".join(out)
 
