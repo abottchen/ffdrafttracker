@@ -295,10 +295,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Return only comments with `seq` greater than this \u2014 the live tail (forward polling).",
+              "description": "Return only comments with `seq` greater than this (live tail / forward polling).",
               "title": "Since"
             },
-            "description": "Return only comments with `seq` greater than this \u2014 the live tail (forward polling)."
+            "description": "Return only comments with `seq` greater than this (live tail / forward polling)."
           },
           {
             "name": "before",
@@ -314,10 +314,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Return only comments with `seq` less than this \u2014 older history (backward paging).",
+              "description": "Return only comments with `seq` less than this (older history / backward paging).",
               "title": "Before"
             },
-            "description": "Return only comments with `seq` less than this \u2014 older history (backward paging)."
+            "description": "Return only comments with `seq` less than this (older history / backward paging)."
           },
           {
             "name": "limit",

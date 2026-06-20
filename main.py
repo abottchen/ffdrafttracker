@@ -142,11 +142,10 @@ class CommentResponse(BaseModel):
 # Per-parameter OpenAPI descriptions for the comments feed, shared so the admin
 # and viewer specs stay identical.
 _COMMENTS_SINCE_DESC = (
-    "Return only comments with `seq` greater than this "
-    "— the live tail (forward polling)."
+    "Return only comments with `seq` greater than this (live tail / forward polling)."
 )
 _COMMENTS_BEFORE_DESC = (
-    "Return only comments with `seq` less than this — older history (backward paging)."
+    "Return only comments with `seq` less than this (older history / backward paging)."
 )
 _COMMENTS_LIMIT_DESC = (
     "Cap the result to the most recent N comments of the matched window."
