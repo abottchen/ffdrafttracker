@@ -224,3 +224,6 @@ data/action_log.json
 # Temporary files from atomic operations
 *.tmp
 data/*.tmp
+
+# Analyst booth runtime commentary log (regenerated each draft)
+data/analyst-comments.jsonl
