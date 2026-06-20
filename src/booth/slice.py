@@ -164,7 +164,7 @@ class BidBoardRow(BaseModel):
     team_name: str
     budget_remaining: int
     max_legal_bid: int | None
-    has_position_room: bool  # open roster slot AND under the position max (capacity)
+    needs_position: bool  # nominee's position is a real roster need (per _needs)
 
 
 class Comparable(BaseModel):
@@ -507,18 +507,20 @@ def _build_nominee_live(data: BoothData, slc: AnalystSlice) -> None:
         )
 
     nominee_pos = str(player.position) if player is not None else None
+    elite_te = _elite_te_available(data)
 
-    # Bid board: every team's budget, legal ceiling, and position need.
+    # Bid board: every team's budget, legal ceiling, and whether the nominee's
+    # position is a real roster NEED for them. "Need" (not raw position-max
+    # capacity) is what tells the booth who should be bidding — it excludes
+    # wasteful over-builds (a 3rd QB/TE, a 2nd K/D-ST, a 6th-7th RB/WR are never
+    # needs) and a full roster (no needs at all).
     rows: list[BidBoardRow] = []
     for team in data.state.teams:
         owner = data.owners.get(team.owner_id)
         counts = _position_counts(team, data.players)
-        has_room = False
-        # A full roster can't add ANY player, so it has no room regardless of
-        # position headroom — gate on an open roster slot before the position max.
-        if nominee_pos is not None and remaining_roster_spots(team, data.config) > 0:
-            maximum = data.config.position_maximums.get(nominee_pos, 0)
-            has_room = counts.get(nominee_pos, 0) < maximum
+        slots_left = remaining_roster_spots(team, data.config)
+        team_needs = _needs(counts, slots_left, elite_te_available=elite_te)
+        needs_pos = nominee_pos is not None and nominee_pos in team_needs
         rows.append(
             BidBoardRow(
                 owner_id=team.owner_id,
@@ -526,7 +528,7 @@ def _build_nominee_live(data: BoothData, slc: AnalystSlice) -> None:
                 team_name=owner.team_name if owner else f"Team {team.owner_id}",
                 budget_remaining=team.budget_remaining,
                 max_legal_bid=max_bid(team, data.config),
-                has_position_room=has_room,
+                needs_position=needs_pos,
             )
         )
     slc.bid_board = rows
@@ -766,9 +768,9 @@ def render_brief(slc: AnalystSlice) -> str:
                 out.append(f"  {c.name} ({c.nfl_team}) — ${c.price}")
         if slc.bid_board:
             out.append("")
-            out.append("BID BOARD (budget / max legal bid / position room?):")
+            out.append("BID BOARD (budget / max legal bid / needs the position?):")
             for row in slc.bid_board:
-                flag = "room" if row.has_position_room else "capped"
+                flag = "need" if row.needs_position else "no need"
                 out.append(
                     f"  {row.team_name} ({row.owner_name}): "
                     f"${row.budget_remaining} / max {_fmt_bid(row.max_legal_bid)} "

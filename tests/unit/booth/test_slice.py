@@ -483,13 +483,13 @@ class TestNomineeLive:
         slc = build_slice(tmp_path)
         assert len(slc.bid_board) == 3
         beth = next(r for r in slc.bid_board if r.owner_id == 3)
-        # Beth empty roster -> has room at WR; max bid 184.
-        assert beth.has_position_room is True
+        # Beth empty roster -> WR is a need; max bid 184.
+        assert beth.needs_position is True
         assert beth.max_legal_bid == 184
 
-    def test_bid_board_has_position_room_false_when_full(self, tmp_path):
+    def test_bid_board_no_need_when_position_satisfied(self, tmp_path):
         state = _nominee_state(player_id=31)  # nominee is a WR
-        # Fill Jerry to the WR max (8) so he has no room at WR.
+        # Fill Jerry's WR slots (8) so WR is no longer a need for him.
         state["teams"][1]["picks"] = [
             {"pick_id": 100 + i, "player_id": 30, "owner_id": 2, "price": 1}
             for i in range(8)
@@ -497,13 +497,27 @@ class TestNomineeLive:
         _write_data(tmp_path, state)
         slc = build_slice(tmp_path)
         jerry = next(r for r in slc.bid_board if r.owner_id == 2)
-        assert jerry.has_position_room is False
+        assert jerry.needs_position is False
 
-    def test_bid_board_no_room_when_roster_full(self, tmp_path):
-        # Regression: a FULL roster has no room for ANY player, even a position
-        # it isn't maxed at. Rick is full (17 QBs); the nominee is a WR he has
-        # zero of, so the position-only check would say "room" -- but a full
-        # roster can't add anyone.
+    def test_bid_board_no_need_for_oversaturated_position(self, tmp_path):
+        # Under the league position max but NOT a real need: a team with 2 QBs
+        # (QB max is 3) and an open roster facing a QB nominee must not be
+        # flagged -- a 3rd QB is never a need, so the booth shouldn't highlight
+        # it as biddable.
+        state = _nominee_state(player_id=10)  # nominee is a QB (Rick Sanchez)
+        state["teams"][1]["picks"] = [
+            {"pick_id": 60, "player_id": 10, "owner_id": 2, "price": 1},
+            {"pick_id": 61, "player_id": 10, "owner_id": 2, "price": 1},
+        ]
+        _write_data(tmp_path, state)
+        slc = build_slice(tmp_path)
+        jerry = next(r for r in slc.bid_board if r.owner_id == 2)
+        assert jerry.max_legal_bid is not None  # has open slots, can bid
+        assert jerry.needs_position is False  # but QB3 is not a need
+
+    def test_bid_board_no_need_when_roster_full(self, tmp_path):
+        # A FULL roster needs nothing, even a position it has zero of. Rick is
+        # full (17 QBs); the nominee is a WR he has none of -> still not a need.
         state = _nominee_state(player_id=31)  # nominee is a WR
         state["teams"][0]["picks"] = [
             {"pick_id": i, "player_id": 10, "owner_id": 1, "price": 1}
@@ -513,7 +527,7 @@ class TestNomineeLive:
         slc = build_slice(tmp_path)
         rick = next(r for r in slc.bid_board if r.owner_id == 1)
         assert rick.max_legal_bid is None  # full roster -> can't bid
-        assert rick.has_position_room is False  # ...so no room, despite 0 WRs
+        assert rick.needs_position is False  # ...and needs nothing anyway
 
     def test_comparables_same_position_recent_first(self, tmp_path):
         # Draft a couple WRs first so there are same-position comparables.
