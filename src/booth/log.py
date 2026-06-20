@@ -7,7 +7,7 @@ crash mid-write leaves an un-terminated (uncommitted) tail rather than a
 corrupt record. The read path drops that tail defensively, keeping every
 downstream consumer naive.
 
-Eisen is the sole writer (no concurrent interleaving) and runs this as a module
+It assumes a single writer (no concurrent interleaving) and is run as a module
 so every line is schema-checked and server-timestamped::
 
     python -m src.booth.log append --persona Kiper --state-version 147 \\
@@ -21,9 +21,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from pydantic import BaseModel, field_validator
-
-# Valid personas: the five analysts plus the host.
-VALID_PERSONAS = {"Kiper", "Schefter", "Kimes", "Booger", "McAfee", "Eisen"}
 
 DEFAULT_LOG_PATH = Path("data") / "analyst-comments.jsonl"
 
@@ -41,20 +38,11 @@ class AnalystComment(BaseModel):
     persona: str
     text: str
 
-    @field_validator("persona")
+    @field_validator("persona", "text")
     @classmethod
-    def _known_persona(cls, value: str) -> str:
-        if value not in VALID_PERSONAS:
-            raise ValueError(
-                f"unknown persona {value!r}; expected one of {sorted(VALID_PERSONAS)}"
-            )
-        return value
-
-    @field_validator("text")
-    @classmethod
-    def _non_empty_text(cls, value: str) -> str:
+    def _non_empty(cls, value: str) -> str:
         if not value.strip():
-            raise ValueError("comment text must not be empty")
+            raise ValueError("must not be empty")
         return value
 
 
@@ -130,7 +118,7 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
 
     ap = sub.add_parser("append", help="Append a validated comment line.")
-    ap.add_argument("--persona", required=True, help="One of the five names or Eisen.")
+    ap.add_argument("--persona", required=True, help="The speaker's name.")
     ap.add_argument(
         "--state-version",
         type=int,

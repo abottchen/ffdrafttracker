@@ -40,13 +40,13 @@ class TestSchema:
         )
         assert c.persona == "Eisen"
 
-    def test_unknown_persona_rejected(self):
+    def test_empty_persona_rejected(self):
         with pytest.raises(ValidationError):
             AnalystComment(
                 ts="2026-06-20T03:42:55Z",
                 state_version=1,
-                persona="Squanchy",
-                text="schwifty take",
+                persona="  ",
+                text="a take",
             )
 
     def test_empty_text_rejected(self):
@@ -162,14 +162,13 @@ class TestRead:
         records = read_comments(path)
         assert [r.text for r in records] == ["a", "b"]
 
-    def test_skips_invalid_persona_line(self, tmp_path):
+    def test_skips_schema_invalid_line(self, tmp_path):
         path = tmp_path / "log.jsonl"
         good = json.dumps(
             {"ts": "t1", "state_version": 1, "persona": "Kimes", "text": "valid"}
         )
-        bad = json.dumps(
-            {"ts": "t2", "state_version": 1, "persona": "Squanchy", "text": "nope"}
-        )
+        # Missing the required state_version -> fails schema -> reader skips it.
+        bad = json.dumps({"ts": "t2", "persona": "Booger", "text": "nope"})
         path.write_text(good + "\n" + bad + "\n")
         records = read_comments(path)
         assert [r.persona for r in records] == ["Kimes"]
