@@ -36,6 +36,12 @@ TOP_N_PER_POSITION = 5
 # How many recent same-position comparables to include for a nominee.
 COMPARABLES_N = 5
 
+# How many picks to surface at each end of the value board.
+VALUE_BOARD_N = 3
+
+# How many recent pick positions to surface for run-spotting.
+RECENT_PICKS_N = 8
+
 
 # ---------------------------------------------------------------------------
 # Production scoring (market-derived, no ADP)
@@ -168,6 +174,23 @@ class Comparable(BaseModel):
     price: int
 
 
+class ValuePick(BaseModel):
+    """A completed pick with neutral price-vs-production facts.
+
+    ``value_ratio`` is ``production_score / price`` — a neutral ordering signal,
+    NOT a verdict. Personas decide what counts as a steal or an overpay.
+    """
+
+    pick_id: int
+    name: str
+    position: str
+    nfl_team: str
+    price: int
+    production_score: float
+    value_ratio: float
+    drafter_team_name: str
+
+
 class NomineeBlock(BaseModel):
     player: StatLine
     current_bid: int
@@ -186,10 +209,11 @@ class AnalystSlice(BaseModel):
     """Grounded, neutral facts for one draft-state event.
 
     ``mode`` is ``NO-NOMINEE`` (react to the pick that just landed / tee up the
-    next nominator) or ``NOMINEE-LIVE`` (who should be bidding, and at what).
+    next nominator), ``NOMINEE-LIVE`` (who should be bidding, and at what), or
+    ``RETROSPECTIVE`` (idle-lull musing — a draft-wide retrospective).
     """
 
-    mode: str  # "NO-NOMINEE" | "NOMINEE-LIVE"
+    mode: str  # "NO-NOMINEE" | "NOMINEE-LIVE" | "RETROSPECTIVE"
     state_version: int
     draft_year: int
     picks_made: int
@@ -208,6 +232,11 @@ class AnalystSlice(BaseModel):
     bid_board: list[BidBoardRow] = Field(default_factory=list)
     comparables: list[Comparable] = Field(default_factory=list)
     position_scarcity: int | None = None
+
+    # Mode C — RETROSPECTIVE (idle musings; draft-wide retrospective)
+    all_teams: list[TeamSnapshot] = Field(default_factory=list)
+    value_board: list[ValuePick] = Field(default_factory=list)
+    recent_pick_positions: list[str] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -524,11 +553,90 @@ def _build_nominee_live(data: BoothData, slc: AnalystSlice) -> None:
         slc.position_scarcity = len(ranked.get(nominee_pos, []))
 
 
+def _build_retrospective(data: BoothData, slc: AnalystSlice) -> None:
+    elite_te = _elite_te_available(data)
+
+    # All teams, ordered by cash on hand (budget remaining) descending — who is
+    # loaded and who is broke is the spine of most retrospective takes.
+    snaps = [
+        _team_snapshot(team, data, elite_te_available=elite_te)
+        for team in data.state.teams
+    ]
+    snaps.sort(key=lambda s: -s.budget_remaining)
+    slc.all_teams = snaps
+
+    team_name_by_owner = {
+        team.owner_id: (
+            data.owners[team.owner_id].team_name
+            if team.owner_id in data.owners
+            else f"Team {team.owner_id}"
+        )
+        for team in data.state.teams
+    }
+
+    # Value board: every completed pick with neutral price-vs-production facts,
+    # best production-per-dollar first. Ties (e.g. rookies at ratio 0) order the
+    # priciest last, so the tail surfaces expensive-for-the-production picks.
+    value: list[ValuePick] = []
+    for team in data.state.teams:
+        for pick in team.picks:
+            player = data.players.get(pick.player_id)
+            if player is None:
+                continue
+            score = production_score(data.stats.get_player_stats(pick.player_id))
+            ratio = round(score / pick.price, 2) if pick.price > 0 else 0.0
+            value.append(
+                ValuePick(
+                    pick_id=pick.pick_id,
+                    name=player.full_name,
+                    position=str(player.position),
+                    nfl_team=str(player.team),
+                    price=pick.price,
+                    production_score=score,
+                    value_ratio=ratio,
+                    drafter_team_name=team_name_by_owner[team.owner_id],
+                )
+            )
+    value.sort(key=lambda v: (v.value_ratio, -v.price), reverse=True)
+    slc.value_board = value
+
+    # Best available + depth (scarcity) per skill position — same board the
+    # NO-NOMINEE mode builds.
+    ranked = _ranked_available(data)
+    slc.best_available = [
+        PositionBoard(
+            position=pos,
+            top=ranked.get(pos, [])[:TOP_N_PER_POSITION],
+            depth_left=len(ranked.get(pos, [])),
+        )
+        for pos in SKILL_POSITIONS
+    ]
+
+    # Recent pick positions (chronological) for spotting a positional run.
+    all_picks = [
+        (pick, data.players.get(pick.player_id))
+        for team in data.state.teams
+        for pick in team.picks
+    ]
+    all_picks.sort(key=lambda pp: pp[0].pick_id)
+    slc.recent_pick_positions = [
+        str(player.position)
+        for _, player in all_picks[-RECENT_PICKS_N:]
+        if player is not None
+    ]
+
+
 # ---------------------------------------------------------------------------
 # Public builder
 # ---------------------------------------------------------------------------
-def build_slice(data_dir: Path, *, recent_log_limit: int = 0) -> AnalystSlice:
-    """Build the validated ``AnalystSlice`` for the data dir's current state."""
+def build_slice(
+    data_dir: Path, *, recent_log_limit: int = 0, retrospective: bool = False
+) -> AnalystSlice:
+    """Build the validated ``AnalystSlice`` for the data dir's current state.
+
+    ``retrospective=True`` (only meaningful with no live nominee) builds the
+    draft-wide RETROSPECTIVE payload for an idle-lull musing.
+    """
     data = load_booth_data(data_dir)
     picks_made = sum(len(t.picks) for t in data.state.teams)
     total_rounds = data.config.total_rounds
@@ -536,7 +644,13 @@ def build_slice(data_dir: Path, *, recent_log_limit: int = 0) -> AnalystSlice:
     # Approx round: 1-based, derived from picks per "round" across all teams.
     approx_round = min(total_rounds, picks_made // num_teams + 1)
 
-    mode = "NO-NOMINEE" if data.state.nominated is None else "NOMINEE-LIVE"
+    if data.state.nominated is not None:
+        mode = "NOMINEE-LIVE"
+    elif retrospective:
+        mode = "RETROSPECTIVE"
+    else:
+        mode = "NO-NOMINEE"
+
     slc = AnalystSlice(
         mode=mode,
         state_version=data.state.version,
@@ -555,8 +669,10 @@ def build_slice(data_dir: Path, *, recent_log_limit: int = 0) -> AnalystSlice:
 
     if mode == "NO-NOMINEE":
         _build_no_nominee(data, slc)
-    else:
+    elif mode == "NOMINEE-LIVE":
         _build_nominee_live(data, slc)
+    else:  # RETROSPECTIVE
+        _build_retrospective(data, slc)
     return slc
 
 
@@ -686,9 +802,18 @@ def main(argv: list[str] | None = None) -> int:
         default=0,
         help="Include the last N committed analyst-comments lines.",
     )
+    parser.add_argument(
+        "--retrospective",
+        action="store_true",
+        help="Build the draft-wide RETROSPECTIVE slice (idle-lull musing).",
+    )
     args = parser.parse_args(argv)
 
-    slc = build_slice(Path(args.data_dir), recent_log_limit=args.recent_log)
+    slc = build_slice(
+        Path(args.data_dir),
+        recent_log_limit=args.recent_log,
+        retrospective=args.retrospective,
+    )
     if args.json:
         print(slc.model_dump_json(indent=2))
     else:

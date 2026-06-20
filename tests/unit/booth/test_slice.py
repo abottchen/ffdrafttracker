@@ -624,3 +624,55 @@ class TestRecentLog:
     def test_no_log_means_empty(self, data_dir):
         slc = build_slice(data_dir, recent_log_limit=5)
         assert slc.recent_log == []
+
+
+# ---------------------------------------------------------------------------
+# Retrospective mode (idle musings)
+# ---------------------------------------------------------------------------
+class TestRetrospective:
+    def test_retrospective_mode_selected(self, data_dir):
+        slc = build_slice(data_dir, retrospective=True)
+        assert slc.mode == "RETROSPECTIVE"
+        assert slc.nominee is None
+        assert slc.last_pick is None
+
+    def test_live_nominee_overrides_retrospective(self, tmp_path):
+        state = _base_state()
+        state["nominated"] = {
+            "player_id": 31,
+            "current_bid": 12,
+            "current_bidder_id": 2,
+            "nominating_owner_id": 1,
+        }
+        _write_data(tmp_path, state)
+        slc = build_slice(tmp_path, retrospective=True)
+        assert slc.mode == "NOMINEE-LIVE"
+
+    def test_all_teams_sorted_by_cash_desc(self, data_dir):
+        slc = build_slice(data_dir, retrospective=True)
+        assert len(slc.all_teams) == 3
+        budgets = [t.budget_remaining for t in slc.all_teams]
+        assert budgets == sorted(budgets, reverse=True)
+        # Rick spent the most -> lowest budget -> last.
+        assert slc.all_teams[-1].team_name == "Wubba Lubba Dub Dubs"
+
+    def test_value_board_ranks_by_production_per_dollar(self, data_dir):
+        slc = build_slice(data_dir, retrospective=True)
+        # Rick(QB) $30 score 340 -> 11.33 ; Birdperson(WR) $45 score 312 -> 6.93.
+        assert [v.name for v in slc.value_board] == [
+            "Rick Sanchez",
+            "Birdperson Phoenix",
+        ]
+        assert slc.value_board[0].value_ratio == 11.33
+        assert slc.value_board[0].production_score == 340.0
+        assert slc.value_board[0].drafter_team_name == "Wubba Lubba Dub Dubs"
+
+    def test_recent_pick_positions_chronological(self, data_dir):
+        slc = build_slice(data_dir, retrospective=True)
+        # pick_id 1 = Rick (QB), pick_id 2 = Birdperson (WR).
+        assert slc.recent_pick_positions == ["QB", "WR"]
+
+    def test_best_available_depth_present(self, data_dir):
+        slc = build_slice(data_dir, retrospective=True)
+        positions = {b.position for b in slc.best_available}
+        assert positions == {"QB", "RB", "WR", "TE"}
