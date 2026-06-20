@@ -139,6 +139,20 @@ class CommentResponse(BaseModel):
     text: str
 
 
+# Per-parameter OpenAPI descriptions for the comments feed, shared so the admin
+# and viewer specs stay identical.
+_COMMENTS_SINCE_DESC = (
+    "Return only comments with `seq` greater than this "
+    "— the live tail (forward polling)."
+)
+_COMMENTS_BEFORE_DESC = (
+    "Return only comments with `seq` less than this — older history (backward paging)."
+)
+_COMMENTS_LIMIT_DESC = (
+    "Cap the result to the most recent N comments of the matched window."
+)
+
+
 # Helper functions
 def load_draft_state() -> DraftState:
     """Load current draft state from file."""
@@ -524,16 +538,11 @@ async def get_team(owner_id: int):
 
 @app.get("/api/v1/comments", response_model=list[CommentResponse])
 async def get_comments(
-    since: int | None = Query(default=None, ge=0),
-    before: int | None = Query(default=None, ge=0),
-    limit: int | None = Query(default=None, ge=1),
+    since: int | None = Query(default=None, ge=0, description=_COMMENTS_SINCE_DESC),
+    before: int | None = Query(default=None, ge=0, description=_COMMENTS_BEFORE_DESC),
+    limit: int | None = Query(default=None, ge=1, description=_COMMENTS_LIMIT_DESC),
 ):
-    """Get analyst-booth commentary, ordered oldest-first (ascending ``seq``).
-
-    - ``since``: only comments with ``seq > since`` (live tail / forward).
-    - ``before``: only comments with ``seq < before`` (history / backward paging).
-    - ``limit``: cap to the most recent N of the matched window.
-    """
+    """Analyst-booth commentary, ordered oldest-first (ascending `seq`)."""
     return await _get_comments_data(since=since, before=before, limit=limit)
 
 
@@ -1290,11 +1299,11 @@ async def viewer_get_team(owner_id: int):
 
 @viewer_app.get("/api/v1/comments", response_model=list[CommentResponse])
 async def viewer_get_comments(
-    since: int | None = Query(default=None, ge=0),
-    before: int | None = Query(default=None, ge=0),
-    limit: int | None = Query(default=None, ge=1),
+    since: int | None = Query(default=None, ge=0, description=_COMMENTS_SINCE_DESC),
+    before: int | None = Query(default=None, ge=0, description=_COMMENTS_BEFORE_DESC),
+    limit: int | None = Query(default=None, ge=1, description=_COMMENTS_LIMIT_DESC),
 ):
-    """Read-only mirror of the admin commentary feed (see ``get_comments``)."""
+    """Read-only mirror of the admin commentary feed (see `get_comments`)."""
     return await _get_comments_data(since=since, before=before, limit=limit)
 
 

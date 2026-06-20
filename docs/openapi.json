@@ -278,7 +278,7 @@
     "/api/v1/comments": {
       "get": {
         "summary": "Get Comments",
-        "description": "Get analyst-booth commentary, ordered oldest-first (ascending ``seq``).\n\n- ``since``: only comments with ``seq > since`` (live tail / forward).\n- ``before``: only comments with ``seq < before`` (history / backward paging).\n- ``limit``: cap to the most recent N of the matched window.",
+        "description": "Analyst-booth commentary, ordered oldest-first (ascending `seq`).",
         "operationId": "get_comments_api_v1_comments_get",
         "parameters": [
           {
@@ -295,8 +295,10 @@
                   "type": "null"
                 }
               ],
+              "description": "Return only comments with `seq` greater than this \u2014 the live tail (forward polling).",
               "title": "Since"
-            }
+            },
+            "description": "Return only comments with `seq` greater than this \u2014 the live tail (forward polling)."
           },
           {
             "name": "before",
@@ -312,8 +314,10 @@
                   "type": "null"
                 }
               ],
+              "description": "Return only comments with `seq` less than this \u2014 older history (backward paging).",
               "title": "Before"
-            }
+            },
+            "description": "Return only comments with `seq` less than this \u2014 older history (backward paging)."
           },
           {
             "name": "limit",
@@ -329,8 +333,10 @@
                   "type": "null"
                 }
               ],
+              "description": "Cap the result to the most recent N comments of the matched window.",
               "title": "Limit"
-            }
+            },
+            "description": "Cap the result to the most recent N comments of the matched window."
           }
         ],
         "responses": {
