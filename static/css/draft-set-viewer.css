@@ -368,14 +368,26 @@ body{
    DRAFT ANALYSIS — market · matrix · insights · tempo
    ============================================================ */
 #view-analysis{grid-template-rows:1fr;}
-.analysis-grid{height:100%;min-height:0;display:grid;
+/* Analysis is the lean-in study tab: a vertically scrolling board rather than one fixed screen. */
+#view-analysis.active{display:block;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--line2) transparent;}
+.analysis-grid{display:grid;align-content:start;
   grid-template-columns:1.45fr 1fr;
-  grid-template-rows:auto minmax(0,1.35fr) minmax(0,1fr);
-  grid-template-areas:"insights insights" "market matrix" "tempo tempo";
+  /* Definite row heights, not auto: fixed-aspect SVG cards fill their band instead of being
+     stretched by a taller neighbour, and list cards (bargain/matrix/top-buys) scroll internally. */
+  grid-template-rows:auto clamp(300px,42vh,384px) clamp(300px,42vh,384px) clamp(300px,40vh,430px) clamp(220px,28vh,300px);
+  grid-template-areas:
+    "insights insights"
+    "market   bargain"
+    "buying   matrix"
+    "topbuys  topbuys"
+    "tempo    tempo";
   gap:clamp(8px,.9vw,14px);}
 .insights{grid-area:insights;display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(8px,.9vw,14px);}
-.market-card{grid-area:market;} .matrix-card{grid-area:matrix;} .tempo-card{grid-area:tempo;}
+.market-card{grid-area:market;} .bargain-card{grid-area:bargain;} .buying-card{grid-area:buying;}
+.matrix-card{grid-area:matrix;} .topbuys-card{grid-area:topbuys;} .tempo-card{grid-area:tempo;}
 .analysis-grid .rcard{min-height:0;display:flex;flex-direction:column;overflow:hidden;}
+.ch-right{display:flex;align-items:center;gap:10px;min-width:0;}
+.ch-right .card-note{overflow:hidden;text-overflow:ellipsis;}
 .insight{position:relative;overflow:hidden;background:linear-gradient(160deg,color-mix(in srgb,var(--ac) 16%,var(--deep)),var(--deep2) 70%);border:1px solid var(--line);border-radius:13px;padding:11px 15px;--ac:var(--electric);box-shadow:0 6px 18px rgba(0,0,0,.34);transition:transform .14s ease;}
 .insight:hover{transform:translateY(-3px);}
 .insight::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--ac);box-shadow:0 0 14px var(--ac);}
@@ -383,7 +395,10 @@ body{
 .in-val{font-family:'Saira Condensed';font-weight:900;font-size:clamp(22px,2.2vw,34px);line-height:1;margin:3px 0;color:var(--ac);}
 .in-sub{font-family:'Inter';font-size:clamp(10px,.82vw,12.5px);color:#c3d0e6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
-.market-wrap{flex:1;min-height:0;display:flex;align-items:center;overflow:hidden;}
+.market-wrap{flex:1;min-height:0;display:flex;align-items:center;overflow:hidden;cursor:grab;}
+.market-wrap.grabbing{cursor:grabbing;}
+.market-wrap .an-dot,.market-wrap .an-hit{cursor:inherit;}
+.mktzoom button{min-width:26px;padding:4px 7px;font-size:14px;line-height:1;}
 .matrix-wrap{flex:1;min-height:0;overflow:auto;padding-top:2px;}
 .an-svg{width:100%;height:100%;}
 .an-grid{stroke:var(--line);stroke-width:.75;opacity:.5;}
@@ -391,7 +406,10 @@ body{
 .an-base{stroke-width:3;stroke-linecap:round;}
 .an-tick{fill:var(--slate);font-family:'Saira Condensed';font-weight:700;font-size:10px;}
 .an-rowlbl{font-family:'Saira Condensed';font-weight:800;font-size:13px;}
-.an-dot{opacity:.92;}
+.an-dot{opacity:.92;pointer-events:none;transform-box:fill-box;transform-origin:center;}
+/* Hovered beeswarm dot: pop, glow in its position color, and pulse to spotlight it (set by JS). */
+.an-dot.an-hot{animation:andotpulse 1.1s ease-in-out infinite;}
+@keyframes andotpulse{0%,100%{transform:scale(1.5);filter:drop-shadow(0 0 3px var(--pc));}50%{transform:scale(2.05);filter:drop-shadow(0 0 9px var(--pc));}}
 .an-hit{fill:transparent;cursor:pointer;}
 .an-med{stroke:var(--ice);stroke-width:2;opacity:.85;}
 .an-medlbl{fill:var(--ice);font-family:'Saira Condensed';font-weight:800;font-size:10px;opacity:.85;}
@@ -426,6 +444,67 @@ body{
 #ptip .tt-ctx.cold{color:var(--turf);border-color:color-mix(in srgb,var(--turf) 40%,var(--line));}
 #ptip .tt-ctx.mid{color:var(--ice);}
 #ptip .tt-none{font-family:'Inter';font-size:11px;color:var(--slate);font-style:italic;}
+#ptip .bp-tt{display:flex;justify-content:space-between;gap:20px;font-family:'Inter';font-size:12px;color:var(--slate);padding:2px 0;}
+#ptip .bp-tt b{color:var(--ice);font-family:'Saira Condensed';font-weight:800;font-size:14px;}
+#ptip .bp-tt b.gold{color:var(--gold);}
+
+/* ---------- BARGAIN BOARD (price vs last-season production) ---------- */
+.bargain-wrap{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:9px;padding-right:3px;scrollbar-width:thin;scrollbar-color:var(--line2) transparent;}
+.bg-note{font-family:'Inter';font-size:11.5px;line-height:1.35;color:var(--slate);background:var(--deep2);border:1px solid var(--line);border-left:3px solid var(--electric);border-radius:8px;padding:8px 10px;}
+.bg-group{display:flex;flex-direction:column;gap:5px;}
+.bg-glabel{font-family:'Saira Condensed';font-weight:800;font-size:11px;letter-spacing:1.2px;text-transform:uppercase;}
+.bg-glabel.under{color:var(--turf);} .bg-glabel.over{color:var(--electric);}
+.bg-row{display:grid;grid-template-columns:26px 1fr auto;align-items:center;gap:9px;padding:6px 9px;border-radius:9px;background:var(--deep2);border:1px solid var(--line);cursor:default;transition:transform .12s ease,border-color .12s ease;}
+.bg-row:hover{transform:translateY(-1px);border-color:var(--line2);}
+.bg-row.under{border-left:3px solid var(--turf);} .bg-row.over{border-left:3px solid var(--electric);}
+.bg-pos{display:flex;align-items:center;justify-content:center;height:20px;border-radius:5px;font-family:'Saira Condensed';font-weight:800;font-size:11px;color:#11100f;}
+.bg-main{min-width:0;display:flex;flex-direction:column;}
+.bg-nm{font-family:'Saira Condensed';font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bg-nm i{font-style:normal;color:var(--slate);font-weight:500;font-size:11px;}
+.bg-sub{font-family:'Inter';font-size:10.5px;color:var(--slate);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bg-right{text-align:right;display:flex;flex-direction:column;align-items:flex-end;}
+.bg-price{font-family:'Saira Condensed';font-weight:800;font-size:15px;}
+.bg-row.under .bg-price{color:var(--turf);} .bg-row.over .bg-price{color:var(--electric);}
+.bg-delta{font-family:'Inter';font-size:10px;color:var(--slate);white-space:nowrap;}
+.bg-none{font-family:'Inter';font-size:11px;font-style:italic;color:var(--slate);padding:3px 2px;}
+
+/* ---------- BUYING POWER (budget left × spots left) ---------- */
+.buying-wrap{flex:1;min-height:0;display:flex;overflow:hidden;}
+.bp-grid{stroke:var(--line);stroke-width:.75;opacity:.5;}
+.bp-tick{fill:var(--slate);font-family:'Saira Condensed';font-weight:700;font-size:10px;}
+.bp-axlbl{fill:var(--slate);font-family:'Saira Condensed';font-weight:700;font-size:10px;letter-spacing:.6px;opacity:.8;}
+.bp-infeasible{fill:color-mix(in srgb,var(--live) 9%,transparent);}
+.bp-floor{stroke:var(--live);stroke-width:1.5;stroke-dasharray:5 4;opacity:.7;}
+.bp-floorlbl{fill:var(--live);font-family:'Saira Condensed';font-weight:700;font-size:10px;opacity:.85;}
+.bp-dot{stroke:#0d0c10;stroke-width:1.5;}
+.bp-dot.sel{stroke:var(--ice);stroke-width:2.5;}
+.bp-lbl{font-family:'Saira Condensed';font-weight:700;font-size:10px;fill:var(--slate);pointer-events:none;}
+.bp-lbl.sel{fill:var(--ice);}
+.bp-hit{fill:transparent;cursor:pointer;}
+
+/* ---------- TOP BUYS (per-team priciest picks) ---------- */
+.topbuys-wrap{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;padding-right:3px;scrollbar-width:thin;scrollbar-color:var(--line2) transparent;}
+.tbuy-row{display:grid;grid-template-columns:clamp(108px,11vw,168px) 1fr auto;align-items:center;gap:12px;padding:7px 2px;border-bottom:1px solid var(--line);}
+.tbuy-row:last-child{border-bottom:none;}
+.tbuy-team{display:flex;align-items:center;gap:8px;min-width:0;font-family:'Saira Condensed';font-weight:700;font-size:13.5px;}
+.tbuy-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.tbuy-team .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--slate);}
+.tbuy-row.sel .tbuy-team .nm{color:var(--ice);}
+.tbuy-chips{display:flex;gap:7px;min-width:0;overflow:hidden;align-items:center;}
+.tbuy-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:8px;flex-shrink:0;cursor:default;
+  background:color-mix(in srgb,var(--pc) 14%,var(--deep2));border:1px solid color-mix(in srgb,var(--pc) 38%,var(--line));transition:transform .1s ease;}
+.tbuy-chip:hover{transform:translateY(-1px);}
+.tbuy-cpos{font-family:'Saira Condensed';font-weight:800;font-size:9px;letter-spacing:.5px;color:var(--pc);}
+.tbuy-cnm{font-family:'Saira Condensed';font-weight:700;font-size:13px;color:var(--ice);white-space:nowrap;}
+.tbuy-cpr{font-family:'Saira Condensed';font-weight:800;font-size:13px;color:var(--pc);}
+.tbuy-chip.is-dump{opacity:.5;border-style:dashed;background:var(--deep2);}
+.tbuy-chip.is-dump .tbuy-cnm,.tbuy-chip.is-dump .tbuy-cpr{color:var(--slate);}
+.tbuy-tag{font-style:normal;font-family:'Inter';font-weight:600;font-size:8.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--slate);border:1px solid var(--line2);border-radius:4px;padding:0 3px;margin-left:1px;}
+.tbuy-more{font-family:'Inter';font-size:11px;color:var(--slate);white-space:nowrap;flex-shrink:0;}
+.tbuy-spent{font-family:'Saira Condensed';font-weight:700;font-size:12px;color:var(--slate);text-align:right;}
+/* budget-dump marker: hollow ring on the Position Market beeswarm, amber note in its tooltip */
+.an-dump{stroke-width:1.7;opacity:.95;}
+#ptip .tt-ctx.dump{color:var(--electric);border-color:color-mix(in srgb,var(--electric) 40%,var(--line));}
 
 /* Respect prefers-reduced-motion (plan §2 global constraint) — disable
    ambient/looping animations and shorten transitions for users who request it. */

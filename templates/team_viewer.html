@@ -120,16 +120,50 @@
           <div class="rcard market-card">
             <div class="card-head">
               <h3>Position Market</h3>
-              <span class="card-note">each dot = a pick · ▮ median · hover for detail</span>
+              <div class="ch-right">
+                <div class="rmode mktzoom">
+                  <button onclick="marketZoom(0.7)" title="Zoom in">+</button>
+                  <button onclick="marketZoom(1/0.7)" title="Zoom out">−</button>
+                  <button id="mkt-reset" onclick="marketReset()" title="Reset zoom">⟲</button>
+                </div>
+                <span class="card-note">drag to pan · ⌘/Ctrl-scroll or ± to zoom</span>
+              </div>
             </div>
             <div class="market-wrap" id="market"></div>
+          </div>
+          <div class="rcard bargain-card">
+            <div class="card-head">
+              <h3>Bargain Board</h3>
+              <span class="card-note">price vs last-season production, within position</span>
+            </div>
+            <div class="bargain-wrap" id="bargain"></div>
+          </div>
+          <div class="rcard buying-card">
+            <div class="card-head">
+              <h3>Buying Power</h3>
+              <span class="card-note">dollars left × roster spots left · height above the line = bid firepower</span>
+            </div>
+            <div class="buying-wrap" id="buying"></div>
           </div>
           <div class="rcard matrix-card">
             <div class="card-head">
               <h3>Roster Matrix</h3>
-              <span class="card-note" id="matrixNote">filled vs max · gaps glow</span>
+              <div class="ch-right">
+                <div class="rmode mxmode" id="mxmode">
+                  <button id="mx-count" class="active" onclick="setMatrixMode('count')">#</button>
+                  <button id="mx-dollars" onclick="setMatrixMode('dollars')">$</button>
+                </div>
+                <span class="card-note" id="matrixNote">filled vs max · gaps glow</span>
+              </div>
             </div>
             <div class="matrix-wrap" id="matrix"></div>
+          </div>
+          <div class="rcard topbuys-card">
+            <div class="card-head">
+              <h3>Top Buys</h3>
+              <span class="card-note">each team's priciest picks · ranked by biggest single buy</span>
+            </div>
+            <div class="topbuys-wrap" id="topbuys"></div>
           </div>
           <div class="rcard tempo-card">
             <div class="card-head">
@@ -171,6 +205,10 @@
         let AVAILABLE = [];
         let rosterMode = 'cards';       // Teams view roster style: cards | bye | list
         let MARKET = {};                // per-position price stats (median/sd/min/max/total)
+        let DUMPS = new Set();          // pick_ids that are end-of-draft budget dumps
+        let matrixMode = 'count';       // Roster Matrix cell metric: count | dollars
+        let marketView = null;          // Position Market visible $ window {min,max}; null = full range
+        let marketGeo = null, marketWired = false, marketDragging = false, marketRAF = 0;
         let ledgerSort = 'order', ledgerDir = -1, ledgerQuery = '';   // ledger sort key + direction (-1 desc)
         let availPos = 'ALL', availSort = 'pos', availDir = 1;         // available-board filter + sort
 
@@ -568,12 +606,37 @@
         }
         function renderAnalysisView() {
             renderMarketStrips();
+            renderBargain();
+            renderBuying();
             renderMatrix();
             renderInsights();
+            renderTopBuys();
             renderTempo();
         }
+        // A "budget dump" is a completed team's FINAL pick where they emptied their wallet on
+        // an over-market player — use-it-or-lose-it money, not a value signal. Deterministic:
+        // last pick by pick_id + ≥2× the positional median + left them ≤$2. Positional medians
+        // here come from ALL picks (median is robust to the handful of dumps we're detecting),
+        // so this needs no dump-free MARKET and avoids a circular dependency.
+        function budgetDumpIds() {
+            const byPos = {};
+            (lastDraftState ? lastDraftState.teams : []).forEach(t => t.picks.forEach(pk => {
+                const pl = playersById[pk.player_id]; if (pl) (byPos[pl.position] = byPos[pl.position] || []).push(pk.price);
+            }));
+            const medOf = pos => { const a = byPos[pos]; return (a && a.length >= 3) ? median(a) : 1; };
+            const dumps = new Set();
+            (lastDraftState ? lastDraftState.teams : []).forEach(t => {
+                const done = t.manually_done || t.picks.length >= TOTAL;
+                if (!done || !t.picks.length) return;
+                const final = t.picks.reduce((a, b) => (b.pick_id > a.pick_id ? b : a));
+                const pl = playersById[final.player_id]; if (!pl) return;
+                if (final.price >= 2 * medOf(pl.position) && final.price >= 5 && t.budget_remaining <= 2) dumps.add(final.pick_id);
+            });
+            return dumps;
+        }
         function computeMarket() {
-            const log = buildDraftLog(); MARKET = {};
+            DUMPS = budgetDumpIds();
+            const log = buildDraftLog().filter(l => !DUMPS.has(l.pickId)); MARKET = {};   // baselines exclude dumps
             RADAR_ORDER.forEach(pos => {
                 const a = log.filter(l => l.pos === pos).map(l => l.price);
                 if (a.length) { const m = a.reduce((s, v) => s + v, 0) / a.length;
@@ -846,62 +909,154 @@
                 });
             });
             picks.sort((a, b) => a.pickId - b.pickId);
-            return picks.map((p, i) => ({ no: i + 1, pos: p.pos, price: p.price, name: p.name, teamName: p.teamName, color: p.color }));
+            return picks.map((p, i) => ({ no: i + 1, pickId: p.pickId, pos: p.pos, price: p.price, name: p.name, teamName: p.teamName, color: p.color }));
         }
         /* ── Draft Analysis: market strips · roster matrix · insights · tempo ── */
+        // Computes the data + geometry once per poll, then hands off to drawMarket(), which the
+        // pan/zoom handlers also call. The x-axis is the only zoomable one (positions are rows).
         function renderMarketStrips() {
             const wrap = document.getElementById('market');
             const order = RADAR_ORDER.filter(pos => MARKET[pos]);
-            if (!order.length) { wrap.innerHTML = '<div class="an-empty">No picks yet — the market opens with the first sale.</div>'; return; }
-            const log = buildDraftLog();
-            const maxP = Math.max(10, ...order.map(pos => MARKET[pos].max));
+            if (!order.length) { wrap.innerHTML = '<div class="an-empty">No picks yet — the market opens with the first sale.</div>'; marketGeo = null; updateMarketZoomUI(); return; }
+            const log = buildDraftLog();   // full log (incl dumps) so a dump dot still appears, marked
+            const dataMax = Math.max(10, ...log.map(l => l.price));
             const W = 720, rowH = 48, padL = 52, padR = 20, padT = 10, padB = 26;
-            const H = padT + padB + order.length * rowH;
-            const X = p => padL + (p / maxP) * (W - padL - padR);
+            marketGeo = { W, H: padT + padB + order.length * rowH, rowH, padL, padR, padT, padB, dataMax, order, log };
+            if (marketView) {   // keep the zoom window valid as data grows; collapse to null at full range
+                marketView.min = Math.max(0, Math.min(marketView.min, dataMax - 1));
+                marketView.max = Math.min(dataMax, Math.max(marketView.max, marketView.min + 1));
+                if (marketView.min <= 0 && marketView.max >= dataMax) marketView = null;
+            }
+            drawMarket();
+            if (!marketWired) wireMarket();
+        }
+        function drawMarket() {
+            const g = marketGeo; if (!g) return;
+            const { W, H, rowH, padL, padR, padT, padB, dataMax, order, log } = g;
+            const vMin = marketView ? marketView.min : 0, vMax = marketView ? marketView.max : dataMax, span = (vMax - vMin) || 1;
+            const X = p => padL + ((p - vMin) / span) * (W - padL - padR);
+            const inV = p => p >= vMin - 1e-6 && p <= vMax + 1e-6;
             let s = `<svg class="an-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`;
-            const step = Math.max(5, Math.round(maxP / 5 / 5) * 5);
-            for (let g = 0; g <= maxP; g += step) { const xx = X(g);
-                s += `<line class="an-grid" x1="${xx.toFixed(1)}" y1="${padT}" x2="${xx.toFixed(1)}" y2="${H - padB}"/><text class="an-tick" x="${xx.toFixed(1)}" y="${H - padB + 16}" text-anchor="middle">$${g}</text>`; }
+            const step = Math.max(1, niceStep(span, 4));
+            for (let gg = Math.ceil(vMin / step) * step; gg <= vMax + 1e-6; gg += step) { const xx = X(gg);
+                s += `<line class="an-grid" x1="${xx.toFixed(1)}" y1="${padT}" x2="${xx.toFixed(1)}" y2="${H - padB}"/><text class="an-tick" x="${xx.toFixed(1)}" y="${H - padB + 16}" text-anchor="middle">$${gg}</text>`; }
             order.forEach((pos, ri) => {
                 const m = MARKET[pos], cy = padT + ri * rowH + rowH / 2;
-                const pts = log.filter(l => l.pos === pos);
-                s += `<line class="an-base" x1="${X(m.min).toFixed(1)}" y1="${cy}" x2="${X(m.max).toFixed(1)}" y2="${cy}" style="stroke:${hexA(POSCOLOR[pos], .32)}"/>`;
+                const bx1 = X(Math.max(m.min, vMin)), bx2 = X(Math.min(m.max, vMax));   // range bar clamped to view
+                if (bx2 > bx1) s += `<line class="an-base" x1="${bx1.toFixed(1)}" y1="${cy}" x2="${bx2.toFixed(1)}" y2="${cy}" style="stroke:${hexA(POSCOLOR[pos], .32)}"/>`;
                 s += `<text class="an-rowlbl" x="${padL - 12}" y="${(cy + 4).toFixed(1)}" text-anchor="end" fill="${POSCOLOR[pos]}">${pos}</text>`;
-                pts.forEach((l, i) => {
+                log.filter(l => l.pos === pos && inV(l.price)).forEach((l, i) => {
                     const jitter = ((i % 5) - 2) * 4.2;
                     const cx = X(l.price).toFixed(1), yy = (cy + jitter).toFixed(1);
-                    const z = (l.price - m.md) / (m.sd || 1);
-                    const data = `data-n="${l.name}" data-pos="${pos}" data-pr="${l.price}" data-tm="${l.teamName}" data-z="${z.toFixed(1)}"`;
-                    s += `<circle class="an-dot" cx="${cx}" cy="${yy}" r="4" style="fill:${POSCOLOR[pos]}"/><circle class="an-hit" cx="${cx}" cy="${yy}" r="9" ${data}/>`;
+                    const z = (l.price - m.md) / (m.sd || 1), isDump = DUMPS.has(l.pickId);
+                    const data = `data-n="${l.name}" data-pos="${pos}" data-pr="${l.price}" data-tm="${l.teamName}" data-z="${z.toFixed(1)}" data-dump="${isDump ? 1 : ''}"`;
+                    s += `<circle class="an-dot ${isDump ? 'an-dump' : ''}" cx="${cx}" cy="${yy}" r="${isDump ? 4.5 : 4}" style="--pc:${POSCOLOR[pos]};fill:${isDump ? 'none' : POSCOLOR[pos]};stroke:${isDump ? POSCOLOR[pos] : 'none'}"/><circle class="an-hit" cx="${cx}" cy="${yy}" r="9" ${data}/>`;
                 });
-                s += `<line class="an-med" x1="${X(m.md).toFixed(1)}" y1="${(cy - 16).toFixed(1)}" x2="${X(m.md).toFixed(1)}" y2="${(cy + 16).toFixed(1)}"/>`;
-                s += `<text class="an-medlbl" x="${X(m.md).toFixed(1)}" y="${(cy - 19).toFixed(1)}" text-anchor="middle">$${m.md}</text>`;
+                if (inV(m.md)) {
+                    s += `<line class="an-med" x1="${X(m.md).toFixed(1)}" y1="${(cy - 16).toFixed(1)}" x2="${X(m.md).toFixed(1)}" y2="${(cy + 16).toFixed(1)}"/>`;
+                    s += `<text class="an-medlbl" x="${X(m.md).toFixed(1)}" y="${(cy - 19).toFixed(1)}" text-anchor="middle">$${m.md}</text>`;
+                }
             });
             s += '</svg>';
+            const wrap = document.getElementById('market');
             wrap.innerHTML = s;
-            wrap.querySelectorAll('.an-hit').forEach(c => { c.addEventListener('mouseenter', e => showMarketTip(e, c)); c.addEventListener('mousemove', moveTip); c.addEventListener('mouseleave', hideTip); });
+            wrap.querySelectorAll('.an-hit').forEach(c => {
+                c.addEventListener('mouseenter', e => { if (!marketDragging) c.previousElementSibling.classList.add('an-hot'); showMarketTip(e, c); });
+                c.addEventListener('mousemove', moveTip);
+                c.addEventListener('mouseleave', () => { c.previousElementSibling.classList.remove('an-hot'); hideTip(); });
+            });
+            updateMarketZoomUI();
+        }
+        function scheduleDraw() { if (marketRAF) return; marketRAF = requestAnimationFrame(() => { marketRAF = 0; drawMarket(); }); }
+        function zoomAround(dollar, factor) {   // factor<1 zooms in (shrinks the window around `dollar`)
+            const g = marketGeo; if (!g) return;
+            const vMin = marketView ? marketView.min : 0, vMax = marketView ? marketView.max : g.dataMax;
+            let nMin = dollar - (dollar - vMin) * factor, nMax = dollar + (vMax - dollar) * factor;
+            if (nMax - nMin < 4) return;   // floor the window at $4 wide
+            nMin = Math.max(0, nMin); nMax = Math.min(g.dataMax, nMax);
+            marketView = (nMin <= 0 && nMax >= g.dataMax) ? null : { min: nMin, max: nMax };
+            scheduleDraw();
+        }
+        function marketZoom(factor) { const g = marketGeo; if (!g) return; const vMin = marketView ? marketView.min : 0, vMax = marketView ? marketView.max : g.dataMax; zoomAround((vMin + vMax) / 2, factor); }
+        function marketReset() { marketView = null; drawMarket(); }
+        function updateMarketZoomUI() { const r = document.getElementById('mkt-reset'); if (r) r.classList.toggle('active', !!marketView); }
+        // Attach pan/zoom to the persistent #market container once (its inner SVG is replaced each draw).
+        function wireMarket() {
+            const wrap = document.getElementById('market'); marketWired = true;
+            const svgX = clientX => {   // screen px → SVG-user x, correct under preserveAspectRatio letterboxing
+                const svg = wrap.querySelector('svg'), ctm = svg && svg.getScreenCTM(); if (!ctm) return null;
+                const pt = svg.createSVGPoint(); pt.x = clientX; pt.y = 0; return pt.matrixTransform(ctm.inverse()).x;
+            };
+            const toDollar = sx => { const g = marketGeo, vMin = marketView ? marketView.min : 0, vMax = marketView ? marketView.max : g.dataMax; return vMin + (sx - g.padL) / (g.W - g.padL - g.padR) * (vMax - vMin); };
+            wrap.addEventListener('wheel', e => {
+                if (!(e.ctrlKey || e.metaKey) || !marketGeo) return;   // plain wheel scrolls the page; modifier zooms
+                e.preventDefault();
+                const sx = svgX(e.clientX); if (sx != null) zoomAround(toDollar(sx), e.deltaY < 0 ? 0.82 : 1 / 0.82);
+            }, { passive: false });
+            let down = null;
+            wrap.addEventListener('mousedown', e => {
+                if (!marketGeo) return;
+                marketDragging = false;
+                down = { x: e.clientX, view: [marketView ? marketView.min : 0, marketView ? marketView.max : marketGeo.dataMax] };
+                wrap.classList.add('grabbing');
+            });
+            window.addEventListener('mousemove', e => {
+                if (!down || !marketGeo) return;
+                const sx0 = svgX(down.x), sx1 = svgX(e.clientX); if (sx0 == null || sx1 == null) return;
+                const g = marketGeo, [vMin0, vMax0] = down.view, w = vMax0 - vMin0;
+                const dxData = (sx1 - sx0) / (g.W - g.padL - g.padR) * w;
+                let nMin = vMin0 - dxData, nMax = vMax0 - dxData;
+                if (nMin < 0) { nMin = 0; nMax = w; }
+                if (nMax > g.dataMax) { nMax = g.dataMax; nMin = g.dataMax - w; }
+                if (Math.abs(e.clientX - down.x) > 2) { marketDragging = true; hideTip(); }
+                marketView = (nMin <= 0 && nMax >= g.dataMax) ? null : { min: nMin, max: nMax };
+                scheduleDraw();
+            });
+            window.addEventListener('mouseup', () => { if (down) { down = null; wrap.classList.remove('grabbing'); setTimeout(() => { marketDragging = false; }, 0); } });
+            wrap.addEventListener('dblclick', () => { marketView = null; drawMarket(); });
         }
         function showMarketTip(e, c) {
+            if (marketDragging) return;   // suppress hover while panning
             const tip = document.getElementById('ptip'), pos = c.dataset.pos, pr = +c.dataset.pr;
             const t = valueTier(pos, pr);
-            const ctx = t ? ctxHTML(pos, pr, t) : `<div class="tt-ctx mid"><b>$${pr}</b></div>`;
+            const ctx = c.dataset.dump
+                ? `<div class="tt-ctx dump"><b>$${pr}</b> · final-pick budget dump · leftover money</div>`
+                : (t ? ctxHTML(pos, pr, t) : `<div class="tt-ctx mid"><b>$${pr}</b></div>`);
             tip.style.setProperty('--pc', POSCOLOR[pos]);
             tip.innerHTML = `<div class="tt-head"><span class="tt-pos ${LIGHTPOS[pos] ? 'light' : ''}" style="background:${POSCOLOR[pos]}">${pos}</span><span class="tt-name">${c.dataset.n}</span></div>
                 <div class="tt-sub">${c.dataset.tm}</div>${ctx}`;
             tip.style.display = 'block'; moveTip(e);
         }
+        function setMatrixMode(m) {
+            matrixMode = m;
+            document.querySelectorAll('#mxmode button').forEach(b => b.classList.toggle('active', b.id === 'mx-' + m));
+            renderMatrix();
+        }
+        // Per-team aggregate by position: how many filled, and how many dollars spent.
+        function teamPosAgg(t) {
+            const count = {}, spend = {};
+            rosterFor(t).forEach(p => { count[p.pos] = (count[p.pos] || 0) + 1; spend[p.pos] = (spend[p.pos] || 0) + p.price; });
+            return { count, spend };
+        }
         function renderMatrix() {
-            const order = RADAR_ORDER;
-            const rows = TEAMS.map(t => ({ t, c: posCounts(rosterFor(t)) }));
+            const order = RADAR_ORDER, dollars = matrixMode === 'dollars';
+            const rows = TEAMS.map(t => ({ t, ...teamPosAgg(t) }));
+            const maxCell = dollars ? Math.max(1, ...rows.flatMap(r => order.map(pos => r.spend[pos] || 0))) : 1;
+            document.getElementById('matrixNote').textContent = dollars ? '$ spent by position · darker = more' : 'filled vs max · gaps glow';
             let html = `<div class="mx-grid" style="grid-template-columns:minmax(96px,1.3fr) repeat(${order.length},1fr)">`;
-            html += `<div class="mx-corner"></div>` + order.map(pos => `<div class="mx-h" style="color:${POSCOLOR[pos]}">${pos}<i>/${POSMAX[pos]}</i></div>`).join('');
-            rows.forEach(({ t, c }) => {
+            html += `<div class="mx-corner"></div>` + order.map(pos => `<div class="mx-h" style="color:${POSCOLOR[pos]}">${pos}${dollars ? '' : `<i>/${POSMAX[pos]}</i>`}</div>`).join('');
+            rows.forEach(({ t, count, spend }) => {
                 html += `<div class="mx-team"><span class="mx-dot" style="background:${t.color}"></span><span class="nm">${t.team}</span></div>`;
                 order.forEach(pos => {
-                    const n = c[pos] || 0, max = POSMAX[pos] || 1, frac = Math.min(n / max, 1), full = n >= max;
-                    const bg = n === 0 ? 'transparent' : `color-mix(in srgb, ${POSCOLOR[pos]} ${Math.round(16 + frac * 64)}%, transparent)`;
-                    const cls = 'mx-cell' + (n === 0 ? ' empty' : '') + (full ? ' full' : '');
-                    html += `<div class="${cls}" style="background:${bg}" title="${t.team} · ${pos} ${n}/${max}"><span class="mx-n">${n || '·'}</span></div>`;
+                    const n = count[pos] || 0, dol = spend[pos] || 0;
+                    const val = dollars ? dol : n, max = POSMAX[pos] || 1;
+                    const frac = dollars ? dol / maxCell : Math.min(n / max, 1);
+                    const full = !dollars && n >= max;
+                    const bg = val === 0 ? 'transparent' : `color-mix(in srgb, ${POSCOLOR[pos]} ${Math.round(16 + frac * 64)}%, transparent)`;
+                    const cls = 'mx-cell' + (val === 0 ? ' empty' : '') + (full ? ' full' : '');
+                    const label = dollars ? (dol ? '$' + dol : '·') : (n || '·');
+                    const title = dollars ? `${t.team} · ${pos} $${dol}` : `${t.team} · ${pos} ${n}/${max}`;
+                    html += `<div class="${cls}" style="background:${bg}" title="${title}"><span class="mx-n">${label}</span></div>`;
                 });
             });
             html += '</div>';
@@ -920,7 +1075,7 @@
             if (log.length < 3) { box.innerHTML = '<div class="an-empty">Trends surface once a handful of players are sold.</div>'; return; }
             const cards = [];
             let splurge = null;
-            log.forEach(l => { const m = MARKET[l.pos]; if (!m || l.price <= 1) return; const over = l.price - m.md; if (!splurge || over > splurge.over) splurge = { ...l, over, md: m.md }; });
+            log.forEach(l => { if (DUMPS.has(l.pickId)) return; const m = MARKET[l.pos]; if (!m || l.price <= 1) return; const over = l.price - m.md; if (!splurge || over > splurge.over) splurge = { ...l, over, md: m.md }; });
             if (splurge) cards.push({ accent: POSCOLOR[splurge.pos], eyebrow: 'Biggest Splurge', val: `$${splurge.price}`, sub: `${splurge.name} · $${splurge.over} over typical ${splurge.pos} ($${splurge.md})` });
             let topPos = null;
             RADAR_ORDER.forEach(pos => { const m = MARKET[pos]; if (m && (!topPos || m.total > topPos.total)) topPos = { pos, ...m }; });
@@ -928,7 +1083,7 @@
             const run = runsInfo(log);
             if (run.len >= 2) cards.push({ accent: POSCOLOR[run.pos], eyebrow: 'Hottest Run', val: `${run.len}× ${run.pos}`, sub: `picks ${run.start}–${run.end} all went ${run.pos}` });
             let conc = null;
-            TEAMS.forEach(t => { const ps = t._picks.map(p => p.price), spent = ps.reduce((s, v) => s + v, 0); if (spent < 10 || !ps.length) return; const top = Math.max(...ps), share = top / spent; if (!conc || share > conc.share) conc = { team: t.team, share, top, spent }; });
+            TEAMS.forEach(t => { const ps = t._picks.filter(p => !DUMPS.has(p.pick_id)).map(p => p.price), spent = ps.reduce((s, v) => s + v, 0); if (spent < 10 || !ps.length) return; const top = Math.max(...ps), share = top / spent; if (!conc || share > conc.share) conc = { team: t.team, share, top, spent }; });
             if (conc) cards.push({ accent: 'var(--gold)', eyebrow: 'Stars & Scrubs', val: `${Math.round(conc.share * 100)}%`, sub: `${conc.team} — $${conc.top} of $${conc.spent} spent on one player` });
             box.innerHTML = cards.map(c => `<div class="insight" style="--ac:${c.accent}"><div class="in-eyebrow">${c.eyebrow}</div><div class="in-val cond">${c.val}</div><div class="in-sub">${c.sub}</div></div>`).join('');
         }
@@ -957,6 +1112,146 @@
                 <div class="tt-sub">Pick ${b.dataset.no} · ${b.dataset.tm}</div>
                 <div class="tt-ctx mid"><b>$${b.dataset.pr}</b></div>`;
             tip.style.display = 'block'; moveTip(e);
+        }
+        // Shared player tooltip for the Bargain Board + Draft DNA: pos chip, name, owner,
+        // and the price-vs-market read (reuses valueTier/ctxHTML).
+        function showCtxTip(e, el) {
+            const tip = document.getElementById('ptip'), pos = el.dataset.pos, pr = +el.dataset.pr;
+            const t = valueTier(pos, pr);
+            const ctx = t ? ctxHTML(pos, pr, t) : `<div class="tt-ctx mid"><b>$${pr}</b></div>`;
+            tip.style.setProperty('--pc', POSCOLOR[pos]);
+            tip.innerHTML = `<div class="tt-head"><span class="tt-pos ${LIGHTPOS[pos] ? 'light' : ''}" style="background:${POSCOLOR[pos]}">${pos}</span><span class="tt-name">${el.dataset.n}</span></div>
+                <div class="tt-sub">${el.dataset.tm}</div>${ctx}`;
+            tip.style.display = 'block'; moveTip(e);
+        }
+
+        /* ── Bargain Board (Task #2): price vs last-season production, ranked WITHIN position ──
+           Deterministic + honest. We never claim "value" outright (no projections/ADP exist).
+           For each position we percentile-rank price and prior-year production, then surface the
+           biggest disagreements. Players with no prior-year line (rookies, D/ST, zero production)
+           are excluded — a $1 unknown can't masquerade as a steal. */
+        function pctRanker(vals) {                       // midpoint percentile in (0,1); ties-safe
+            const n = vals.length;
+            return v => { let lt = 0, eq = 0; for (const x of vals) { if (x < v) lt++; else if (x === v) eq++; } return n ? (lt + 0.5 * eq) / n : 0; };
+        }
+        function bargainData() {
+            const POSSET = ['QB', 'RB', 'WR', 'TE'];     // skill spots with a real market + box score
+            const byPos = {};
+            (lastDraftState ? lastDraftState.teams : []).forEach(t => {
+                const tm = TEAMS.find(x => x.owner_id === t.owner_id);
+                t.picks.forEach(pk => {
+                    const pl = playersById[pk.player_id]; if (!pl || !tm || !POSSET.includes(pl.position)) return;
+                    if (DUMPS.has(pk.pick_id)) return;   // leftover-budget dump, not a reach
+                    const prod = prodScore({ id: pl.id, pos: pl.position });
+                    if (prod <= 0) return;               // no prior-year baseline → no verdict
+                    (byPos[pl.position] = byPos[pl.position] || []).push({ id: pl.id, name: `${pl.first_name} ${pl.last_name}`, pos: pl.position, nfl: pl.team, price: pk.price, team: tm.team, prod });
+                });
+            });
+            const flagged = [];
+            Object.entries(byPos).forEach(([pos, arr]) => {
+                if (arr.length < 4) return;              // ranks too noisy below four rated picks
+                const md = MARKET[pos] ? MARKET[pos].md : median(arr.map(a => a.price));
+                const pricePct = pctRanker(arr.map(a => a.price)), prodPct = pctRanker(arr.map(a => a.prod));
+                const prodRank = {}; [...arr].map((a, i) => ({ i, p: a.prod })).sort((x, y) => y.p - x.p).forEach((o, r) => prodRank[o.i] = r + 1);
+                arr.forEach((a, i) => {
+                    const div = pricePct(a.price) - prodPct(a.prod);
+                    if (Math.abs(div) < 0.25 || Math.abs(a.price - md) < 4) return;   // need rank AND $ gap
+                    flagged.push({ ...a, div, md, prodRank: prodRank[i], n: arr.length });
+                });
+            });
+            return {
+                under: flagged.filter(f => f.div <= -0.25).sort((a, b) => a.div - b.div),   // cheap vs production
+                over: flagged.filter(f => f.div >= 0.25).sort((a, b) => b.div - a.div)       // pricey vs production
+            };
+        }
+        function renderBargain() {
+            const wrap = document.getElementById('bargain'), { under, over } = bargainData();
+            if (!under.length && !over.length) { wrap.innerHTML = '<div class="an-empty">Bargains surface once at least four players at a position are sold.</div>'; return; }
+            const row = (f, kind) => {
+                const delta = kind === 'under' ? `$${f.md - f.price} under typical` : `$${f.price - f.md} over typical`;
+                return `<div class="bg-row ${kind}" data-n="${f.name}" data-pos="${f.pos}" data-pr="${f.price}" data-tm="${f.team}" onmouseenter="showCtxTip(event,this)" onmousemove="moveTip(event)" onmouseleave="hideTip()">
+                    <span class="bg-pos" style="background:${POSCOLOR[f.pos]}${LIGHTPOS[f.pos] ? ';color:#fff' : ''}">${f.pos}</span>
+                    <span class="bg-main"><span class="bg-nm">${f.name} <i>${f.nfl}</i></span><span class="bg-sub">${f.pos}#${f.prodRank} of ${f.n} by ${STATS_YR} production · to ${f.team}</span></span>
+                    <span class="bg-right"><span class="bg-price">$${f.price}</span><span class="bg-delta">${delta}</span></span></div>`;
+            };
+            const grp = (label, kind, items, empty) => `<div class="bg-group"><div class="bg-glabel ${kind}">${label}</div>${items.length ? items.slice(0, 6).map(f => row(f, kind)).join('') : `<div class="bg-none">${empty}</div>`}</div>`;
+            wrap.innerHTML = `<div class="bg-note">Where price and last-season production disagree most — a value buy, or the room knows something the box score doesn't (injury, role, holdout).</div>`
+                + grp('Paid under the box score', 'under', under, 'Nothing notably cheap versus last year.')
+                + grp('Paid over the box score', 'over', over, "No one paid up beyond last year's line.");
+        }
+
+        /* ── Buying Power (Task #3): dollars left × roster spots left ──
+           Axes auto-scale to the field, so the $1/slot floor (y = x) becomes a real diagonal as
+           budgets shrink late. Height above the floor ≈ the biggest single bid a team can still make. */
+        function niceStep(max, target) { const raw = max / target, pow = Math.pow(10, Math.floor(Math.log10(raw || 1))), r = raw / pow, m = r >= 5 ? 5 : r >= 2 ? 2 : 1; return Math.max(1, m * pow); }
+        function renderBuying() {
+            const wrap = document.getElementById('buying');
+            const pts = TEAMS.map((t, i) => ({ i, owner: t.owner, team: t.team, color: t.color, spots: Math.max(0, TOTAL - t.picks), budget: t.budget, mb: t.picks >= TOTAL ? 0 : maxBid(t) }));
+            if (!pts.length) { wrap.innerHTML = '<div class="an-empty">No teams yet.</div>'; return; }
+            const W = 720, H = 320, padL = 48, padR = 18, padT = 16, padB = 38;
+            const maxSpots = Math.max(4, ...pts.map(p => p.spots)), maxBudget = Math.max(20, ...pts.map(p => p.budget));
+            const X = s => padL + (s / maxSpots) * (W - padL - padR), Y = b => (H - padB) - (b / maxBudget) * (H - padT - padB);
+            let s = `<svg class="an-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`;
+            const xStep = Math.max(1, Math.ceil(maxSpots / 6));
+            for (let g = 0; g <= maxSpots; g += xStep) { const xx = X(g); s += `<line class="bp-grid" x1="${xx.toFixed(1)}" y1="${padT}" x2="${xx.toFixed(1)}" y2="${H - padB}"/><text class="bp-tick" x="${xx.toFixed(1)}" y="${H - padB + 15}" text-anchor="middle">${g}</text>`; }
+            const yStep = niceStep(maxBudget, 5);
+            for (let g = 0; g <= maxBudget; g += yStep) { const yy = Y(g); s += `<line class="bp-grid" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W - padR}" y2="${yy.toFixed(1)}"/><text class="bp-tick" x="${padL - 7}" y="${(yy + 3).toFixed(1)}" text-anchor="end">$${g}</text>`; }
+            const fx0 = X(0), fy0 = Y(0), fx1 = X(maxSpots), fy1 = Y(maxSpots);
+            s += `<polygon class="bp-infeasible" points="${fx0},${fy0} ${fx1.toFixed(1)},${fy1.toFixed(1)} ${fx1.toFixed(1)},${fy0}"/>`;
+            s += `<line class="bp-floor" x1="${fx0}" y1="${fy0}" x2="${fx1.toFixed(1)}" y2="${fy1.toFixed(1)}"/>`;
+            s += `<text class="bp-floorlbl" x="${(fx1 - 4).toFixed(1)}" y="${(fy1 - 6).toFixed(1)}" text-anchor="end">min to fill roster · $1/slot</text>`;
+            s += `<text class="bp-axlbl" x="${((padL + W - padR) / 2).toFixed(0)}" y="${H - 6}" text-anchor="middle">ROSTER SPOTS LEFT →</text>`;
+            s += `<text class="bp-axlbl" transform="translate(12,${(padT + (H - padB - padT) / 2).toFixed(0)}) rotate(-90)" text-anchor="middle">← BUDGET LEFT</text>`;
+            pts.forEach(p => {
+                const cx = X(p.spots), cy = Y(p.budget), sel = p.i === selected;
+                const data = `data-tm="${p.team}" data-ow="${p.owner}" data-bu="${p.budget}" data-sp="${p.spots}" data-mb="${p.mb}" data-cl="${p.color}"`;
+                s += `<circle class="bp-dot ${sel ? 'sel' : ''}" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${sel ? 7 : 5.5}" style="fill:${p.color}"/>`;
+                s += `<circle class="bp-hit" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="13" ${data}/>`;
+                s += `<text class="bp-lbl ${sel ? 'sel' : ''}" x="${(cx + 9).toFixed(1)}" y="${(cy + 3.5).toFixed(1)}">${p.owner}</text>`;
+            });
+            s += '</svg>';
+            wrap.innerHTML = s;
+            wrap.querySelectorAll('.bp-hit').forEach(c => { c.addEventListener('mouseenter', e => showBuyingTip(e, c)); c.addEventListener('mousemove', moveTip); c.addEventListener('mouseleave', hideTip); });
+        }
+        function showBuyingTip(e, c) {
+            const tip = document.getElementById('ptip');
+            tip.style.setProperty('--pc', c.dataset.cl);
+            tip.innerHTML = `<div class="tt-head"><span class="tt-name">${c.dataset.tm}</span></div>
+                <div class="tt-sub">${c.dataset.ow}</div>
+                <div class="bp-tt"><span>Budget left</span><b class="tnum">$${c.dataset.bu}</b></div>
+                <div class="bp-tt"><span>Spots left</span><b class="tnum">${c.dataset.sp}</b></div>
+                <div class="bp-tt"><span>Max single bid</span><b class="tnum gold">$${c.dataset.mb}</b></div>`;
+            tip.style.display = 'block'; moveTip(e);
+        }
+
+        /* ── Top Buys (Task #4): each team's priciest picks as named, position-colored chips ──
+           Ranked by biggest REAL buy (a budget dump never sets the ranking); dump chips are still
+           shown but marked + dimmed so leftover-money picks aren't mistaken for a marquee target. */
+        function renderTopBuys() {
+            const wrap = document.getElementById('topbuys');
+            const selOwner = TEAMS[selected] ? TEAMS[selected].owner_id : null;
+            const rows = TEAMS.map(t => {
+                const picks = t._picks.map(pk => {
+                    const pl = playersById[pk.player_id];
+                    return pl ? { fn: pl.first_name, ln: pl.last_name, pos: pl.position, nfl: pl.team, price: pk.price, dump: DUMPS.has(pk.pick_id) } : null;
+                }).filter(Boolean).sort((a, b) => b.price - a.price);
+                const spent = picks.reduce((s, p) => s + p.price, 0);
+                const headline = Math.max(0, ...picks.filter(p => !p.dump).map(p => p.price));
+                return { t, picks, spent, headline };
+            }).filter(r => r.picks.length);
+            if (!rows.length) { wrap.innerHTML = '<div class="an-empty">No picks yet — biggest buys appear as players sell.</div>'; return; }
+            rows.sort((a, b) => b.headline - a.headline || b.spent - a.spent);
+            wrap.innerHTML = rows.map(({ t, picks, spent }) => {
+                const chips = picks.slice(0, 3).map(p => {
+                    const tag = p.dump ? '<i class="tbuy-tag" title="Final-pick budget dump — leftover money, not a target">dump</i>' : '';
+                    return `<span class="tbuy-chip ${p.dump ? 'is-dump' : ''}" style="--pc:${POSCOLOR[p.pos]}" data-n="${p.fn} ${p.ln}" data-pos="${p.pos}" data-pr="${p.price}" data-tm="${t.team}" onmouseenter="showCtxTip(event,this)" onmousemove="moveTip(event)" onmouseleave="hideTip()"><span class="tbuy-cpos">${p.pos}</span><span class="tbuy-cnm">${p.ln}</span><span class="tbuy-cpr">$${p.price}</span>${tag}</span>`;
+                }).join('');
+                const more = picks.length > 3 ? `<span class="tbuy-more">+${picks.length - 3} more</span>` : '';
+                return `<div class="tbuy-row ${t.owner_id === selOwner ? 'sel' : ''}">
+                    <span class="tbuy-team"><span class="tbuy-dot" style="background:${t.color}"></span><span class="nm">${t.team}</span></span>
+                    <span class="tbuy-chips">${chips}${more}</span>
+                    <span class="tbuy-spent tnum">$${spent}</span></div>`;
+            }).join('');
         }
 
         init();
