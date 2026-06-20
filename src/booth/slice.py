@@ -21,6 +21,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
+from src.booth.log import read_comments
 from src.draft_rules import max_bid, remaining_roster_spots
 from src.models import Configuration, DraftState, Owner, Player, Team
 from src.models.player_stats import PlayerStats, PlayerStatsCollection
@@ -247,26 +248,17 @@ def load_booth_data(data_dir: Path) -> BoothData:
 
 
 def _read_recent_log(data_dir: Path, limit: int) -> list[dict]:
-    """Tail of analyst-comments.jsonl (committed lines only), for callbacks."""
+    """Tail of analyst-comments.jsonl (committed lines only), for callbacks.
+
+    Delegates to ``log.read_comments`` so the defensive trailing-tail handling
+    lives in exactly one place. (The duplicated copy that used to live here
+    parsed first and then dropped the last *record*, which discarded a good
+    committed line whenever the torn final line was unparseable.)
+    """
     if limit <= 0:
         return []
-    path = data_dir / "analyst-comments.jsonl"
-    if not path.exists():
-        return []
-    # Defensive read mirrors log.read_comments: drop a non-terminated tail.
-    text = path.read_text()
-    records: list[dict] = []
-    for line in text.split("\n"):
-        if not line:
-            continue
-        try:
-            records.append(json.loads(line))
-        except json.JSONDecodeError:
-            continue
-    if text and not text.endswith("\n"):
-        # The final line was not newline-terminated -> not yet committed.
-        records = records[:-1] if records else records
-    return records[-limit:]
+    records = read_comments(data_dir / "analyst-comments.jsonl")
+    return [c.model_dump() for c in records[-limit:]]
 
 
 # ---------------------------------------------------------------------------

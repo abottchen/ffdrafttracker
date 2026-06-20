@@ -610,6 +610,17 @@ class TestRecentLog:
         assert len(slc.recent_log) == 1
         assert slc.recent_log[0]["text"] == "one"
 
+    def test_recent_log_keeps_committed_on_torn_tail(self, data_dir):
+        # A torn (unparseable) final line must drop only the partial, never the
+        # committed line above it — the bug the old duplicated reader had.
+        log = data_dir / "analyst-comments.jsonl"
+        committed = json.dumps(
+            {"ts": "t1", "state_version": 41, "persona": "Kiper", "text": "one"}
+        )
+        log.write_text(committed + '\n{"ts":"t2","state_versi')
+        slc = build_slice(data_dir, recent_log_limit=5)
+        assert [r["text"] for r in slc.recent_log] == ["one"]
+
     def test_no_log_means_empty(self, data_dir):
         slc = build_slice(data_dir, recent_log_limit=5)
         assert slc.recent_log == []
