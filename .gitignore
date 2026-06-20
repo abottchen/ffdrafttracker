@@ -202,8 +202,9 @@ cython_debug/
 .cursorindexingignore
 
 # Claude Code
-#  Claude Code user settings and personal configurations
-.claude/
+#  Personal settings and config stay local; project skills are tracked.
+.claude/*
+!.claude/skills/
 CLAUDE.local.md
 #  Project-scoped MCP server config (may contain local/private server definitions)
 .mcp.json
@@ -224,3 +225,6 @@ data/action_log.json
 # Temporary files from atomic operations
 *.tmp
 data/*.tmp
+
+# Analyst booth runtime commentary log (regenerated each draft)
+data/analyst-comments.jsonl
