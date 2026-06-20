@@ -483,13 +483,13 @@ class TestNomineeLive:
         slc = build_slice(tmp_path)
         assert len(slc.bid_board) == 3
         beth = next(r for r in slc.bid_board if r.owner_id == 3)
-        # Beth empty roster -> has room at WR; max bid 184.
-        assert beth.has_position_room is True
+        # Beth empty roster -> WR is a need; max bid 184.
+        assert beth.needs_position is True
         assert beth.max_legal_bid == 184
 
-    def test_bid_board_has_position_room_false_when_full(self, tmp_path):
+    def test_bid_board_no_need_when_position_satisfied(self, tmp_path):
         state = _nominee_state(player_id=31)  # nominee is a WR
-        # Fill Jerry to the WR max (8) so he has no room at WR.
+        # Fill Jerry's WR slots (8) so WR is no longer a need for him.
         state["teams"][1]["picks"] = [
             {"pick_id": 100 + i, "player_id": 30, "owner_id": 2, "price": 1}
             for i in range(8)
@@ -497,7 +497,37 @@ class TestNomineeLive:
         _write_data(tmp_path, state)
         slc = build_slice(tmp_path)
         jerry = next(r for r in slc.bid_board if r.owner_id == 2)
-        assert jerry.has_position_room is False
+        assert jerry.needs_position is False
+
+    def test_bid_board_no_need_for_oversaturated_position(self, tmp_path):
+        # Under the league position max but NOT a real need: a team with 2 QBs
+        # (QB max is 3) and an open roster facing a QB nominee must not be
+        # flagged -- a 3rd QB is never a need, so the booth shouldn't highlight
+        # it as biddable.
+        state = _nominee_state(player_id=10)  # nominee is a QB (Rick Sanchez)
+        state["teams"][1]["picks"] = [
+            {"pick_id": 60, "player_id": 10, "owner_id": 2, "price": 1},
+            {"pick_id": 61, "player_id": 10, "owner_id": 2, "price": 1},
+        ]
+        _write_data(tmp_path, state)
+        slc = build_slice(tmp_path)
+        jerry = next(r for r in slc.bid_board if r.owner_id == 2)
+        assert jerry.max_legal_bid is not None  # has open slots, can bid
+        assert jerry.needs_position is False  # but QB3 is not a need
+
+    def test_bid_board_no_need_when_roster_full(self, tmp_path):
+        # A FULL roster needs nothing, even a position it has zero of. Rick is
+        # full (17 QBs); the nominee is a WR he has none of -> still not a need.
+        state = _nominee_state(player_id=31)  # nominee is a WR
+        state["teams"][0]["picks"] = [
+            {"pick_id": i, "player_id": 10, "owner_id": 1, "price": 1}
+            for i in range(1, 18)
+        ]
+        _write_data(tmp_path, state)
+        slc = build_slice(tmp_path)
+        rick = next(r for r in slc.bid_board if r.owner_id == 1)
+        assert rick.max_legal_bid is None  # full roster -> can't bid
+        assert rick.needs_position is False  # ...and needs nothing anyway
 
     def test_comparables_same_position_recent_first(self, tmp_path):
         # Draft a couple WRs first so there are same-position comparables.
@@ -624,3 +654,124 @@ class TestRecentLog:
     def test_no_log_means_empty(self, data_dir):
         slc = build_slice(data_dir, recent_log_limit=5)
         assert slc.recent_log == []
+
+
+# ---------------------------------------------------------------------------
+# Retrospective mode (idle musings)
+# ---------------------------------------------------------------------------
+class TestRetrospective:
+    def test_retrospective_mode_selected(self, data_dir):
+        slc = build_slice(data_dir, retrospective=True)
+        assert slc.mode == "RETROSPECTIVE"
+        assert slc.nominee is None
+        assert slc.last_pick is None
+
+    def test_live_nominee_overrides_retrospective(self, tmp_path):
+        state = _base_state()
+        state["nominated"] = {
+            "player_id": 31,
+            "current_bid": 12,
+            "current_bidder_id": 2,
+            "nominating_owner_id": 1,
+        }
+        _write_data(tmp_path, state)
+        slc = build_slice(tmp_path, retrospective=True)
+        assert slc.mode == "NOMINEE-LIVE"
+
+    def test_all_teams_sorted_by_cash_desc(self, data_dir):
+        slc = build_slice(data_dir, retrospective=True)
+        assert len(slc.all_teams) == 3
+        budgets = [t.budget_remaining for t in slc.all_teams]
+        assert budgets == sorted(budgets, reverse=True)
+        # Rick spent the most -> lowest budget -> last.
+        assert slc.all_teams[-1].team_name == "Wubba Lubba Dub Dubs"
+
+    def test_value_board_ranks_by_production_per_dollar(self, data_dir):
+        slc = build_slice(data_dir, retrospective=True)
+        # Rick(QB) $30 score 340 -> 11.33 ; Birdperson(WR) $45 score 312 -> 6.93.
+        assert [v.name for v in slc.value_board] == [
+            "Rick Sanchez",
+            "Birdperson Phoenix",
+        ]
+        assert slc.value_board[0].value_ratio == 11.33
+        assert slc.value_board[0].production_score == 340.0
+        assert slc.value_board[0].drafter_team_name == "Wubba Lubba Dub Dubs"
+
+    def test_recent_pick_positions_chronological(self, data_dir):
+        slc = build_slice(data_dir, retrospective=True)
+        # pick_id 1 = Rick (QB), pick_id 2 = Birdperson (WR).
+        assert slc.recent_pick_positions == ["QB", "WR"]
+
+    def test_best_available_depth_present(self, data_dir):
+        slc = build_slice(data_dir, retrospective=True)
+        positions = {b.position for b in slc.best_available}
+        assert positions == {"QB", "RB", "WR", "TE"}
+
+    def test_value_board_tiebreak_priciest_last(self, tmp_path):
+        # Add two zero-production rookies at different prices so the board has
+        # >VALUE_BOARD_N entries AND a ratio-0 tie. On the tie, the priciest
+        # must sort LAST (so the "priciest vs production" tail surfaces it).
+        state = _base_state()
+        # Players 21 (Summer) and 99 (Noob) are both rookies -> production 0.
+        state["teams"][1]["picks"] = [
+            {"pick_id": 3, "player_id": 21, "owner_id": 2, "price": 5},
+            {"pick_id": 4, "player_id": 99, "owner_id": 2, "price": 15},
+        ]
+        state["available_player_ids"] = [
+            pid for pid in state["available_player_ids"] if pid not in (21, 99)
+        ]
+        _write_data(tmp_path, state)
+        slc = build_slice(tmp_path, retrospective=True)
+        # Rick 11.33 > Birdperson 6.93 > (ratio-0 tie: cheaper Summer before
+        # pricier Noob).
+        assert [v.name for v in slc.value_board] == [
+            "Rick Sanchez",
+            "Birdperson Phoenix",
+            "Summer Smith",
+            "Noob Noob",
+        ]
+        assert slc.value_board[-1].name == "Noob Noob"
+        assert slc.value_board[-1].price == 15
+        assert slc.value_board[-1].value_ratio == 0.0
+        # The rendered "Priciest vs production" tail leads with the most expensive.
+        tail = render_brief(slc).split("Priciest vs production:")[1]
+        assert tail.index("Noob Noob") < tail.index("Summer Smith")
+
+    def test_recent_pick_positions_skips_missing_then_windows(self, tmp_path):
+        # 9 picks, one referencing a player absent from players.json (id 777) in
+        # the tail. The window must be the last RECENT_PICKS_N=8 *resolved*
+        # picks, so filtering happens BEFORE slicing (else a tail miss truncates).
+        player_ids = [10, 20, 21, 30, 31, 40, 50, 99, 777]
+        state = _base_state()
+        state["teams"][0]["picks"] = [
+            {"pick_id": i + 1, "player_id": pid, "owner_id": 1, "price": 1}
+            for i, pid in enumerate(player_ids)
+        ]
+        state["teams"][1]["picks"] = []
+        state["available_player_ids"] = []
+        _write_data(tmp_path, state)
+        slc = build_slice(tmp_path, retrospective=True)
+        # 777 dropped; the 8 resolved positions remain in pick order.
+        assert slc.recent_pick_positions == [
+            "QB",
+            "RB",
+            "RB",
+            "WR",
+            "WR",
+            "TE",
+            "K",
+            "WR",
+        ]
+
+
+class TestRetrospectiveBrief:
+    def test_brief_has_retrospective_sections(self, data_dir):
+        slc = build_slice(data_dir, retrospective=True)
+        brief = render_brief(slc)
+        assert "[RETROSPECTIVE]" in brief
+        assert "STATE OF THE DRAFT" in brief
+        assert "VALUE BOARD" in brief
+        assert "RECENT PICK POSITIONS" in brief
+        # A team name and a value-board entry both render.
+        assert "Wubba Lubba Dub Dubs" in brief
+        assert "Rick Sanchez" in brief

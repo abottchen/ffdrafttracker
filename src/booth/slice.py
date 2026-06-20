@@ -36,6 +36,12 @@ TOP_N_PER_POSITION = 5
 # How many recent same-position comparables to include for a nominee.
 COMPARABLES_N = 5
 
+# How many picks to surface at each end of the value board.
+VALUE_BOARD_N = 3
+
+# How many recent pick positions to surface for run-spotting.
+RECENT_PICKS_N = 8
+
 
 # ---------------------------------------------------------------------------
 # Production scoring (market-derived, no ADP)
@@ -158,7 +164,7 @@ class BidBoardRow(BaseModel):
     team_name: str
     budget_remaining: int
     max_legal_bid: int | None
-    has_position_room: bool  # under the position max (capacity, not strategic need)
+    needs_position: bool  # nominee's position is a real roster need (per _needs)
 
 
 class Comparable(BaseModel):
@@ -166,6 +172,23 @@ class Comparable(BaseModel):
     name: str
     nfl_team: str
     price: int
+
+
+class ValuePick(BaseModel):
+    """A completed pick with neutral price-vs-production facts.
+
+    ``value_ratio`` is ``production_score / price`` — a neutral ordering signal,
+    NOT a verdict. Personas decide what counts as a steal or an overpay.
+    """
+
+    pick_id: int
+    name: str
+    position: str
+    nfl_team: str
+    price: int
+    production_score: float
+    value_ratio: float
+    drafter_team_name: str
 
 
 class NomineeBlock(BaseModel):
@@ -186,10 +209,11 @@ class AnalystSlice(BaseModel):
     """Grounded, neutral facts for one draft-state event.
 
     ``mode`` is ``NO-NOMINEE`` (react to the pick that just landed / tee up the
-    next nominator) or ``NOMINEE-LIVE`` (who should be bidding, and at what).
+    next nominator), ``NOMINEE-LIVE`` (who should be bidding, and at what), or
+    ``RETROSPECTIVE`` (idle-lull musing — a draft-wide retrospective).
     """
 
-    mode: str  # "NO-NOMINEE" | "NOMINEE-LIVE"
+    mode: str  # "NO-NOMINEE" | "NOMINEE-LIVE" | "RETROSPECTIVE"
     state_version: int
     draft_year: int
     picks_made: int
@@ -208,6 +232,11 @@ class AnalystSlice(BaseModel):
     bid_board: list[BidBoardRow] = Field(default_factory=list)
     comparables: list[Comparable] = Field(default_factory=list)
     position_scarcity: int | None = None
+
+    # Mode C — RETROSPECTIVE (idle musings; draft-wide retrospective)
+    all_teams: list[TeamSnapshot] = Field(default_factory=list)
+    value_board: list[ValuePick] = Field(default_factory=list)
+    recent_pick_positions: list[str] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -478,16 +507,20 @@ def _build_nominee_live(data: BoothData, slc: AnalystSlice) -> None:
         )
 
     nominee_pos = str(player.position) if player is not None else None
+    elite_te = _elite_te_available(data)
 
-    # Bid board: every team's budget, legal ceiling, and position need.
+    # Bid board: every team's budget, legal ceiling, and whether the nominee's
+    # position is a real roster NEED for them. "Need" (not raw position-max
+    # capacity) is what tells the booth who should be bidding — it excludes
+    # wasteful over-builds (a 3rd QB/TE, a 2nd K/D-ST, a 6th-7th RB/WR are never
+    # needs) and a full roster (no needs at all).
     rows: list[BidBoardRow] = []
     for team in data.state.teams:
         owner = data.owners.get(team.owner_id)
         counts = _position_counts(team, data.players)
-        has_room = False
-        if nominee_pos is not None:
-            maximum = data.config.position_maximums.get(nominee_pos, 0)
-            has_room = counts.get(nominee_pos, 0) < maximum
+        slots_left = remaining_roster_spots(team, data.config)
+        team_needs = _needs(counts, slots_left, elite_te_available=elite_te)
+        needs_pos = nominee_pos is not None and nominee_pos in team_needs
         rows.append(
             BidBoardRow(
                 owner_id=team.owner_id,
@@ -495,7 +528,7 @@ def _build_nominee_live(data: BoothData, slc: AnalystSlice) -> None:
                 team_name=owner.team_name if owner else f"Team {team.owner_id}",
                 budget_remaining=team.budget_remaining,
                 max_legal_bid=max_bid(team, data.config),
-                has_position_room=has_room,
+                needs_position=needs_pos,
             )
         )
     slc.bid_board = rows
@@ -524,11 +557,91 @@ def _build_nominee_live(data: BoothData, slc: AnalystSlice) -> None:
         slc.position_scarcity = len(ranked.get(nominee_pos, []))
 
 
+def _build_retrospective(data: BoothData, slc: AnalystSlice) -> None:
+    elite_te = _elite_te_available(data)
+
+    # All teams, ordered by cash on hand (budget remaining) descending — who is
+    # loaded and who is broke is the spine of most retrospective takes.
+    snaps = [
+        _team_snapshot(team, data, elite_te_available=elite_te)
+        for team in data.state.teams
+    ]
+    snaps.sort(key=lambda s: -s.budget_remaining)
+    slc.all_teams = snaps
+
+    team_name_by_owner = {
+        team.owner_id: (
+            data.owners[team.owner_id].team_name
+            if team.owner_id in data.owners
+            else f"Team {team.owner_id}"
+        )
+        for team in data.state.teams
+    }
+
+    # Value board: every completed pick with neutral price-vs-production facts,
+    # best production-per-dollar first. Ties (e.g. rookies at ratio 0) order the
+    # priciest last, so the tail surfaces expensive-for-the-production picks.
+    value: list[ValuePick] = []
+    for team in data.state.teams:
+        for pick in team.picks:
+            player = data.players.get(pick.player_id)
+            if player is None:
+                continue
+            score = production_score(data.stats.get_player_stats(pick.player_id))
+            ratio = round(score / pick.price, 2) if pick.price > 0 else 0.0
+            value.append(
+                ValuePick(
+                    pick_id=pick.pick_id,
+                    name=player.full_name,
+                    position=str(player.position),
+                    nfl_team=str(player.team),
+                    price=pick.price,
+                    production_score=score,
+                    value_ratio=ratio,
+                    drafter_team_name=team_name_by_owner[team.owner_id],
+                )
+            )
+    value.sort(key=lambda v: (v.value_ratio, -v.price), reverse=True)
+    slc.value_board = value
+
+    # Best available + depth (scarcity) per skill position — same board the
+    # NO-NOMINEE mode builds.
+    ranked = _ranked_available(data)
+    slc.best_available = [
+        PositionBoard(
+            position=pos,
+            top=ranked.get(pos, [])[:TOP_N_PER_POSITION],
+            depth_left=len(ranked.get(pos, [])),
+        )
+        for pos in SKILL_POSITIONS
+    ]
+
+    # Recent pick positions (chronological) for spotting a positional run.
+    # Filter unresolved players out BEFORE windowing, so a missing-player pick
+    # in the tail can't shrink or misalign the last-N view.
+    resolved_picks = [
+        (pick, player)
+        for team in data.state.teams
+        for pick in team.picks
+        if (player := data.players.get(pick.player_id)) is not None
+    ]
+    resolved_picks.sort(key=lambda pp: pp[0].pick_id)
+    slc.recent_pick_positions = [
+        str(player.position) for _, player in resolved_picks[-RECENT_PICKS_N:]
+    ]
+
+
 # ---------------------------------------------------------------------------
 # Public builder
 # ---------------------------------------------------------------------------
-def build_slice(data_dir: Path, *, recent_log_limit: int = 0) -> AnalystSlice:
-    """Build the validated ``AnalystSlice`` for the data dir's current state."""
+def build_slice(
+    data_dir: Path, *, recent_log_limit: int = 0, retrospective: bool = False
+) -> AnalystSlice:
+    """Build the validated ``AnalystSlice`` for the data dir's current state.
+
+    ``retrospective=True`` (only meaningful with no live nominee) builds the
+    draft-wide RETROSPECTIVE payload for an idle-lull musing.
+    """
     data = load_booth_data(data_dir)
     picks_made = sum(len(t.picks) for t in data.state.teams)
     total_rounds = data.config.total_rounds
@@ -536,7 +649,13 @@ def build_slice(data_dir: Path, *, recent_log_limit: int = 0) -> AnalystSlice:
     # Approx round: 1-based, derived from picks per "round" across all teams.
     approx_round = min(total_rounds, picks_made // num_teams + 1)
 
-    mode = "NO-NOMINEE" if data.state.nominated is None else "NOMINEE-LIVE"
+    if data.state.nominated is not None:
+        mode = "NOMINEE-LIVE"
+    elif retrospective:
+        mode = "RETROSPECTIVE"
+    else:
+        mode = "NO-NOMINEE"
+
     slc = AnalystSlice(
         mode=mode,
         state_version=data.state.version,
@@ -555,8 +674,10 @@ def build_slice(data_dir: Path, *, recent_log_limit: int = 0) -> AnalystSlice:
 
     if mode == "NO-NOMINEE":
         _build_no_nominee(data, slc)
-    else:
+    elif mode == "NOMINEE-LIVE":
         _build_nominee_live(data, slc)
+    else:  # RETROSPECTIVE
+        _build_retrospective(data, slc)
     return slc
 
 
@@ -625,7 +746,7 @@ def render_brief(slc: AnalystSlice) -> str:
             for board in slc.best_available:
                 names = "; ".join(_fmt_stat_line(s) for s in board.top) or "(none)"
                 out.append(f"  {board.position} ({board.depth_left} left): {names}")
-    else:  # NOMINEE-LIVE
+    elif slc.mode == "NOMINEE-LIVE":
         if slc.nominee is not None:
             n = slc.nominee
             out.append("")
@@ -647,14 +768,52 @@ def render_brief(slc: AnalystSlice) -> str:
                 out.append(f"  {c.name} ({c.nfl_team}) — ${c.price}")
         if slc.bid_board:
             out.append("")
-            out.append("BID BOARD (budget / max legal bid / position room?):")
+            out.append("BID BOARD (budget / max legal bid / needs the position?):")
             for row in slc.bid_board:
-                flag = "room" if row.has_position_room else "capped"
+                flag = "need" if row.needs_position else "no need"
                 out.append(
                     f"  {row.team_name} ({row.owner_name}): "
                     f"${row.budget_remaining} / max {_fmt_bid(row.max_legal_bid)} "
                     f"/ {flag}"
                 )
+    elif slc.mode == "RETROSPECTIVE":
+        if slc.all_teams:
+            out.append("")
+            out.append("STATE OF THE DRAFT (teams by cash on hand):")
+            for snap in slc.all_teams:
+                out.extend(_fmt_team_snapshot(snap))
+        if slc.value_board:
+            out.append("")
+            out.append(
+                "VALUE BOARD (production per $ — personas judge steal vs overpay):"
+            )
+            out.append("  Most production per $:")
+            for v in slc.value_board[:VALUE_BOARD_N]:
+                out.append(
+                    f"    {v.name} ({v.position}, {v.nfl_team}) — ${v.price}, "
+                    f"score {v.production_score}, ratio {v.value_ratio} "
+                    f"[{v.drafter_team_name}]"
+                )
+            if len(slc.value_board) > VALUE_BOARD_N:
+                out.append("  Priciest vs production:")
+                for v in reversed(slc.value_board[-VALUE_BOARD_N:]):
+                    out.append(
+                        f"    {v.name} ({v.position}, {v.nfl_team}) — ${v.price}, "
+                        f"score {v.production_score}, ratio {v.value_ratio} "
+                        f"[{v.drafter_team_name}]"
+                    )
+        if slc.recent_pick_positions:
+            out.append("")
+            out.append(
+                "RECENT PICK POSITIONS (oldest->newest): "
+                + " ".join(slc.recent_pick_positions)
+            )
+        if slc.best_available:
+            out.append("")
+            out.append("BEST AVAILABLE / DEPTH:")
+            for board in slc.best_available:
+                names = "; ".join(_fmt_stat_line(s) for s in board.top) or "(none)"
+                out.append(f"  {board.position} ({board.depth_left} left): {names}")
 
     if slc.recent_log:
         out.append("")
@@ -686,9 +845,18 @@ def main(argv: list[str] | None = None) -> int:
         default=0,
         help="Include the last N committed analyst-comments lines.",
     )
+    parser.add_argument(
+        "--retrospective",
+        action="store_true",
+        help="Build the draft-wide RETROSPECTIVE slice (idle-lull musing).",
+    )
     args = parser.parse_args(argv)
 
-    slc = build_slice(Path(args.data_dir), recent_log_limit=args.recent_log)
+    slc = build_slice(
+        Path(args.data_dir),
+        recent_log_limit=args.recent_log,
+        retrospective=args.retrospective,
+    )
     if args.json:
         print(slc.model_dump_json(indent=2))
     else:
