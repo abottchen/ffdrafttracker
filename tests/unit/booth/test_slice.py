@@ -676,3 +676,16 @@ class TestRetrospective:
         slc = build_slice(data_dir, retrospective=True)
         positions = {b.position for b in slc.best_available}
         assert positions == {"QB", "RB", "WR", "TE"}
+
+
+class TestRetrospectiveBrief:
+    def test_brief_has_retrospective_sections(self, data_dir):
+        slc = build_slice(data_dir, retrospective=True)
+        brief = render_brief(slc)
+        assert "[RETROSPECTIVE]" in brief
+        assert "STATE OF THE DRAFT" in brief
+        assert "VALUE BOARD" in brief
+        assert "RECENT PICK POSITIONS" in brief
+        # A team name and a value-board entry both render.
+        assert "Wubba Lubba Dub Dubs" in brief
+        assert "Rick Sanchez" in brief

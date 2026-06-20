@@ -741,7 +741,7 @@ def render_brief(slc: AnalystSlice) -> str:
             for board in slc.best_available:
                 names = "; ".join(_fmt_stat_line(s) for s in board.top) or "(none)"
                 out.append(f"  {board.position} ({board.depth_left} left): {names}")
-    else:  # NOMINEE-LIVE
+    elif slc.mode == "NOMINEE-LIVE":
         if slc.nominee is not None:
             n = slc.nominee
             out.append("")
@@ -771,6 +771,44 @@ def render_brief(slc: AnalystSlice) -> str:
                     f"${row.budget_remaining} / max {_fmt_bid(row.max_legal_bid)} "
                     f"/ {flag}"
                 )
+    elif slc.mode == "RETROSPECTIVE":
+        if slc.all_teams:
+            out.append("")
+            out.append("STATE OF THE DRAFT (teams by cash on hand):")
+            for snap in slc.all_teams:
+                out.extend(_fmt_team_snapshot(snap))
+        if slc.value_board:
+            out.append("")
+            out.append(
+                "VALUE BOARD (production per $ — personas judge steal vs overpay):"
+            )
+            out.append("  Most production per $:")
+            for v in slc.value_board[:VALUE_BOARD_N]:
+                out.append(
+                    f"    {v.name} ({v.position}, {v.nfl_team}) — ${v.price}, "
+                    f"score {v.production_score}, ratio {v.value_ratio} "
+                    f"[{v.drafter_team_name}]"
+                )
+            if len(slc.value_board) > VALUE_BOARD_N:
+                out.append("  Priciest vs production:")
+                for v in reversed(slc.value_board[-VALUE_BOARD_N:]):
+                    out.append(
+                        f"    {v.name} ({v.position}, {v.nfl_team}) — ${v.price}, "
+                        f"score {v.production_score}, ratio {v.value_ratio} "
+                        f"[{v.drafter_team_name}]"
+                    )
+        if slc.recent_pick_positions:
+            out.append("")
+            out.append(
+                "RECENT PICK POSITIONS (oldest->newest): "
+                + " ".join(slc.recent_pick_positions)
+            )
+        if slc.best_available:
+            out.append("")
+            out.append("BEST AVAILABLE / DEPTH:")
+            for board in slc.best_available:
+                names = "; ".join(_fmt_stat_line(s) for s in board.top) or "(none)"
+                out.append(f"  {board.position} ({board.depth_left} left): {names}")
 
     if slc.recent_log:
         out.append("")
