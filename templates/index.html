@@ -18,7 +18,7 @@
     <div id="stage">
       <!-- TOP BAR -->
       <div class="topbar">
-        <div class="wordmark"><span class="yr cond">DRAFT</span><span class="tag">'25</span></div>
+        <div class="wordmark"><span class="yr cond">DRAFT</span><span class="tag">'{{ "%02d" | format(config.draft_year % 100) }}</span></div>
         <div class="progress-wrap">
           <span class="progress-label">Draft Complete</span>
           <div class="progress-track">

@@ -17,7 +17,7 @@
   <body>
     <div id="app">
       <div class="vtop">
-        <div class="wordmark"><span class="yr cond">DRAFT</span><span class="tag">'25</span><span class="vsub">Viewer</span></div>
+        <div class="wordmark"><span class="yr cond">DRAFT</span><span class="tag">'{{ "%02d" | format(config.draft_year % 100) }}</span><span class="vsub">Viewer</span></div>
         <div class="seg">
           <button id="seg-teams" class="active" onclick="showView('teams')">Teams</button>
           <button id="seg-status" onclick="showView('status')">Draft Status</button>
@@ -152,6 +152,8 @@
         const TOTAL = config.total_rounds;
         const INITIAL = config.initial_budget;
         const POSMAX = config.position_maximums;            // {QB,RB,WR,TE,K,"D/ST"}
+        const DRAFT_YEAR = config.draft_year || 2025;
+        const STATS_YR = "'" + String(DRAFT_YEAR - 1).slice(-2);   // prior-season stats column header
         const RADAR_ORDER = ['QB','RB','WR','TE','K','D/ST'];
         const POSORDER = {QB:0,RB:1,WR:2,TE:3,K:4,'D/ST':5};
         const POSCOLOR = {QB:'#A877DE',RB:'#46B86C',WR:'#5790CF',TE:'#E08A45',K:'#E6B23E','D/ST':'#D6564A'};
@@ -692,7 +694,7 @@
             const chips = [`<button class="af-chip ${availPos === 'ALL' ? 'active' : ''}" onclick="setAvailPos('ALL')">All <i>${AVAILABLE.length}</i></button>`]
                 .concat(order.map(pos => `<button class="af-chip ${availPos === pos ? 'active' : ''}" style="--pc:${POSCOLOR[pos]}" onclick="setAvailPos('${pos}')">${pos} <i>${counts[pos]}</i></button>`));
             document.getElementById('availFilter').innerHTML = chips.join('');
-            thCells('avHead', [{ k: 'pos', lbl: 'Pos', cls: 'ct' }, { k: 'name', lbl: 'Player' }, { k: 'team', lbl: 'Tm' }, { k: 'bye', lbl: 'Bye', cls: 'rt' }, { k: 'prod', lbl: '’24', cls: 'rt' }], availSort, availDir, 'setAvailSort');
+            thCells('avHead', [{ k: 'pos', lbl: 'Pos', cls: 'ct' }, { k: 'name', lbl: 'Player' }, { k: 'team', lbl: 'Tm' }, { k: 'bye', lbl: 'Bye', cls: 'rt' }, { k: 'prod', lbl: STATS_YR, cls: 'rt' }], availSort, availDir, 'setAvailSort');
             const list = AVAILABLE.filter(p => availPos === 'ALL' || p.pos === availPos).sort(availCmp);
             const box = document.getElementById('availList');
             if (!list.length) { box.innerHTML = '<div class="av-empty">No players left here.</div>'; return; }

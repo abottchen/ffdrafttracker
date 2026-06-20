@@ -31,6 +31,25 @@ class TestConfiguration:
 
         assert config.data_directory == "data"  # Default value
 
+    def test_draft_year_defaults_and_accepts_override(self):
+        """draft_year is optional (defaults to 2025) and accepts an explicit value."""
+        default_cfg = Configuration(
+            initial_budget=200,
+            min_bid=1,
+            position_maximums={"QB": 2},
+            total_rounds=17,
+        )
+        assert default_cfg.draft_year == 2025
+
+        explicit_cfg = Configuration(
+            initial_budget=200,
+            min_bid=1,
+            position_maximums={"QB": 2},
+            total_rounds=17,
+            draft_year=2026,
+        )
+        assert explicit_cfg.draft_year == 2026
+
     @patch("pathlib.Path.read_text")
     def test_load_from_file_calls_model_validate_json(self, mock_read_text):
         """Test load_from_file reads file and validates JSON."""
