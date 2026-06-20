@@ -65,9 +65,11 @@ The slice is ground truth and the only facts the booth may assert — never hand
 - NO-NOMINEE: "React to that last pick, or who should the next nominator target and why?"
 - NOMINEE-LIVE: "Who should be bidding on this nominee, and why?"
 
-Collect takes, each behind a **~15–20s timeout** — a no-show just sits the pick out. Run each through the gate, pick the most interesting survivor(s), and log them.
+Collect takes, each behind a **~15–20s timeout** — a no-show just sits the pick out. Gate them, then **log only the single best one — one line, not four.** When several personas land on the same point (same player, same argument), that is *one* logged line: keep the sharpest voice and drop the rest. Round 1 ends the moment that one opening line is logged.
 
-**Reaction rounds** (repeat while the event key still equals `cycle_key` and under a **~4–5 logged-turn** cap): relay the just-logged line to one or more *other* personas. The relay payload = **the logged line + that persona's own prior take this segment + the slice**. Tell them to react and **name who they're answering**. Gate and log the good ones. Kimes is the natural target for a reality check on a hot take. Optionally pair two personas for ~2 direct exchanges, but you stay the curator.
+**Reaction rounds** (repeat while the event key still equals `cycle_key` and under a **~4–5 logged-turn** cap): relay the just-logged line to one or more *other* personas. The relay payload = **the logged line + that persona's own prior take this segment + the slice**. Tell them to react and **name who they're answering**. Gate them and **log only the single best reaction — one line per round** — then relay *that* line onward and iterate, building a back-and-forth. A reaction earns its line only by adding something new (a counter, a number, a different angle); if it just restates the prior take, **drop it — never log two lines making the same point.** Kimes is the natural reality check on a hot take. You stay the curator: the log is a debate, never a pile of parallel takes.
+
+**Wasteful picks are fair game.** A pick that over-builds a position — a 3rd QB or TE, a 2nd K or D/ST, a 6th–7th RB/WR — is essentially never a real need (the brief never flags those as a need), so it's legitimately newsworthy as likely wasted money. A persona calling that out is on-frame: it's valuation, not a fact error.
 
 **End the segment** when any of: the event key no longer equals `cycle_key` (abort immediately — discard in-flight takes, ignore late replies, return to the watch loop); the turn cap is hit; or nothing's interesting (silence is fine). If an exchange is mid-thread at the cap/timeout, **wrap it with one logged host line** rather than leaving a dangling reply.
 
