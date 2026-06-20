@@ -316,6 +316,7 @@ Pydantic Models (Python) → FastAPI Endpoints → OpenAPI Schema
 - `position_maximums: Dict[str, int]` - Max players per position (e.g., {"QB": 2, "RB": 4})
 - `total_rounds: int` - Total draft rounds (e.g., 19)
 - `data_directory: str` - Where to store data files
+- `draft_year: int` - Draft year shown in the UI (e.g., 2025); the viewer's prior-season stats column shows this minus 1. Optional, defaults to 2025.
 
 **PlayerStats** (`player_stats.py`): Enhanced player data (optional)
 - `bye_week: Optional[int]` - 2025 NFL bye week (1-18)

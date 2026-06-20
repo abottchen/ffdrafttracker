@@ -93,7 +93,8 @@ A live auction draft tracking tool for fantasy football leagues. Features a web-
     "D/ST": 3
   },
   "total_rounds": 17,
-  "data_directory": "data"
+  "data_directory": "data",
+  "draft_year": 2025
 }
 ```
 

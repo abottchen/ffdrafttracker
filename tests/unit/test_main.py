@@ -205,7 +205,11 @@ class TestGetEndpoints(TestMainApp):
     def test_get_config(self, mock_config):
         """Test GET /api/v1/config."""
         mock_config.return_value = Configuration(
-            initial_budget=200, min_bid=1, position_maximums={}, total_rounds=15
+            initial_budget=200,
+            min_bid=1,
+            position_maximums={},
+            total_rounds=15,
+            draft_year=2026,
         )
 
         response = self.client.get("/api/v1/config")
@@ -216,6 +220,7 @@ class TestGetEndpoints(TestMainApp):
         assert data["min_bid"] == 1
         assert data["total_rounds"] == 15
         assert "position_maximums" in data
+        assert data["draft_year"] == 2026
 
     @patch("main.load_players")
     @patch("main.load_owners")
