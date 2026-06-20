@@ -87,10 +87,13 @@ class TestLullPhase:
         assert lull_phase(_stocked_state(), dead_seconds=480) == "3"
         assert lull_phase(_stocked_state(), dead_seconds=899) == "3"
 
-    def test_easter_egg_steps_every_fifteen_minutes(self):
-        assert lull_phase(_stocked_state(), dead_seconds=900) == "ee1"
-        assert lull_phase(_stocked_state(), dead_seconds=1800) == "ee2"
-        assert lull_phase(_stocked_state(), dead_seconds=2700) == "ee3"
+    def test_easter_egg_starts_at_15min_then_steps_every_2min(self):
+        # Fires once at 15:00, then recurs every 2 min while the lull persists.
+        assert lull_phase(_stocked_state(), dead_seconds=900) == "ee1"  # 15:00
+        assert lull_phase(_stocked_state(), dead_seconds=1019) == "ee1"  # < 17:00
+        assert lull_phase(_stocked_state(), dead_seconds=1020) == "ee2"  # 17:00
+        assert lull_phase(_stocked_state(), dead_seconds=1140) == "ee3"  # 19:00
+        assert lull_phase(_stocked_state(), dead_seconds=1260) == "ee4"  # 21:00
 
 
 class TestBoothTick:

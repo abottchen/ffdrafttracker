@@ -30,7 +30,7 @@ Collect the ready acks, then tell the user the booth is live.
 
 ## 2 — Watch loop
 
-Arm a `Monitor` that polls the booth **tick** every ~1s. The tick is `<event_key>#<lull_phase>`, produced by `src.booth.watch --tick`. The **event-key** half (`<nominee_player_id|none>:<max_pick_id>`) changes only on a *real* event — a new nominee or a completed pick; bids bump `version`/`current_bid` but **not** the event key, so a bidding war never triggers a segment. The **phase** half tracks dead air: `0` (live), `1`/`2`/`3` (retrospective musing stages at ~2/4/6 min), or `ee1`/`ee2`/`ee3…` (the long-lull easter egg at ~15/30/45 min). The lull clock is `now − max(mtime(draft_state.json), booth_start)`, which the booth's own commentary never resets — and `--since "$start"` floors it at the booth's arm time, so starting up on an already-stale `draft_state.json` doesn't inherit dead air the booth never watched (without it, a fresh start would jump straight to the easter egg and skip the normal musings).
+Arm a `Monitor` that polls the booth **tick** every ~1s. The tick is `<event_key>#<lull_phase>`, produced by `src.booth.watch --tick`. The **event-key** half (`<nominee_player_id|none>:<max_pick_id>`) changes only on a *real* event — a new nominee or a completed pick; bids bump `version`/`current_bid` but **not** the event key, so a bidding war never triggers a segment. The **phase** half tracks dead air: `0` (live), `1`/`2`/`3` (retrospective musing stages at ~2/4/6 min), or `ee1`/`ee2`/`ee3…` (the long-lull easter egg — starts at ~15 min, then every ~2 min while the lull holds). The lull clock is `now − max(mtime(draft_state.json), booth_start)`, which the booth's own commentary never resets — and `--since "$start"` floors it at the booth's arm time, so starting up on an already-stale `draft_state.json` doesn't inherit dead air the booth never watched (without it, a fresh start would jump straight to the easter egg and skip the normal musings).
 
 ```bash
 cd <project root>
@@ -90,12 +90,12 @@ When the draft goes quiet, the booth muses on the draft so far instead of sittin
    - **Callbacks** — revisit an earlier take from RECENT COMMENTARY; hold someone to a prediction; a Booger timeline bit → the original take's author + a foil.
 4. Pose the topic to the **1–2 personas that fit the flavor** via `SendMessage` (brief + the ask). Allow **one reaction round** — relay the logged line to one other persona (Kimes is the natural reality check). A **mini-debate: 2–3 logged lines total.** Gate every line (§5) and log the survivors (§6).
 
-**The long-lull easter egg** (`EASTER EGG`, phases ee1/ee2/ee3… at ~15/30/45 min):
+**The long-lull easter egg** (`EASTER EGG`, phases ee1/ee2/ee3… — starts at ~15 min, then every ~2 min while the lull persists):
 
 The draft has stalled. Eisen opens by wondering aloud where everyone has gone, and the **whole panel** weighs in on what happened to the owners. This is the one musing that runs as a fuller exchange — **2–3 reaction turns** where the panel builds on or disagrees with each other's theories (Booger's wild guess, Kimes's deadpan counter, McAfee running with it), up to the normal 4–5 logged-turn cap.
 
 - **It's off-topic and exempt from the player-facts gate** — it's pure speculation about absent owners, so there are no draft facts to verify. The **frame-floor still applies**: stay in character and invent no draft *results* (no fake picks/prices) — the bit is about the owners' whereabouts, not the board.
-- **Each ee step escalates** the absurdity, and ideally calls back the previous theory from RECENT COMMENTARY so it builds rather than repeats.
+- **Each ee step (≈ every 2 min) escalates** the absurdity: call back the previous theory from RECENT COMMENTARY and build on it, or float a fresh idea — keep wondering where everyone went, never just repeat the last line.
 
 **Ending an idle segment / abort.** End when the turn cap is hit or nothing's interesting (silence is fine). If a `DRAFT EVENT` lands mid-musing (`cycle_key`/event-key half changed), abort the musing and return to the segment flow — **but** if you've already logged **at least one** line this musing, first log a single Eisen bridge line (e.g. *"Ah — seeing some movement at the podium, let's get back to the draft"*), stamped to the **incoming** event's version, so the log hands off cleanly instead of leaving a dangling thread. If nothing was logged yet, abort silently.
 

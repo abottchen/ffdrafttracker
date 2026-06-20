@@ -60,8 +60,9 @@ def lull_phase(
 
     Returns ``"0"`` (no musing), ``"1"``..``"<cap>"`` (retrospective musing
     stages, one per ``idle_threshold`` seconds, saturating at ``cap``), or
-    ``"eeN"`` (the off-topic long-lull easter egg, ``N`` = number of
-    ``easter_threshold`` steps elapsed).
+    ``"eeN"`` (the off-topic long-lull easter egg — ``ee1`` at
+    ``easter_threshold``, then stepping every ``idle_threshold`` so it recurs
+    while the long lull persists).
 
     ``dead_seconds`` is time since the last real draft event — the caller passes
     ``now - mtime(draft_state.json)``. A live nominee, too-little draft history
@@ -78,7 +79,11 @@ def lull_phase(
     if dead_seconds < idle_threshold:
         return "0"
     if dead_seconds >= easter_threshold:
-        return f"ee{int(dead_seconds // easter_threshold)}"
+        # Fires at the easter threshold, then steps every idle_threshold (not
+        # every easter_threshold) so the "where did everyone go" bit keeps
+        # firing ~every 2 min and building while the long lull holds.
+        ee_step = int((dead_seconds - easter_threshold) // idle_threshold) + 1
+        return f"ee{ee_step}"
     return str(min(cap, int(dead_seconds // idle_threshold)))
 
 
