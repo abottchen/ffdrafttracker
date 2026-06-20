@@ -17,6 +17,7 @@ Run as a module to print the current event key for the watch loop::
 from __future__ import annotations
 
 import argparse
+import time
 from pathlib import Path
 
 from src.models import DraftState
@@ -36,6 +37,54 @@ def event_key(state: DraftState) -> str:
     return f"{nominee}:{last_pick}"
 
 
+DEFAULT_IDLE_THRESHOLD = 120  # seconds of dead air before the first musing
+DEFAULT_EASTER_THRESHOLD = 900  # 15 min of dead air -> the long-lull easter egg
+DEFAULT_MUSING_CAP = 3  # retrospective musings per lull before going silent
+
+
+def lull_phase(
+    state: DraftState,
+    dead_seconds: float,
+    *,
+    idle_threshold: int = DEFAULT_IDLE_THRESHOLD,
+    easter_threshold: int = DEFAULT_EASTER_THRESHOLD,
+    cap: int = DEFAULT_MUSING_CAP,
+) -> str:
+    """The lull phase for the booth tick.
+
+    Returns ``"0"`` (no musing), ``"1"``..``"<cap>"`` (retrospective musing
+    stages, one per ``idle_threshold`` seconds, saturating at ``cap``), or
+    ``"eeN"`` (the off-topic long-lull easter egg, ``N`` = number of
+    ``easter_threshold`` steps elapsed).
+
+    ``dead_seconds`` is time since the last real draft event — the caller passes
+    ``now - mtime(draft_state.json)``. A live nominee, too-little draft history
+    (``picks_made < num_teams``), or too short a lull all pin the phase to
+    ``"0"``. The easter egg is checked before the musing bucket so it wins once
+    the draft has truly stalled.
+    """
+    if state.nominated is not None:
+        return "0"
+    picks_made = sum(len(team.picks) for team in state.teams)
+    num_teams = max(len(state.teams), 1)
+    if picks_made < num_teams:
+        return "0"
+    if dead_seconds < idle_threshold:
+        return "0"
+    if dead_seconds >= easter_threshold:
+        return f"ee{int(dead_seconds // easter_threshold)}"
+    return str(min(cap, int(dead_seconds // idle_threshold)))
+
+
+def booth_tick(state: DraftState, dead_seconds: float, **kwargs: int) -> str:
+    """The watch signal: ``"<event_key>#<lull_phase>"``.
+
+    The event-key half changes on a real draft event; the phase half changes as
+    a lull deepens. ``kwargs`` are forwarded to :func:`lull_phase` (thresholds).
+    """
+    return f"{event_key(state)}#{lull_phase(state, dead_seconds, **kwargs)}"
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Print the booth watch event key.")
     parser.add_argument(
@@ -43,9 +92,19 @@ def main(argv: list[str] | None = None) -> int:
         default="data",
         help="Directory holding draft_state.json (default: data)",
     )
+    parser.add_argument(
+        "--tick",
+        action="store_true",
+        help="Print the booth tick (<event_key>#<lull_phase>) for lull detection.",
+    )
     args = parser.parse_args(argv)
-    state = DraftState.load_from_file(Path(args.data_dir) / "draft_state.json")
-    print(event_key(state))
+    state_path = Path(args.data_dir) / "draft_state.json"
+    state = DraftState.load_from_file(state_path)
+    if args.tick:
+        dead_seconds = time.time() - state_path.stat().st_mtime
+        print(booth_tick(state, dead_seconds))
+    else:
+        print(event_key(state))
     return 0
 
 
