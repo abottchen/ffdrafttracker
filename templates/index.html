@@ -487,12 +487,12 @@
         // ---- Analyst booth chyron (live commentary from /api/v1/comments) ----
         // Per-persona identity: accent ring + headshot file (or initials fallback).
         const BOOTH_PERSONAS = {
-            eisen:    { accent: '#E8A33D', slug: 'eisen' },
-            kiper:    { accent: '#56C5D0', slug: 'kiper' },
-            schefter: { accent: '#E2574C', slug: 'schefter' },
-            booger:   { accent: '#5BBF7B', slug: 'booger' },
-            kimes:    { accent: '#9B8CEF', slug: 'kimes' },
-            mcafee:   { accent: '#F0913E', slug: 'mcafee' },
+            eisen:    { accent: '#E8A33D', slug: 'eisen',    name: 'Rich Eisen' },
+            kiper:    { accent: '#56C5D0', slug: 'kiper',    name: 'Mel Kiper Jr.' },
+            schefter: { accent: '#E2574C', slug: 'schefter', name: 'Adam Schefter' },
+            booger:   { accent: '#5BBF7B', slug: 'booger',   name: 'Booger McFarland' },
+            kimes:    { accent: '#9B8CEF', slug: 'kimes',    name: 'Mina Kimes' },
+            mcafee:   { accent: '#F0913E', slug: 'mcafee',   name: 'Pat McAfee' },
         };
         function boothPersona(name) {
             const key = (name || '').toLowerCase().replace(/[^a-z]/g, '');
@@ -500,8 +500,8 @@
             const label = (name || '?').toUpperCase();
             const initials = (name || '?').replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase() || '?';
             return m
-                ? { label, accent: m.accent, img: `/static/img/personas/${m.slug}.jpg`, initials }
-                : { label, accent: 'var(--slate)', img: '', initials };  // unknown -> monogram
+                ? { label, fullName: m.name, accent: m.accent, img: `/static/img/personas/${m.slug}.jpg`, initials }
+                : { label, fullName: (name || ''), accent: 'var(--slate)', img: '', initials };  // unknown -> monogram
         }
         let boothBuffer = [];        // recent comments, ascending seq
         let boothLastSeq = 0;        // watermark
@@ -517,7 +517,7 @@
             mono.textContent = meta.initials;
             if (meta.img) {
                 const img = document.createElement('img');
-                img.className = 'intel-av'; img.src = meta.img; img.alt = '';
+                img.className = 'intel-av'; img.src = meta.img; img.alt = ''; img.title = meta.fullName;
                 img.onerror = () => { img.style.display = 'none'; mono.style.display = 'grid'; };
                 row.append(img, mono);
             } else {

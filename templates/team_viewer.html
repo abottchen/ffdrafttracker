@@ -478,12 +478,12 @@
         // ---- The Booth: live analyst commentary (/api/v1/comments) ----
         // Per-persona identity: accent ring + headshot file (or initials fallback).
         const BOOTH_PERSONAS = {
-            eisen:    { accent: '#E8A33D', slug: 'eisen' },
-            kiper:    { accent: '#56C5D0', slug: 'kiper' },
-            schefter: { accent: '#E2574C', slug: 'schefter' },
-            booger:   { accent: '#5BBF7B', slug: 'booger' },
-            kimes:    { accent: '#9B8CEF', slug: 'kimes' },
-            mcafee:   { accent: '#F0913E', slug: 'mcafee' },
+            eisen:    { accent: '#E8A33D', slug: 'eisen',    name: 'Rich Eisen' },
+            kiper:    { accent: '#56C5D0', slug: 'kiper',    name: 'Mel Kiper Jr.' },
+            schefter: { accent: '#E2574C', slug: 'schefter', name: 'Adam Schefter' },
+            booger:   { accent: '#5BBF7B', slug: 'booger',   name: 'Booger McFarland' },
+            kimes:    { accent: '#9B8CEF', slug: 'kimes',    name: 'Mina Kimes' },
+            mcafee:   { accent: '#F0913E', slug: 'mcafee',   name: 'Pat McAfee' },
         };
         const BOOTH_LINEUP = ['eisen', 'kiper', 'schefter', 'booger', 'kimes', 'mcafee'];
         function boothPersona(name) {
@@ -492,8 +492,8 @@
             const label = (name || '?').toUpperCase();
             const initials = (name || '?').replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase() || '?';
             return m
-                ? { key, label, accent: m.accent, img: `/static/img/personas/${m.slug}.jpg`, initials }
-                : { key, label, accent: 'var(--slate)', img: '', initials };
+                ? { key, label, fullName: m.name, accent: m.accent, img: `/static/img/personas/${m.slug}.jpg`, initials }
+                : { key, label, fullName: (name || ''), accent: 'var(--slate)', img: '', initials };
         }
         let boothMaxSeq = 0;          // newest seq shown (live-tail watermark)
         let boothMinSeq = null;       // oldest seq shown (backward-paging cursor)
@@ -515,7 +515,7 @@
             mono.className = 'mono'; mono.textContent = meta.initials;
             if (meta.img) {
                 const img = document.createElement('img');
-                img.className = 'av'; img.src = meta.img; img.alt = '';
+                img.className = 'av'; img.src = meta.img; img.alt = ''; img.title = meta.fullName;
                 img.onerror = () => { img.style.display = 'none'; mono.style.display = 'grid'; };
                 row.append(img, mono);
             } else {
@@ -539,7 +539,7 @@
                 mono.className = 'pmono'; mono.textContent = meta.initials;
                 mono.style.setProperty('--pa', meta.accent);
                 const img = document.createElement('img');
-                img.src = meta.img; img.alt = meta.label; img.title = meta.label;
+                img.src = meta.img; img.alt = meta.fullName; img.title = meta.fullName;
                 img.style.setProperty('--pa', meta.accent);
                 img.onerror = () => img.replaceWith(mono);
                 panel.append(img);
