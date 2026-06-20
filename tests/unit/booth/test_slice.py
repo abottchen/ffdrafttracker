@@ -499,6 +499,22 @@ class TestNomineeLive:
         jerry = next(r for r in slc.bid_board if r.owner_id == 2)
         assert jerry.has_position_room is False
 
+    def test_bid_board_no_room_when_roster_full(self, tmp_path):
+        # Regression: a FULL roster has no room for ANY player, even a position
+        # it isn't maxed at. Rick is full (17 QBs); the nominee is a WR he has
+        # zero of, so the position-only check would say "room" -- but a full
+        # roster can't add anyone.
+        state = _nominee_state(player_id=31)  # nominee is a WR
+        state["teams"][0]["picks"] = [
+            {"pick_id": i, "player_id": 10, "owner_id": 1, "price": 1}
+            for i in range(1, 18)
+        ]
+        _write_data(tmp_path, state)
+        slc = build_slice(tmp_path)
+        rick = next(r for r in slc.bid_board if r.owner_id == 1)
+        assert rick.max_legal_bid is None  # full roster -> can't bid
+        assert rick.has_position_room is False  # ...so no room, despite 0 WRs
+
     def test_comparables_same_position_recent_first(self, tmp_path):
         # Draft a couple WRs first so there are same-position comparables.
         state = _nominee_state(player_id=31)

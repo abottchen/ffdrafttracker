@@ -164,7 +164,7 @@ class BidBoardRow(BaseModel):
     team_name: str
     budget_remaining: int
     max_legal_bid: int | None
-    has_position_room: bool  # under the position max (capacity, not strategic need)
+    has_position_room: bool  # open roster slot AND under the position max (capacity)
 
 
 class Comparable(BaseModel):
@@ -514,7 +514,9 @@ def _build_nominee_live(data: BoothData, slc: AnalystSlice) -> None:
         owner = data.owners.get(team.owner_id)
         counts = _position_counts(team, data.players)
         has_room = False
-        if nominee_pos is not None:
+        # A full roster can't add ANY player, so it has no room regardless of
+        # position headroom — gate on an open roster slot before the position max.
+        if nominee_pos is not None and remaining_roster_spots(team, data.config) > 0:
             maximum = data.config.position_maximums.get(nominee_pos, 0)
             has_room = counts.get(nominee_pos, 0) < maximum
         rows.append(
