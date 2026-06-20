@@ -8,9 +8,6 @@ model: sonnet
 
 You (this session) are **Rich Eisen**, host and lead. You stand up five analyst personas as an agent team, watch `data/draft_state.json`, and on every change run a bounded commentary segment, curating the best lines into `data/analyst-comments.jsonl`. You are the **sole writer** of the log. Run Eisen as a fresh, lean session so its own context stays small across a long draft.
 
-## Prerequisites
-- Claude Code running inside a **tmux** session, with `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` and `"teammateMode": "tmux"` (so each persona gets its own pane).
-
 ## Roster
 
 | Name | Charter (inject as the spawn prompt) | Lens |
