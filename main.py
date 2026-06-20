@@ -4,13 +4,14 @@ import io
 import logging
 from pathlib import Path
 
-from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
+from src.booth.log import read_comments
 from src.draft_rules import (
     max_bid,
     next_eligible_nominator,
@@ -73,6 +74,7 @@ OWNERS_FILE = DATA_DIR / "owners.json"
 CONFIG_FILE = DATA_DIR / "config.json"
 ACTION_LOG_FILE = DATA_DIR / "action_log.json"
 PLAYER_STATS_FILE = DATA_DIR / "player_stats.json"
+COMMENTS_FILE = DATA_DIR / "analyst-comments.jsonl"
 
 
 # Request/Response models
@@ -121,6 +123,33 @@ class TeamView(Team):
 class DraftStateResponse(DraftState):
     teams: list[TeamView] = Field(default_factory=list)
     up_next: int | None = None  # next distinct eligible nominator, or null
+
+
+class CommentResponse(BaseModel):
+    """One analyst-booth comment, tagged with its position in the log.
+
+    ``seq`` is the 1-based position of the (committed) line in the append-only
+    log; it is the cursor clients page against (``since`` / ``before``).
+    """
+
+    seq: int
+    ts: str
+    state_version: int
+    persona: str
+    text: str
+
+
+# Per-parameter OpenAPI descriptions for the comments feed, shared so the admin
+# and viewer specs stay identical.
+_COMMENTS_SINCE_DESC = (
+    "Return only comments with `seq` greater than this (live tail / forward polling)."
+)
+_COMMENTS_BEFORE_DESC = (
+    "Return only comments with `seq` less than this (older history / backward paging)."
+)
+_COMMENTS_LIMIT_DESC = (
+    "Cap the result to the most recent N comments of the matched window."
+)
 
 
 # Helper functions
@@ -425,6 +454,38 @@ async def _get_team_data(owner_id: int):
     }
 
 
+async def _get_comments_data(
+    since: int | None = None,
+    before: int | None = None,
+    limit: int | None = None,
+) -> list[CommentResponse]:
+    """Shared logic for the analyst-booth commentary feed.
+
+    Reads the append-only JSONL log (``read_comments`` already drops a torn tail
+    and skips invalid lines), assigns each committed record a 1-based ``seq``,
+    then applies the query-param window. ``seq`` is stable because the log is
+    only ever appended to, so it is a safe cursor (unlike the second-granular
+    ``ts``, which can collide). Returns newest-last (ascending ``seq``).
+    """
+    comments = [
+        CommentResponse(
+            seq=i,
+            ts=c.ts,
+            state_version=c.state_version,
+            persona=c.persona,
+            text=c.text,
+        )
+        for i, c in enumerate(read_comments(COMMENTS_FILE), start=1)
+    ]
+    if since is not None:
+        comments = [c for c in comments if c.seq > since]
+    if before is not None:
+        comments = [c for c in comments if c.seq < before]
+    if limit is not None:
+        comments = comments[-limit:]
+    return comments
+
+
 # Read-only API endpoints for main app (admin interface)
 @app.get("/api/v1/draft-state", response_model=DraftStateResponse)
 async def get_draft_state():
@@ -472,6 +533,16 @@ async def get_owner(owner_id: int):
 async def get_team(owner_id: int):
     """Get specific team roster with player details."""
     return await _get_team_data(owner_id)
+
+
+@app.get("/api/v1/comments", response_model=list[CommentResponse])
+async def get_comments(
+    since: int | None = Query(default=None, ge=0, description=_COMMENTS_SINCE_DESC),
+    before: int | None = Query(default=None, ge=0, description=_COMMENTS_BEFORE_DESC),
+    limit: int | None = Query(default=None, ge=1, description=_COMMENTS_LIMIT_DESC),
+):
+    """Analyst-booth commentary, ordered oldest-first (ascending `seq`)."""
+    return await _get_comments_data(since=since, before=before, limit=limit)
 
 
 @app.get("/api/v1/export/csv")
@@ -1223,6 +1294,16 @@ async def viewer_get_owner(owner_id: int):
 async def viewer_get_team(owner_id: int):
     """Get specific team roster with player details."""
     return await _get_team_data(owner_id)
+
+
+@viewer_app.get("/api/v1/comments", response_model=list[CommentResponse])
+async def viewer_get_comments(
+    since: int | None = Query(default=None, ge=0, description=_COMMENTS_SINCE_DESC),
+    before: int | None = Query(default=None, ge=0, description=_COMMENTS_BEFORE_DESC),
+    limit: int | None = Query(default=None, ge=1, description=_COMMENTS_LIMIT_DESC),
+):
+    """Read-only mirror of the admin commentary feed (see `get_comments`)."""
+    return await _get_comments_data(since=since, before=before, limit=limit)
 
 
 # Run the application

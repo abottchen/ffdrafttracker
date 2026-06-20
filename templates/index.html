@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap"
           rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/draft-set-admin.css?v=9">
+    <link rel="stylesheet" href="/static/css/draft-set-admin.css?v=10">
   </head>
   <body>
     <div id="stage">
@@ -116,10 +116,18 @@
         </div>
       </div>
       <div class="rail" id="rail"></div>
-      <!-- INTEL (reserved pane) — hidden until there's real commentary to show -->
-      <div class="intel" hidden>
-        <span class="badge">Draft Intel</span>
-        <span class="note">reserved — AI draft commentary</span>
+      <!-- INTEL / BOOTH chyron — hidden until the first comment arrives -->
+      <div class="intel"
+           id="intel"
+           hidden
+           role="button"
+           tabindex="0"
+           title="Click for the booth's last few calls"
+           onclick="toggleBooth()">
+        <span class="live-dot" aria-hidden="true"></span>
+        <span class="badge">Booth</span>
+        <div class="intel-feed" id="intel-feed"></div>
+        <span class="intel-chevron" aria-hidden="true">▾</span>
       </div>
       <!-- TICKER -->
       <div class="ticker is-hidden" id="ticker">
@@ -479,6 +487,87 @@
             if (ticker.classList.contains('is-hidden') && pill.style.display !== 'block') {
                 ticker.classList.remove('is-hidden');
             }
+        }
+
+        // ---- Analyst booth chyron (live commentary from /api/v1/comments) ----
+        // Per-persona identity: accent ring + headshot file (or initials fallback).
+        const BOOTH_PERSONAS = {
+            eisen:    { accent: '#E8A33D', slug: 'eisen',    name: 'Rich Eisen' },
+            kiper:    { accent: '#56C5D0', slug: 'kiper',    name: 'Mel Kiper Jr.' },
+            schefter: { accent: '#E2574C', slug: 'schefter', name: 'Adam Schefter' },
+            booger:   { accent: '#5BBF7B', slug: 'booger',   name: 'Booger McFarland' },
+            kimes:    { accent: '#9B8CEF', slug: 'kimes',    name: 'Mina Kimes' },
+            mcafee:   { accent: '#F0913E', slug: 'mcafee',   name: 'Pat McAfee' },
+        };
+        function boothPersona(name) {
+            const key = (name || '').toLowerCase().replace(/[^a-z]/g, '');
+            const m = BOOTH_PERSONAS[key];
+            const label = (name || '?').toUpperCase();
+            const initials = (name || '?').replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase() || '?';
+            return m
+                ? { label, fullName: m.name, accent: m.accent, img: `/static/img/personas/${m.slug}.jpg`, initials }
+                : { label, fullName: (name || ''), accent: 'var(--slate)', img: '', initials };  // unknown -> monogram
+        }
+        let boothBuffer = [];        // recent comments, ascending seq
+        let boothLastSeq = 0;        // watermark
+        let boothExpanded = false;
+
+        function boothRow(c) {
+            const meta = boothPersona(c.persona);
+            const row = document.createElement('div');
+            row.className = 'intel-row';
+            row.style.setProperty('--pa', meta.accent);
+            const mono = document.createElement('span');
+            mono.className = 'intel-mono';
+            mono.textContent = meta.initials;
+            if (meta.img) {
+                const img = document.createElement('img');
+                img.className = 'intel-av'; img.src = meta.img; img.alt = ''; img.title = meta.fullName;
+                img.onerror = () => { img.style.display = 'none'; mono.style.display = 'grid'; };
+                row.append(img, mono);
+            } else {
+                mono.style.display = 'grid';
+                row.append(mono);
+            }
+            const name = document.createElement('span');
+            name.className = 'intel-name'; name.textContent = meta.label;
+            const text = document.createElement('span');
+            text.className = 'intel-text'; text.textContent = c.text;
+            row.append(name, text);
+            return row;
+        }
+
+        function renderBooth() {
+            const feed = document.getElementById('intel-feed');
+            if (!feed) return;
+            // Oldest first, newest at the bottom — chronological top→down.
+            const rows = boothExpanded ? boothBuffer.slice(-5) : boothBuffer.slice(-1);
+            feed.replaceChildren(...rows.map(boothRow));
+        }
+
+        function toggleBooth() {
+            boothExpanded = !boothExpanded;
+            document.getElementById('intel').classList.toggle('expanded', boothExpanded);
+            renderBooth();
+        }
+
+        async function pollBooth() {
+            try {
+                // First load seeds the buffer with the recent tail; after that, only deltas.
+                const q = boothLastSeq ? `?since=${boothLastSeq}` : '?limit=8';
+                const fresh = await (await fetch(`/api/v1/comments${q}`)).json();
+                if (!Array.isArray(fresh) || fresh.length === 0) return;
+                boothBuffer.push(...fresh);
+                if (boothBuffer.length > 12) boothBuffer = boothBuffer.slice(-12);
+                boothLastSeq = boothBuffer[boothBuffer.length - 1].seq;
+                const intel = document.getElementById('intel');
+                intel.hidden = false;
+                renderBooth();
+                // Fresh-line glow, then settle.
+                intel.classList.remove('flash');
+                void intel.offsetWidth;   // restart the animation
+                intel.classList.add('flash');
+            } catch (e) { /* booth may not be running; stay quiet */ }
         }
 
         function setupPlayerSearch() {
@@ -1384,8 +1473,15 @@
         });
         document.querySelectorAll('.hero').forEach(hero => heroSizer.observe(hero));
 
+        // Keyboard access for the booth chyron (role="button").
+        document.getElementById('intel').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleBooth(); }
+        });
+
         loadData();
         setInterval(refreshData, 30000);
+        pollBooth();
+        setInterval(pollBooth, 5000);
     </script>
   </body>
 </html>
