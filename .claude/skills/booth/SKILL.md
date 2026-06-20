@@ -28,11 +28,12 @@ Collect the ready acks, then tell the user the booth is live.
 
 ## 2 — Watch loop
 
-Arm a `Monitor` that polls the booth **tick** every ~1s. The tick is `<event_key>#<lull_phase>`, produced by `src.booth.watch --tick`. The **event-key** half (`<nominee_player_id|none>:<max_pick_id>`) changes only on a *real* event — a new nominee or a completed pick; bids bump `version`/`current_bid` but **not** the event key, so a bidding war never triggers a segment. The **phase** half tracks dead air: `0` (live), `1`/`2`/`3` (retrospective musing stages at ~2/4/6 min), or `ee1`/`ee2`/`ee3…` (the long-lull easter egg at ~15/30/45 min). The lull clock is `now − mtime(draft_state.json)`, which the booth's own commentary never resets.
+Arm a `Monitor` that polls the booth **tick** every ~1s. The tick is `<event_key>#<lull_phase>`, produced by `src.booth.watch --tick`. The **event-key** half (`<nominee_player_id|none>:<max_pick_id>`) changes only on a *real* event — a new nominee or a completed pick; bids bump `version`/`current_bid` but **not** the event key, so a bidding war never triggers a segment. The **phase** half tracks dead air: `0` (live), `1`/`2`/`3` (retrospective musing stages at ~2/4/6 min), or `ee1`/`ee2`/`ee3…` (the long-lull easter egg at ~15/30/45 min). The lull clock is `now − max(mtime(draft_state.json), booth_start)`, which the booth's own commentary never resets — and `--since "$start"` floors it at the booth's arm time, so starting up on an already-stale `draft_state.json` doesn't inherit dead air the booth never watched (without it, a fresh start would jump straight to the easter egg and skip the normal musings).
 
 ```bash
 cd <project root>
-tick() { .venv/bin/python -m src.booth.watch --tick 2>/dev/null; }
+start=$(date +%s)
+tick() { .venv/bin/python -m src.booth.watch --tick --since "$start" 2>/dev/null; }
 prev=$(tick); echo "booth watch armed — $prev"
 while true; do
   cur=$(tick)

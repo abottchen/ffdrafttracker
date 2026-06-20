@@ -1,6 +1,6 @@
 """Tests for the booth watch event-key (bid-insensitive event detection)."""
 
-from src.booth.watch import booth_tick, event_key, lull_phase
+from src.booth.watch import booth_tick, effective_dead, event_key, lull_phase
 from src.models.draft_pick import DraftPick
 from src.models.draft_state import DraftState
 from src.models.nominated import Nominated
@@ -101,3 +101,23 @@ class TestBoothTick:
     def test_tick_phase_zero_when_short_lull(self):
         state = _stocked_state()
         assert booth_tick(state, dead_seconds=5) == f"{event_key(state)}#0"
+
+    def test_tick_forwards_thresholds_to_lull_phase(self):
+        state = _stocked_state()
+        # dead=200: default idle 120 -> bucket 1; a tighter idle 60 -> 200//60=3.
+        assert booth_tick(state, dead_seconds=200).endswith("#1")
+        assert booth_tick(state, dead_seconds=200, idle_threshold=60).endswith("#3")
+
+
+class TestEffectiveDead:
+    def test_no_start_is_now_minus_mtime(self):
+        assert effective_dead(1000.0, 700.0) == 300.0
+
+    def test_floors_at_start_for_stale_file(self):
+        # File last touched at 100 (long before the booth armed at 900): measure
+        # dead air from the booth's start, not the pre-start staleness.
+        assert effective_dead(1000.0, 100.0, started_at=900.0) == 100.0
+
+    def test_recent_activity_after_start_wins(self):
+        # A pick at 950 (after the 900 arm) -> measure from the pick.
+        assert effective_dead(1000.0, 950.0, started_at=900.0) == 50.0

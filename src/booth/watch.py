@@ -9,9 +9,15 @@ alone thrashes during a bidding war and no segment ever finishes.
 latest pick changes, so the watch loop stays quiet through a bidding war and fires
 once when the nominee goes up and again when the pick completes.
 
-Run as a module to print the current event key for the watch loop::
+Run as a module to print the current event key — or, with ``--tick``, the full
+booth tick (event key + lull phase) — for the watch loop::
 
-    python -m src.booth.watch [--data-dir DIR]   # -> "<nominee_id|none>:<max_pick_id>"
+    python -m src.booth.watch [--data-dir DIR]  # -> "<nominee_id|none>:<max_pick_id>"
+    python -m src.booth.watch --tick [--since EPOCH]  # -> "<event_key>#<lull_phase>"
+
+``--since`` is the booth's arm time (epoch seconds); it floors the lull clock so
+a booth started on an already-stale ``draft_state.json`` doesn't inherit dead air
+it never watched.
 """
 
 from __future__ import annotations
@@ -76,13 +82,42 @@ def lull_phase(
     return str(min(cap, int(dead_seconds // idle_threshold)))
 
 
-def booth_tick(state: DraftState, dead_seconds: float, **kwargs: int) -> str:
+def booth_tick(
+    state: DraftState,
+    dead_seconds: float,
+    *,
+    idle_threshold: int = DEFAULT_IDLE_THRESHOLD,
+    easter_threshold: int = DEFAULT_EASTER_THRESHOLD,
+    cap: int = DEFAULT_MUSING_CAP,
+) -> str:
     """The watch signal: ``"<event_key>#<lull_phase>"``.
 
     The event-key half changes on a real draft event; the phase half changes as
-    a lull deepens. ``kwargs`` are forwarded to :func:`lull_phase` (thresholds).
+    a lull deepens. The threshold args are forwarded to :func:`lull_phase`.
     """
-    return f"{event_key(state)}#{lull_phase(state, dead_seconds, **kwargs)}"
+    phase = lull_phase(
+        state,
+        dead_seconds,
+        idle_threshold=idle_threshold,
+        easter_threshold=easter_threshold,
+        cap=cap,
+    )
+    return f"{event_key(state)}#{phase}"
+
+
+def effective_dead(
+    now: float, state_mtime: float, started_at: float | None = None
+) -> float:
+    """Lull-clock idle seconds: ``now - max(state_mtime, started_at)``.
+
+    ``state_mtime`` is the mtime of ``draft_state.json`` (the last real draft
+    event). Flooring at ``started_at`` — the booth's arm time — keeps a booth
+    started on an already-stale file from inheriting dead air it never watched;
+    without it, a fresh start could jump straight into the easter-egg band and
+    skip the normal musing stages entirely.
+    """
+    floor = state_mtime if started_at is None else max(state_mtime, started_at)
+    return now - floor
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -97,12 +132,21 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Print the booth tick (<event_key>#<lull_phase>) for lull detection.",
     )
+    parser.add_argument(
+        "--since",
+        type=float,
+        default=None,
+        help=(
+            "Booth arm time (epoch seconds). Floors the lull clock so a stale "
+            "draft_state.json at startup doesn't inherit pre-start dead air."
+        ),
+    )
     args = parser.parse_args(argv)
     state_path = Path(args.data_dir) / "draft_state.json"
     state = DraftState.load_from_file(state_path)
     if args.tick:
-        dead_seconds = time.time() - state_path.stat().st_mtime
-        print(booth_tick(state, dead_seconds))
+        dead = effective_dead(time.time(), state_path.stat().st_mtime, args.since)
+        print(booth_tick(state, dead))
     else:
         print(event_key(state))
     return 0
