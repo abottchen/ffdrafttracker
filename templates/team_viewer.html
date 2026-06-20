@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap"
           rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/draft-set-viewer.css">
+    <link rel="stylesheet" href="/static/css/draft-set-viewer.css?v=3">
   </head>
   <body>
     <div id="app">
@@ -117,6 +117,22 @@
       <div class="view" id="view-analysis">
         <div class="analysis-grid">
           <div class="insights" id="insights"></div>
+          <div class="rcard booth-card">
+            <div class="card-head">
+              <h3>The Booth</h3>
+              <div class="ch-right">
+                <span class="onair"><span class="onair-dot" aria-hidden="true"></span>On Air</span>
+              </div>
+            </div>
+            <div class="booth-panel" id="boothPanel" aria-hidden="true"></div>
+            <div class="booth-scroll" id="boothScroll">
+              <div class="booth-older" id="boothOlder" hidden>loading older…</div>
+              <div class="booth-log" id="boothLog">
+                <div class="booth-empty" id="boothEmpty">Waiting for the booth to call the draft…</div>
+              </div>
+            </div>
+            <button class="booth-jump" id="boothJump" type="button" hidden onclick="boothJumpToLive()">↓ Jump to live</button>
+          </div>
           <div class="rcard market-card">
             <div class="card-head">
               <h3>Position Market</h3>
@@ -351,6 +367,7 @@
                 showError('Connection lost — retrying…');
             }
             try { await loadAvailable(); } catch (e) {}
+            boothPollLive();   // commentary feed (independent of draft-state)
         }
 
         async function init() {
@@ -367,6 +384,8 @@
             renderChrome(); renderTeamsView();
             setupTargetBoard();
             setupStatusControls();
+            setupBooth();
+            boothPollLive();
             setInterval(pollState, 5000);
         }
         function maxPickId(ds){ let m = 0; ds.teams.forEach(t => t.picks.forEach(p => { if (p.pick_id > m) m = p.pick_id; })); return m; }
@@ -451,10 +470,167 @@
             });
             document.getElementById('teamstrip').style.display = v === 'teams' ? 'flex' : 'none';
             if (v === 'status') renderStatusView();
-            else if (v === 'analysis') renderAnalysisView();
+            else if (v === 'analysis') { renderAnalysisView(); boothOnShow(); }
             else renderTeamsView();
         }
         function activeViewId() { const a = document.querySelector('.view.active'); return a ? a.id : 'view-teams'; }
+
+        // ---- The Booth: live analyst commentary (/api/v1/comments) ----
+        // Per-persona identity: accent ring + headshot file (or initials fallback).
+        const BOOTH_PERSONAS = {
+            eisen:    { accent: '#E8A33D', slug: 'eisen' },
+            kiper:    { accent: '#56C5D0', slug: 'kiper' },
+            schefter: { accent: '#E2574C', slug: 'schefter' },
+            booger:   { accent: '#5BBF7B', slug: 'booger' },
+            kimes:    { accent: '#9B8CEF', slug: 'kimes' },
+            mcafee:   { accent: '#F0913E', slug: 'mcafee' },
+        };
+        const BOOTH_LINEUP = ['eisen', 'kiper', 'schefter', 'booger', 'kimes', 'mcafee'];
+        function boothPersona(name) {
+            const key = (name || '').toLowerCase().replace(/[^a-z]/g, '');
+            const m = BOOTH_PERSONAS[key];
+            const label = (name || '?').toUpperCase();
+            const initials = (name || '?').replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase() || '?';
+            return m
+                ? { key, label, accent: m.accent, img: `/static/img/personas/${m.slug}.jpg`, initials }
+                : { key, label, accent: 'var(--slate)', img: '', initials };
+        }
+        let boothMaxSeq = 0;          // newest seq shown (live-tail watermark)
+        let boothMinSeq = null;       // oldest seq shown (backward-paging cursor)
+        let boothPinned = true;       // user is parked at the live edge
+        let boothLoadingOlder = false;
+        let boothMoreOlder = true;
+        let boothStarted = false;
+
+        function boothFmtTime(ts) {
+            try { return new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); }
+            catch (e) { return ''; }
+        }
+        function boothMsgEl(c) {
+            const meta = boothPersona(c.persona);
+            const row = document.createElement('div');
+            row.className = 'booth-msg' + (meta.key === 'eisen' ? ' host' : '');
+            row.style.setProperty('--pa', meta.accent);
+            const mono = document.createElement('span');
+            mono.className = 'mono'; mono.textContent = meta.initials;
+            if (meta.img) {
+                const img = document.createElement('img');
+                img.className = 'av'; img.src = meta.img; img.alt = '';
+                img.onerror = () => { img.style.display = 'none'; mono.style.display = 'grid'; };
+                row.append(img, mono);
+            } else {
+                mono.style.display = 'grid'; row.append(mono);
+            }
+            const body = document.createElement('div'); body.className = 'body';
+            const meta2 = document.createElement('div'); meta2.className = 'meta';
+            const who = document.createElement('span'); who.className = 'who'; who.textContent = meta.label;
+            const when = document.createElement('span'); when.className = 'when'; when.textContent = boothFmtTime(c.ts);
+            meta2.append(who, when);
+            const say = document.createElement('div'); say.className = 'say'; say.textContent = c.text;
+            body.append(meta2, say); row.append(body);
+            return row;
+        }
+        function renderBoothPanel() {
+            const panel = document.getElementById('boothPanel');
+            if (!panel || panel.childElementCount) return;   // build once
+            BOOTH_LINEUP.forEach(slug => {
+                const meta = boothPersona(slug);
+                const mono = document.createElement('span');
+                mono.className = 'pmono'; mono.textContent = meta.initials;
+                mono.style.setProperty('--pa', meta.accent);
+                const img = document.createElement('img');
+                img.src = meta.img; img.alt = meta.label; img.title = meta.label;
+                img.style.setProperty('--pa', meta.accent);
+                img.onerror = () => img.replaceWith(mono);
+                panel.append(img);
+            });
+        }
+        function boothAtBottom() {
+            const s = document.getElementById('boothScroll');
+            return s.scrollHeight - s.scrollTop - s.clientHeight < 50;
+        }
+        function boothScrollToBottom() {
+            const s = document.getElementById('boothScroll'); s.scrollTop = s.scrollHeight;
+        }
+        function boothJumpToLive() {
+            boothPinned = true; boothScrollToBottom();
+            document.getElementById('boothJump').hidden = true;
+        }
+        function boothClearEmpty() {
+            const e = document.getElementById('boothEmpty'); if (e) e.remove();
+        }
+        async function boothLoadOlder() {
+            if (boothLoadingOlder || !boothMoreOlder || boothMinSeq === null || boothMinSeq <= 1) return;
+            boothLoadingOlder = true;
+            const older = document.getElementById('boothOlder'); older.hidden = false;
+            try {
+                const fresh = await (await fetch(`${API_BASE}/comments?before=${boothMinSeq}&limit=50`)).json();
+                if (Array.isArray(fresh) && fresh.length) {
+                    const log = document.getElementById('boothLog');
+                    const s = document.getElementById('boothScroll');
+                    const prevH = s.scrollHeight;
+                    const frag = document.createDocumentFragment();
+                    fresh.forEach(c => frag.append(boothMsgEl(c)));
+                    log.prepend(frag);
+                    boothMinSeq = fresh[0].seq;
+                    s.scrollTop += s.scrollHeight - prevH;   // anchor the viewport
+                    if (fresh.length < 50 || boothMinSeq <= 1) boothMoreOlder = false;
+                } else { boothMoreOlder = false; }
+            } catch (e) { /* ignore */ }
+            older.hidden = true; boothLoadingOlder = false;
+        }
+        async function boothPollLive() {
+            try {
+                const q = boothStarted ? `?since=${boothMaxSeq}` : '?limit=50';
+                const fresh = await (await fetch(`${API_BASE}/comments${q}`)).json();
+                if (!Array.isArray(fresh)) return;
+                const log = document.getElementById('boothLog');
+                if (!boothStarted) {
+                    boothStarted = true;
+                    renderBoothPanel();
+                    if (fresh.length) {
+                        boothClearEmpty();
+                        const frag = document.createDocumentFragment();
+                        fresh.forEach(c => frag.append(boothMsgEl(c)));
+                        log.append(frag);
+                        boothMinSeq = fresh[0].seq;
+                        boothMaxSeq = fresh[fresh.length - 1].seq;
+                        if (fresh.length < 50) boothMoreOlder = boothMinSeq > 1;
+                        if (activeViewId() === 'view-analysis') boothScrollToBottom();
+                    }
+                    return;
+                }
+                if (fresh.length) {
+                    boothClearEmpty();
+                    const wasBottom = boothAtBottom();
+                    const frag = document.createDocumentFragment();
+                    fresh.forEach(c => frag.append(boothMsgEl(c)));
+                    log.append(frag);
+                    boothMaxSeq = fresh[fresh.length - 1].seq;
+                    if (boothMinSeq === null) boothMinSeq = fresh[0].seq;
+                    if (boothPinned && (wasBottom || activeViewId() !== 'view-analysis')) boothScrollToBottom();
+                    else document.getElementById('boothJump').hidden = false;
+                }
+            } catch (e) { /* booth may not be running; stay quiet */ }
+        }
+        function boothOnShow() {
+            renderBoothPanel();
+            if (boothPinned) boothScrollToBottom();
+        }
+        function setupBooth() {
+            const s = document.getElementById('boothScroll');
+            if (!s) return;
+            s.addEventListener('scroll', () => {
+                if (s.scrollTop < 60) boothLoadOlder();
+                if (boothAtBottom()) {
+                    boothPinned = true;
+                    document.getElementById('boothJump').hidden = true;
+                } else {
+                    boothPinned = false;
+                }
+            });
+        }
+
         function renderTeamsView() {
             if (!TEAMS.length) return;
             renderIdentity();

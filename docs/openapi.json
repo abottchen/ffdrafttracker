@@ -275,6 +275,92 @@
         }
       }
     },
+    "/api/v1/comments": {
+      "get": {
+        "summary": "Get Comments",
+        "description": "Get analyst-booth commentary, ordered oldest-first (ascending ``seq``).\n\n- ``since``: only comments with ``seq > since`` (live tail / forward).\n- ``before``: only comments with ``seq < before`` (history / backward paging).\n- ``limit``: cap to the most recent N of the matched window.",
+        "operationId": "get_comments_api_v1_comments_get",
+        "parameters": [
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CommentResponse"
+                  },
+                  "title": "Response Get Comments Api V1 Comments Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/export/csv": {
       "get": {
         "summary": "Export Draft Csv",
@@ -617,6 +703,40 @@
           "expected_version"
         ],
         "title": "BidRequest"
+      },
+      "CommentResponse": {
+        "properties": {
+          "seq": {
+            "type": "integer",
+            "title": "Seq"
+          },
+          "ts": {
+            "type": "string",
+            "title": "Ts"
+          },
+          "state_version": {
+            "type": "integer",
+            "title": "State Version"
+          },
+          "persona": {
+            "type": "string",
+            "title": "Persona"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "seq",
+          "ts",
+          "state_version",
+          "persona",
+          "text"
+        ],
+        "title": "CommentResponse",
+        "description": "One analyst-booth comment, tagged with its position in the log.\n\n``seq`` is the 1-based position of the (committed) line in the append-only\nlog; it is the cursor clients page against (``since`` / ``before``)."
       },
       "Configuration": {
         "properties": {

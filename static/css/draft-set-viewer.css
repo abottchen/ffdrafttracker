@@ -374,9 +374,10 @@ body{
   grid-template-columns:1.45fr 1fr;
   /* Definite row heights, not auto: fixed-aspect SVG cards fill their band instead of being
      stretched by a taller neighbour, and list cards (bargain/matrix/top-buys) scroll internally. */
-  grid-template-rows:auto clamp(300px,42vh,384px) clamp(300px,42vh,384px) clamp(300px,40vh,430px) clamp(220px,28vh,300px);
+  grid-template-rows:auto clamp(300px,38vh,460px) clamp(300px,42vh,384px) clamp(300px,42vh,384px) clamp(300px,40vh,430px) clamp(220px,28vh,300px);
   grid-template-areas:
     "insights insights"
+    "booth    booth"
     "market   bargain"
     "buying   matrix"
     "topbuys  topbuys"
@@ -505,6 +506,39 @@ body{
 /* budget-dump marker: hollow ring on the Position Market beeswarm, amber note in its tooltip */
 .an-dump{stroke-width:1.7;opacity:.95;}
 #ptip .tt-ctx.dump{color:var(--electric);border-color:color-mix(in srgb,var(--electric) 40%,var(--line));}
+
+/* ---------- THE BOOTH (live analyst commentary, analysis tab) ----------
+   A broadcast-panel transcript: headshot lineup as the hero, then a
+   chat-style scrollable log (oldest top, newest bottom). */
+.booth-card{grid-area:booth;position:relative;}
+.onair{display:inline-flex;align-items:center;gap:6px;font-family:'Saira Condensed';font-weight:800;
+  font-size:clamp(10px,.8vw,12px);letter-spacing:1.5px;text-transform:uppercase;color:var(--live);white-space:nowrap;}
+.onair-dot{width:8px;height:8px;border-radius:50%;background:var(--live);animation:boothpulse 2.4s ease-out infinite;}
+@keyframes boothpulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--live) 60%,transparent);}70%{box-shadow:0 0 0 7px transparent;}100%{box-shadow:0 0 0 0 transparent;}}
+.booth-panel{display:flex;gap:6px;padding:0 0 10px;margin-bottom:8px;border-bottom:1px solid var(--line);flex-shrink:0;}
+.booth-panel img,.booth-panel .pmono{width:clamp(28px,2.4vw,36px);height:clamp(28px,2.4vw,36px);border-radius:50%;
+  border:2px solid var(--pa,var(--line2));object-fit:cover;object-position:center 25%;background:var(--deep2);flex-shrink:0;}
+.booth-panel .pmono{display:grid;place-items:center;color:var(--pa);font-family:'Saira Condensed';font-weight:800;font-size:13px;}
+.booth-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--line2) transparent;
+  display:flex;flex-direction:column;}
+.booth-older{align-self:center;font-family:'Saira Condensed';font-weight:700;font-size:11px;letter-spacing:1px;
+  text-transform:uppercase;color:var(--slate);padding:6px 0;flex-shrink:0;}
+.booth-log{display:flex;flex-direction:column;gap:11px;}
+.booth-empty{color:var(--slate);font-family:'Inter';font-style:italic;font-size:13px;padding:18px 4px;text-align:center;}
+.booth-msg{display:grid;grid-template-columns:clamp(30px,2.6vw,38px) 1fr;gap:10px;align-items:start;--pa:var(--electric);}
+.booth-msg .av,.booth-msg .mono{width:clamp(30px,2.6vw,38px);height:clamp(30px,2.6vw,38px);border-radius:50%;
+  border:2px solid var(--pa);object-fit:cover;object-position:center 25%;background:var(--deep2);}
+.booth-msg .mono{display:none;place-items:center;color:var(--pa);font-family:'Saira Condensed';font-weight:800;font-size:14px;}
+.booth-msg .body{min-width:0;}
+.booth-msg .meta{display:flex;align-items:baseline;gap:8px;margin-bottom:1px;}
+.booth-msg .who{font-family:'Saira Condensed';font-weight:800;font-size:clamp(12px,1vw,14px);letter-spacing:1px;text-transform:uppercase;color:var(--pa);}
+.booth-msg .when{font-family:'Inter';font-size:10.5px;color:var(--slate);}
+.booth-msg .say{font-family:'Inter';font-size:clamp(12px,.92vw,13.5px);line-height:1.45;color:var(--ice);overflow-wrap:anywhere;}
+.booth-msg.host{background:linear-gradient(90deg,color-mix(in srgb,var(--electric) 9%,transparent),transparent);
+  border-radius:10px;padding:6px 8px;margin:-6px -8px;}
+.booth-jump{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);font-family:'Saira Condensed';font-weight:800;
+  font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--accent-ink,#1A1206);background:var(--electric);
+  border:none;border-radius:20px;padding:6px 14px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.4);}
 
 /* Respect prefers-reduced-motion (plan §2 global constraint) — disable
    ambient/looping animations and shorten transitions for users who request it. */

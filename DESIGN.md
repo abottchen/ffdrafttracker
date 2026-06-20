@@ -48,6 +48,7 @@ A local fantasy football auction draft tracking tool with a web-based interface 
 - Player search with autocomplete dropdown
 - Team bidding interfaces with budget validation
 - Live roster updates with player images from ESPN
+- Analyst booth chyron (one-line latest call, click to expand the last few), polled from `/api/v1/comments`
 
 #### Team Viewer Interface (Port 8176)
 **Technology Stack:** HTML/CSS/JavaScript with vanilla JS  
@@ -65,6 +66,7 @@ A local fantasy football auction draft tracking tool with a web-based interface 
 - Responsive design optimized for 17-player rosters
 - Uses relative URLs for cross-network compatibility
 - Fetches all data from local read-only API endpoints (same port)
+- Analyst booth transcript in the Draft Analysis tab: scrollable chat-style history with persona headshots, live tail, and infinite scroll for older calls
 
 ### Backend
 **Framework:** FastAPI with Pydantic models  
@@ -153,6 +155,15 @@ This allows frontend to handle errors appropriately:
 - Optional enhanced player data with 2024 season statistics and 2025 bye weeks
 - Graceful degradation: application functions fully without stats data
 - Stats fetched from `/api/v1/player/stats` endpoint with defensive error handling
+
+**Analyst Commentary Feed:**
+- The analyst booth appends commentary to `data/analyst-comments.jsonl` (JSON Lines, one comment per line); `GET /api/v1/comments` exposes it to both the admin and viewer pages (mirrored on both ports).
+- It is a collection resource filtered/paginated via **query params** (the RESTful way to slice a collection), not a `/{timestamp}` path:
+  - `since=<seq>` — comments with `seq > since` (live tail / forward polling)
+  - `before=<seq>` — comments with `seq < before` (history / backward paging)
+  - `limit=<n>` — cap to the most recent N of the matched window
+- Each comment carries a 1-based `seq` (its committed position in the log), which is the cursor clients page against. `seq` is stable because the log is append-only, and is preferred over the second-granular `ts`, which can collide. A torn (un-terminated) trailing line is dropped and never consumes a `seq`.
+- Response is a bare array ordered oldest-first (ascending `seq`); the file is re-read per request, consistent with the stateless design.
 
 ## File Structure
 ```
