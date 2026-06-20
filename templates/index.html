@@ -535,8 +535,8 @@
         function renderBooth() {
             const feed = document.getElementById('intel-feed');
             if (!feed) return;
+            // Oldest first, newest at the bottom — chronological top→down.
             const rows = boothExpanded ? boothBuffer.slice(-5) : boothBuffer.slice(-1);
-            rows.reverse();   // newest on top
             feed.replaceChildren(...rows.map(boothRow));
         }
 

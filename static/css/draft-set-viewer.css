@@ -517,7 +517,9 @@ body{
 @keyframes boothpulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--live) 60%,transparent);}70%{box-shadow:0 0 0 7px transparent;}100%{box-shadow:0 0 0 0 transparent;}}
 .booth-panel{display:flex;gap:6px;padding:0 0 10px;margin-bottom:8px;border-bottom:1px solid var(--line);flex-shrink:0;}
 .booth-panel img,.booth-panel .pmono{width:clamp(28px,2.4vw,36px);height:clamp(28px,2.4vw,36px);border-radius:50%;
-  border:2px solid var(--pa,var(--line2));object-fit:cover;object-position:center 25%;background:var(--deep2);flex-shrink:0;}
+  border:2px solid var(--pa,var(--line2));object-fit:cover;object-position:center 25%;background:var(--deep2);flex-shrink:0;
+  cursor:pointer;position:relative;z-index:1;transform-origin:center top;transition:transform .16s ease, box-shadow .16s ease;}
+.booth-panel img:hover,.booth-panel .pmono:hover{transform:scale(2.3);z-index:6;box-shadow:0 12px 30px rgba(0,0,0,.6);}
 .booth-panel .pmono{display:grid;place-items:center;color:var(--pa);font-family:'Saira Condensed';font-weight:800;font-size:13px;}
 .booth-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--line2) transparent;
   display:flex;flex-direction:column;}
@@ -527,7 +529,9 @@ body{
 .booth-empty{color:var(--slate);font-family:'Inter';font-style:italic;font-size:13px;padding:18px 4px;text-align:center;}
 .booth-msg{display:grid;grid-template-columns:clamp(30px,2.6vw,38px) 1fr;gap:10px;align-items:start;--pa:var(--electric);}
 .booth-msg .av,.booth-msg .mono{width:clamp(30px,2.6vw,38px);height:clamp(30px,2.6vw,38px);border-radius:50%;
-  border:2px solid var(--pa);object-fit:cover;object-position:center 25%;background:var(--deep2);}
+  border:2px solid var(--pa);object-fit:cover;object-position:center 25%;background:var(--deep2);
+  cursor:pointer;position:relative;z-index:1;transform-origin:left center;transition:transform .16s ease, box-shadow .16s ease;}
+.booth-msg .av:hover,.booth-msg .mono:hover{transform:scale(2.1);z-index:6;box-shadow:0 8px 22px rgba(0,0,0,.55);}
 .booth-msg .mono{display:none;place-items:center;color:var(--pa);font-family:'Saira Condensed';font-weight:800;font-size:14px;}
 .booth-msg .body{min-width:0;}
 .booth-msg .meta{display:flex;align-items:baseline;gap:8px;margin-bottom:1px;}
