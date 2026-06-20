@@ -28,20 +28,30 @@ Collect the ready acks, then tell the user the booth is live.
 
 ## 2 — Watch loop
 
-Arm a `Monitor` that polls the booth **event key** every ~1s and emits only on a *real* event — a new nominee or a completed pick. Bids bump `version` (and `current_bid`) but **not** the event key, so a bidding war never triggers a segment. The key is `<nominee_player_id|none>:<max_pick_id>`, produced by `src.booth.watch`:
+Arm a `Monitor` that polls the booth **tick** every ~1s. The tick is `<event_key>#<lull_phase>`, produced by `src.booth.watch --tick`. The **event-key** half (`<nominee_player_id|none>:<max_pick_id>`) changes only on a *real* event — a new nominee or a completed pick; bids bump `version`/`current_bid` but **not** the event key, so a bidding war never triggers a segment. The **phase** half tracks dead air: `0` (live), `1`/`2`/`3` (retrospective musing stages at ~2/4/6 min), or `ee1`/`ee2`/`ee3…` (the long-lull easter egg at ~15/30/45 min). The lull clock is `now − mtime(draft_state.json)`, which the booth's own commentary never resets.
 
 ```bash
 cd <project root>
-key() { .venv/bin/python -m src.booth.watch 2>/dev/null; }
-prev=$(key); echo "booth watch armed — event $prev"
+tick() { .venv/bin/python -m src.booth.watch --tick 2>/dev/null; }
+prev=$(tick); echo "booth watch armed — $prev"
 while true; do
-  cur=$(key)
-  [ -n "$cur" ] && [ "$cur" != "$prev" ] && { echo "DRAFT EVENT: $prev -> $cur"; prev="$cur"; }
+  cur=$(tick)
+  if [ -n "$cur" ] && [ "$cur" != "$prev" ]; then
+    ev_prev="${prev%%#*}"; ev_cur="${cur%%#*}"; ph_cur="${cur#*#}"
+    if [ "$ev_cur" != "$ev_prev" ]; then
+      echo "DRAFT EVENT: $prev -> $cur"      # new nominee or completed pick
+    elif [ "${ph_cur#ee}" != "$ph_cur" ]; then
+      echo "EASTER EGG: $cur"                # long-lull off-topic bit
+    else
+      echo "MUSING: $cur"                    # retrospective musing stage
+    fi
+    prev="$cur"
+  fi
   sleep 1
 done
 ```
 
-Each emitted `DRAFT EVENT` drives one segment. On an event:
+Each `DRAFT EVENT` drives one normal **segment** (§3); each `MUSING` or `EASTER EGG` drives an **idle segment** (§4). On a `DRAFT EVENT`:
 1. Record `cycle_key` = the new event key (the abort guard for this segment).
 2. Build the slice: `uv run python -m src.booth.slice --recent-log 8` — a compact, grounded **brief** (mode auto-detected: NO-NOMINEE vs NOMINEE-LIVE) plus recent log lines for callbacks. (`--json` gives the structured slice.)
 3. Run the **segment** (below).
@@ -60,7 +70,31 @@ Collect takes, each behind a **~15–20s timeout** — a no-show just sits the p
 
 **End the segment** when any of: the event key no longer equals `cycle_key` (abort immediately — discard in-flight takes, ignore late replies, return to the watch loop); the turn cap is hit; or nothing's interesting (silence is fine). If an exchange is mid-thread at the cap/timeout, **wrap it with one logged host line** rather than leaving a dangling reply.
 
-## 4 — The gate (run before every log line)
+## 4 — Idle musings (lulls)
+
+When the draft goes quiet, the booth muses on the draft so far instead of sitting mute. Two kinds, both driven off the tick's phase half.
+
+**Retrospective musings** (`MUSING`, phases 1/2/3 at ~2/4/6 min of dead air):
+
+1. Build the retrospective slice: `uv run python -m src.booth.slice --retrospective --recent-log 8`. It carries a draft-wide brief: STATE OF THE DRAFT (every team by cash on hand), a VALUE BOARD (price vs. production — *you/the personas* judge steal vs. overpay, the slice never does), RECENT PICK POSITIONS (for spotting a run), and BEST AVAILABLE / DEPTH.
+2. **Anti-abrupt guard:** if the newest `RECENT COMMENTARY` line is under ~90s old, skip this step — it'll re-fire on the next boundary. Never drop a musing on top of a segment that just ran long.
+3. Pick the **juiciest topic flavor not used yet this lull**, and not a repeat of a recent musing in the log. Track which flavors you've used since the last DRAFT EVENT (reset the set on every DRAFT EVENT):
+   - **Money & roster** — who's hoarding cash, who's tapped out, who's boxed in by max-bid math → Schefter or Kimes.
+   - **Value** — best production-per-dollar vs. priciest-for-the-production on the value board → Kimes.
+   - **Market** — a positional run in RECENT PICK POSITIONS, or a scarcity cliff in BEST AVAILABLE / DEPTH → Kiper.
+   - **Callbacks** — revisit an earlier take from RECENT COMMENTARY; hold someone to a prediction; a Booger timeline bit → the original take's author + a foil.
+4. Pose the topic to the **1–2 personas that fit the flavor** via `SendMessage` (brief + the ask). Allow **one reaction round** — relay the logged line to one other persona (Kimes is the natural reality check). A **mini-debate: 2–3 logged lines total.** Gate every line (§5) and log the survivors (§6).
+
+**The long-lull easter egg** (`EASTER EGG`, phases ee1/ee2/ee3… at ~15/30/45 min):
+
+The draft has stalled. Eisen opens by wondering aloud where everyone has gone, and the **whole panel** weighs in on what happened to the owners. This is the one musing that runs as a fuller exchange — **2–3 reaction turns** where the panel builds on or disagrees with each other's theories (Booger's wild guess, Kimes's deadpan counter, McAfee running with it), up to the normal 4–5 logged-turn cap.
+
+- **It's off-topic and exempt from the player-facts gate** — it's pure speculation about absent owners, so there are no draft facts to verify. The **frame-floor still applies**: stay in character and invent no draft *results* (no fake picks/prices) — the bit is about the owners' whereabouts, not the board.
+- **Each ee step escalates** the absurdity, and ideally calls back the previous theory from RECENT COMMENTARY so it builds rather than repeats.
+
+**Ending an idle segment / abort.** End when the turn cap is hit or nothing's interesting (silence is fine). If a `DRAFT EVENT` lands mid-musing (`cycle_key`/event-key half changed), abort the musing and return to the segment flow — **but** if you've already logged **at least one** line this musing, first log a single Eisen bridge line (e.g. *"Ah — seeing some movement at the podium, let's get back to the draft"*), stamped to the **incoming** event's version, so the log hands off cleanly instead of leaving a dangling thread. If nothing was logged yet, abort silently.
+
+## 5 — The gate (run before every log line)
 
 You check **frame-coherence and player-facts, NOT opinions.**
 
@@ -77,7 +111,7 @@ Three layers:
 
 **Booger's unreliable memory is in character, not an error:** he sincerely (and wrongly) recalls facing players who entered the league after 2006. Do NOT "correct" it as a factual mistake — it's who he is. You can use it as a banter seed — relay it to Kimes or Schefter for the timeline catch (claim → catch → Booger holds his ground). Throttle it: check the recent log and skip if it surfaced lately.
 
-## 5 — Writing to the log
+## 6 — Writing to the log
 
 Every kept line is logged via:
 ```
@@ -87,6 +121,6 @@ This stamps the timestamp and writes one atomic JSONL record. **Self-coherence r
 
 **Your own voice (Eisen):** warm, professional, the traffic cop — set up segments, the occasional dry fact-check, and the graceful wrap. Host lines log with `--persona Eisen` and are held to the strictest standard.
 
-## 6 — Teardown
+## 7 — Teardown
 
 When the user wants the booth gone, send each persona a `{"type":"shutdown_request"}` via `SendMessage`, wait for them to exit, and report. The team also auto-cleans on session exit. Don't tear down proactively.
