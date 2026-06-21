@@ -95,16 +95,15 @@ def _api(season_id=2024):
 
 
 def test_owner_names_resolved_from_members_with_overrides():
-    season, unknown = season_api_to_season(_api())
+    season = season_api_to_season(_api())
     owners = {t.team_name: t.owner for t in season.standings}
     assert owners["Take Mahomes Tonight"] == "Adam"
     assert owners["Blood Sweat Beers"] == "Jackie"  # Jacqueline -> Jackie
     assert owners["Don't Cook the Lamb"] == "Mitch"  # Roger -> Mitch
-    assert unknown == []
 
 
 def test_headline_draft_join_and_pf_tiebreak():
-    season, _ = season_api_to_season(_api())
+    season = season_api_to_season(_api())
     assert season.champion.owner == "Jackie"  # final_rank 1
     assert season.runner_up.owner == "Adam"  # final_rank 2
     # best record: two 9-5 teams, points-for breaks the tie (Adam 1755 > Mitch 1700)
@@ -118,7 +117,7 @@ def test_headline_draft_join_and_pf_tiebreak():
 
 
 def test_2022_keeps_split_title():
-    season, _ = season_api_to_season(_api(season_id=2022))
+    season = season_api_to_season(_api(season_id=2022))
     assert season.shared_title is True
     assert season.note == "SPLIT TITLE"
 
@@ -126,3 +125,12 @@ def test_2022_keeps_split_title():
 def test_empty_teams_raises():
     with pytest.raises(ValueError):
         season_api_to_season([{"seasonId": 2030, "members": [], "teams": []}])
+
+
+def test_unresolved_owner_raises():
+    # A team whose owner id is not in the member list must fail, not write
+    # "UNKNOWN" into the archive.
+    api = _api()
+    api[0]["teams"][0]["primaryOwner"] = "{GHOST}"  # no matching member
+    with pytest.raises(ValueError, match="Could not resolve an owner"):
+        season_api_to_season(api)

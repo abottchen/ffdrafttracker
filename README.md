@@ -296,6 +296,9 @@ name.
 - **Nickname not matching?** If the league calls someone by a name other than
   their ESPN first name, add an override to `ESPN_NAME_OVERRIDES` in
   `src/espn_history.py` and re-run.
+- **Owner won't resolve?** If a team's ESPN member is missing from the season's
+  member list or has no first name on their profile, the script **fails and
+  writes nothing**, naming the offending team. Fix it on ESPN and re-run.
 - `--league-id <id>` targets a different ESPN league (default is the league's own id).
 
 Pre-2012 seasons came from Yahoo Fantasy (one-time import) and are not refreshed

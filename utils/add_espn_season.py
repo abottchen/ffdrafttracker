@@ -6,8 +6,7 @@ Run at the end of each season:
 
 It fetches that season from ESPN's read API and splices it directly into
 ``data/league_history.json`` (adding the year, or replacing it if already
-present). It does not rebuild the rest of the file. Members are stored by first
-name only.
+present). Members are stored by first name only.
 
 Private leagues require your ESPN auth cookies. Grab them from a logged-in
 browser (DevTools -> Application -> Cookies -> fantasy.espn.com) and export:
@@ -71,9 +70,9 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(f"Could not reach ESPN: {e.reason}")
 
     try:
-        season, unknown = season_api_to_season(api)
+        season = season_api_to_season(api)
     except ValueError as e:
-        raise SystemExit(f"{e} Is the season complete and the league id correct?")
+        raise SystemExit(str(e))
 
     history = (
         LeagueHistory.model_validate_json(OUT.read_text())
@@ -95,13 +94,6 @@ def main(argv: list[str] | None = None) -> int:
         f"({len(history.seasons)} seasons total)"
     )
     print(f"  champion: {season.champion.team_name} ({season.champion.owner})")
-    if unknown:
-        print(
-            "  WARNING: team(s) with an unrecognized ESPN member id show owner "
-            "'UNKNOWN':"
-        )
-        for g in unknown:
-            print(f"    {g}")
     return 0
 
 

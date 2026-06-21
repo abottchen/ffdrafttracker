@@ -115,13 +115,13 @@ def _owner_names(season: dict) -> dict[str, str]:
     return names
 
 
-def season_api_to_season(api_json: list | dict) -> tuple[SeasonResult, list[str]]:
+def season_api_to_season(api_json: list | dict) -> SeasonResult:
     """Convert one ESPN season API response into a validated SeasonResult.
 
     ``api_json`` is the decoded response from ``leagueHistory`` (a one-element
-    list) or ``seasons`` (a single object). Returns ``(season, unknown_guids)``;
-    a team whose owner GUID has no member entry gets owner ``"UNKNOWN"`` and is
-    reported.
+    list) or ``seasons`` (a single object). Raises ``ValueError`` if the season
+    has no teams or any team's owner cannot be resolved from the member list --
+    the archive is the source of truth, so a bad row should fail, not be written.
     """
     season = api_json[0] if isinstance(api_json, list) else api_json
     names = _owner_names(season)
@@ -132,14 +132,18 @@ def season_api_to_season(api_json: list | dict) -> tuple[SeasonResult, list[str]
         if p.get("teamId") is not None and p.get("playerId") is not None:
             price_by[(p["teamId"], p["playerId"])] = p.get("bidAmount")
 
-    unknown: set[str] = set()
+    unresolved: list[str] = []
     teams: list[TeamSeason] = []
     for t in season.get("teams", []):
         rec = (t.get("record") or {}).get("overall") or {}
+        name = (
+            t.get("name") or f"{t.get('location', '')} {t.get('nickname', '')}"
+        ).strip()
         guid = t.get("primaryOwner") or (t.get("owners") or [None])[0]
-        owner = names.get(guid, "UNKNOWN")
-        if owner == "UNKNOWN" and guid:
-            unknown.add(guid)
+        owner = names.get(guid)
+        if not owner:
+            unresolved.append(f"{name!r} (member id {guid})")
+            owner = "UNKNOWN"
 
         roster = []
         for e in (t.get("roster") or {}).get("entries") or []:
@@ -165,9 +169,6 @@ def season_api_to_season(api_json: list | dict) -> tuple[SeasonResult, list[str]
             )
 
         pf = rec.get("pointsFor")
-        name = (
-            t.get("name") or f"{t.get('location', '')} {t.get('nickname', '')}"
-        ).strip()
         teams.append(
             TeamSeason(
                 source_team_id=t.get("id"),
@@ -184,7 +185,14 @@ def season_api_to_season(api_json: list | dict) -> tuple[SeasonResult, list[str]
 
     if not teams:
         raise ValueError(
-            f"No teams in the ESPN response for season {season.get('seasonId')}."
+            f"No teams in the ESPN response for season {season.get('seasonId')}. "
+            "Is the season complete and the league id correct?"
+        )
+    if unresolved:
+        raise ValueError(
+            f"Could not resolve an owner for season {season.get('seasonId')}: "
+            f"{', '.join(unresolved)}. The ESPN member is not in the season's "
+            "member list, or has no first name on their profile."
         )
 
     by_rank = {t.final_rank: t for t in teams if t.final_rank}
@@ -207,4 +215,4 @@ def season_api_to_season(api_json: list | dict) -> tuple[SeasonResult, list[str]
     if year == 2022:  # league-side co-championship (credits the runner-up)
         result.shared_title = True
         result.note = "SPLIT TITLE"
-    return result, sorted(unknown)
+    return result
