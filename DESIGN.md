@@ -67,6 +67,7 @@ A local fantasy football auction draft tracking tool with a web-based interface 
 - Uses relative URLs for cross-network compatibility
 - Fetches all data from local read-only API endpoints (same port)
 - Analyst booth transcript in the Draft Analysis tab: scrollable chat-style history with persona headshots, live tail, and infinite scroll for older calls
+- **League History tab** ("The Rafters"): a read-only hall-of-records view of the multi-season archive — champion banners, a 23-season finish grid (regular-season heat + gold titles, click any cell for that team's full end-of-season roster), régime-vs-crown, player loyalty, title droughts, and most-rostered players. Fetched once from `GET /api/v1/league-history`; all leaderboards are derived client-side (styles/scripts are self-contained in `league-history.css` / `league-history.js`)
 
 ### Backend
 **Framework:** FastAPI with Pydantic models  
@@ -87,6 +88,7 @@ A local fantasy football auction draft tracking tool with a web-based interface 
 - `action_log.json` - History of all draft actions for undo capability
 - `config.json` - Application configuration (budgets, min bids, etc.)
 - `player_stats.json` - Player statistics and bye weeks (optional, generated separately)
+- `league_history.json` - Multi-season archive (champions, standings, end-of-season rosters); served read-only and consumed by the viewer's League History tab
 
 ## API Architecture
 
@@ -165,6 +167,10 @@ This allows frontend to handle errors appropriately:
 - Each comment carries a 1-based `seq` (its committed position in the log), which is the cursor clients page against. `seq` is stable because the log is append-only, and is preferred over the second-granular `ts`, which can collide. A torn (un-terminated) trailing line is dropped and never consumes a `seq`.
 - Response is a bare array ordered oldest-first (ascending `seq`); the file is re-read per request, consistent with the stateless design.
 
+**League History Archive:**
+- `GET /api/v1/league-history` returns the league archive resource: a `seasons` array where each season carries its `champion`, `runner_up`, `best_record`, full `standings`, and per-team end-of-season `roster`. Mirrored on both ports (read-only on the viewer).
+- It returns RESTful primitives only — the viewer derives every leaderboard (championship counts, the regular-season finish grid, régime-vs-crown, loyalty, droughts, royalty) on the client. The file is re-read per request and the response is cached client-side since the archive is static.
+
 ## File Structure
 ```
 ffdrafttracker/
@@ -186,7 +192,8 @@ ffdrafttracker/
 │       ├── action_log.py  # ActionLog model
 │       ├── action_logger.py # ActionLogger utility
 │       ├── configuration.py # Configuration model
-│       └── player_stats.py # Player statistics models
+│       ├── player_stats.py # Player statistics models
+│       └── league_history.py # League history archive models
 ├── static/                # Static assets (if needed)
 ├── templates/
 │   ├── index.html         # Main draft application template
@@ -197,7 +204,8 @@ ffdrafttracker/
 │   ├── owners.json        # Owner information
 │   ├── action_log.json    # Complete action history
 │   ├── config.json        # Application configuration
-│   └── player_stats.json  # Player statistics and bye weeks (optional)
+│   ├── player_stats.json  # Player statistics and bye weeks (optional)
+│   └── league_history.json # Multi-season archive for the League History tab
 ├── tests/                 # Test suite
 │   ├── unit/              # Unit tests for models
 │   └── integration/       # Integration tests for file persistence

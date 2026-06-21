@@ -10,9 +10,10 @@
     <title>Fantasy Football Team Viewer</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Saira+Condensed:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap"
           rel="stylesheet">
     <link rel="stylesheet" href="/static/css/draft-set-viewer.css?v=4">
+    <link rel="stylesheet" href="/static/css/league-history.css?v=1">
   </head>
   <body>
     <div id="app">
@@ -22,6 +23,7 @@
           <button id="seg-teams" class="active" onclick="showView('teams')">Teams</button>
           <button id="seg-status" onclick="showView('status')">Draft Status</button>
           <button id="seg-analysis" onclick="showView('analysis')">Draft Analysis</button>
+          <button id="seg-history" onclick="showView('history')">League History</button>
         </div>
         <div class="spacer"></div>
         <div class="clocknote" id="clocknote"></div>
@@ -194,9 +196,11 @@
           </div>
         </div>
       </div>
+      <div class="view" id="view-history"></div>
     </div>
     <div id="ptip"></div>
     <div id="vError" class="tb-empty verror-toast"></div>
+    <script src="/static/js/league-history.js?v=1"></script>
     {# Hand-tuned single-line JS below; djlint's reformat collapses a // comment over later code. #}
     {# djlint:off #}
     <script>
@@ -468,13 +472,14 @@
     <div class="id-prog" style="width:${t.picks / TOTAL * 100}%"></div>`;
         }
         function showView(v) {
-            ['teams', 'status', 'analysis'].forEach(x => {
+            ['teams', 'status', 'analysis', 'history'].forEach(x => {
                 document.getElementById('view-' + x).classList.toggle('active', v === x);
                 document.getElementById('seg-' + x).classList.toggle('active', v === x);
             });
             document.getElementById('teamstrip').style.display = v === 'teams' ? 'flex' : 'none';
             if (v === 'status') renderStatusView();
             else if (v === 'analysis') { renderAnalysisView(); boothOnShow(); }
+            else if (v === 'history') LeagueHistory.render();
             else renderTeamsView();
         }
         function activeViewId() { const a = document.querySelector('.view.active'); return a ? a.id : 'view-teams'; }
