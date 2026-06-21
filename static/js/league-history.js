@@ -131,13 +131,17 @@
       .map((o) => ({ owner: o, ...career[o], pct: winPct(career[o]), active: active.has(o) }))
       .sort((a, b) => b.pct - a.pct || (b.w - b.l) - (a.w - a.l) || a.owner.localeCompare(b.owner));
 
-    // league royalty: most-rostered NFL players ever
-    const pop = {};
+    // league royalty: most-rostered NFL players ever (with per-season appearances for the hover)
+    const pop = {}, popApp = {};
     seasons.forEach((s) => s.standings.forEach((t) => {
       const seen = new Set();
-      (t.roster || []).forEach((e) => { const p = e.player_name; if (skipPlayer(p) || seen.has(p)) return; seen.add(p); pop[p] = (pop[p] || 0) + 1; });
+      (t.roster || []).forEach((e) => {
+        const p = e.player_name; if (skipPlayer(p) || seen.has(p)) return; seen.add(p);
+        pop[p] = (pop[p] || 0) + 1;
+        (popApp[p] = popApp[p] || []).push({ year: s.year, owner: t.owner });
+      });
     }));
-    const royalty = Object.entries(pop).map(([player, n]) => ({ player, seasons: n })).sort((a, b) => b.seasons - a.seasons).slice(0, 12);
+    const royalty = Object.entries(pop).map(([player, n]) => ({ player, seasons: n, app: popApp[player] })).sort((a, b) => b.seasons - a.seasons).slice(0, 12);
 
     return {
       meta: { years, nSeasons: seasons.length, nManagers: Object.keys(appear).length, latest, active },
@@ -153,14 +157,16 @@
        retention  — career auction-dollar retention vs. win rate per owner   */
   function deriveMoney(seasons, auctionSeasons) {
     const winpctOf = (t) => { const g = (t.wins || 0) + (t.losses || 0) + (t.ties || 0); return g ? ((t.wins || 0) + 0.5 * (t.ties || 0)) / g : 0; };
-    const posOf = {}, rosterSet = {}, meta = {}, leagueByYear = {};
+    const posOf = {}, rosterSet = {}, meta = {}, leagueByYear = {}, ownersByYear = {};
     seasons.forEach((s) => {
       const champO = s.champion && s.champion.owner, runO = s.runner_up && s.runner_up.owner, shared = !!s.shared_title;
       const lset = leagueByYear[s.year] = new Set();
+      const olist = ownersByYear[s.year] = [];
       s.standings.forEach((t) => {
         const set = new Set();
         (t.roster || []).forEach((e) => { const nn = normName(e.player_name); set.add(nn); lset.add(nn); if (e.position) posOf[nn] = e.position; });
         rosterSet[`${s.year}|${t.owner}`] = set;
+        olist.push(t.owner);
         const isC = t.owner === champO || (shared && t.owner === runO);
         const isR = t.owner === runO && !shared;
         meta[`${s.year}|${t.owner}`] = {
@@ -188,12 +194,19 @@
           if (set && set.has(nn)) { r.retained += p.price; return; }
           if (!set) return;                                   // no roster to judge against
           const inLeague = (leagueByYear[y] || new Set()).has(nn);
+          // who finished the season with the player (the rival who claimed them off waivers)
+          let claimedBy = null;
+          if (inLeague) {
+            for (const o2 of (ownersByYear[y] || [])) {
+              if (o2 !== owner && rosterSet[`${y}|${o2}`] && rosterSet[`${y}|${o2}`].has(nn)) { claimedBy = o2; break; }
+            }
+          }
           burns.push({
             // a "burn" = an auction buy missing from the owner's end-of-season roster.
             // gone   = not on ANY roster at year's end (dropped, never re-rostered)
             // claimed = on a RIVAL's end-of-season roster (dropped, then picked up off waivers)
             year: y, owner, player: p.player, price: p.price, keeper: !!p.keeper,
-            gone: !inLeague, claimed: inLeague,
+            gone: !inLeague, claimed: inLeague, claimedBy,
             rec: m ? m.rec : "", win: m ? m.wins > m.losses : false,
             champ: m ? m.champ : false, runner: m ? m.runner : false,
           });
@@ -226,7 +239,7 @@
 
         <section class="lh-sec">
           <div class="lh-sec-head"><span class="lh-num">01</span><h2>Season by Season</h2></div>
-          <p class="lh-sub">Twenty-three years of finishes, one square each. <b>Gold is a title, bright is a top year, dark is a lean one</b> — a dynasty reads as a bright row, a slump as a dark stretch. Hover a name to follow one manager; the squares show regular-season finish and gold marks who actually won it. Click any square for that team's full roster.</p>
+          <p class="lh-sub">Twenty-three years of finishes, one square each. <b>Gold is a title, bright is a top year, dark is a lean one.</b> A dynasty reads as a bright row, a slump as a dark stretch. Hover a name to follow one manager; the squares show regular-season finish and gold marks who actually won it. Click any square for that team's full roster.</p>
           <div class="lh-gridcard">
             <div class="lh-grid" id="lh-grid"></div>
             <div class="lh-legend" id="lh-legend"></div>
@@ -235,27 +248,27 @@
 
         <section class="lh-sec">
           <div class="lh-sec-head"><span class="lh-num">02</span><h2>Best Records vs. Titles</h2></div>
-          <p class="lh-sub">Most seasons with the best regular-season record, against most championships won. They don't always go to the same manager — the gap between the two columns is the gap between dominant and decisive.</p>
+          <p class="lh-sub">Most seasons with the best regular-season record, against most championships won. They don't always go to the same manager. The gap between the two columns is the gap between dominant and decisive.</p>
           <div class="lh-talehead"><div class="l">Best records</div><div class="c">Manager</div><div class="r">Titles</div></div>
           <div class="lh-tale" id="lh-tale"></div>
         </section>
 
         <section class="lh-sec">
           <div class="lh-sec-head"><span class="lh-num">03</span><h2>Most-Rostered Player, by Manager</h2></div>
-          <p class="lh-sub">The player each manager kept coming back for — drafted or stashed, season after season — and how many seasons they rostered them.</p>
+          <p class="lh-sub">The player each manager kept coming back for, drafted or stashed, year after year.</p>
           <div class="lh-loyal" id="lh-loyal"></div>
         </section>
 
         <div class="lh-cols">
           <section class="lh-sec" style="margin-top:0">
             <div class="lh-sec-head"><span class="lh-num">04</span><h2>Career Win-Loss Records</h2></div>
-            <p class="lh-sub">Every manager's career regular-season record — <b>gold is wins, the rest is losses</b>, best rate on top. Three seasons or more.</p>
+            <p class="lh-sub">Every manager's career regular-season record. <b>Gold is wins, the rest is losses</b>, best rate on top. Three seasons or more.</p>
             <div id="lh-ledger"></div>
-            <p class="lh-foot">Regular-season games only — playoffs aren't counted. <b>Ties score as half a win.</b></p>
+            <p class="lh-foot">Regular-season games only. Playoffs aren't counted. <b>Ties score as half a win.</b></p>
           </section>
           <section class="lh-sec lh-roy" style="margin-top:0">
             <div class="lh-sec-head"><span class="lh-num">05</span><h2>Most-Rostered Players, League-Wide</h2></div>
-            <p class="lh-sub">The NFL names that defined the era — most seasons rostered by <i>anyone</i> in the league.</p>
+            <p class="lh-sub">The NFL names that defined the era: most seasons rostered by <i>anyone</i> in the league. Hover a bar for every season.</p>
             <div id="lh-royalty"></div>
           </section>
         </div>
@@ -405,7 +418,8 @@
     const ro = $("#lh-royalty"); ro.innerHTML = "";
     const maxR = DATA.royalty[0].seasons;
     DATA.royalty.forEach((p, i) => {
-      const row = ce("div", "lh-row");
+      const row = ce("div", "lh-row lh-hov");
+      row.dataset.i = i;
       row.innerHTML =
         `<div class="lh-nm">${p.player}</div>` +
         `<div class="lh-track"><span class="lh-fill ${i === 0 ? "gold" : "pew"}"></span></div>` +
@@ -413,6 +427,21 @@
       ro.appendChild(row);
       setTimeout(() => { $(".lh-fill", row).style.width = (p.seasons / maxR * 100) + "%"; }, 250 + i * 55);
     });
+    ro.addEventListener("mousemove", (e) => {
+      const row = e.target.closest(".lh-row"); if (!row || row.dataset.i == null) { hideTip(); return; }
+      tipAt(royaltyTip(DATA.royalty[+row.dataset.i]), e.clientX, e.clientY);
+    });
+    ro.addEventListener("mouseleave", hideTip);
+  }
+
+  // every season a player was rostered: year · team · owner · result
+  function royaltyTip(p) {
+    const rows = (p.app || []).slice().sort((a, b) => a.year - b.year).map((a) => {
+      const r = (DATA.rosters[a.owner] || {})[a.year] || {};
+      const res = r.champ ? '<b class="ch">✦</b>' : (r.runner ? '<b class="ru">RU</b>' : (r.rec || ""));
+      return `<div class="lh-ttline"><span class="lh-tty">’${String(a.year).slice(2)}</span>${r.team || "?"} · ${a.owner} · ${res}</div>`;
+    }).join("");
+    return `<div class="lh-tth">${p.player}</div><div class="lh-ttteam">${p.seasons} seasons rostered</div>${rows}`;
   }
 
   /* ================= Part II · The Money ================= */
@@ -428,14 +457,14 @@
 
        <section class="lh-sec">
          <div class="lh-sec-head"><span class="lh-num">06</span><h2>Priciest Dropped Players</h2></div>
-         <p class="lh-sub">The most expensive players who weren't on their manager's roster at season's end. <b>Charred bars were dropped and never re-rostered; amber bars were dropped, then claimed by a rival off waivers.</b> Glowing tags mark managers who <b>won anyway.</b></p>
+         <p class="lh-sub">The most expensive players who weren't on their manager's roster at season's end. <b>Charred bars were dropped and never re-rostered; amber bars were dropped, then claimed by a rival off waivers.</b> Glowing tags mark managers who <b>won anyway.</b> Hover a row to see who finished the year with the player.</p>
          <div class="lh-sunkcard"><div id="lh-sunk"></div></div>
          <p class="lh-foot">Keepers count as committed dollars. This counts any auction buy missing from the manager's end-of-season roster.</p>
        </section>
 
        <section class="lh-sec">
          <div class="lh-sec-head"><span class="lh-num">07</span><h2>Player Prices Over Time</h2></div>
-         <p class="lh-sub">What each player cost at auction, season by season &mdash; <b>lines are colored by position.</b> Four names are charted to start; tap any chip below to add or remove a line.</p>
+         <p class="lh-sub">What each player cost at auction, season by season. <b>Lines are colored by position.</b> Four names are charted to start; tap any chip below to add or remove a line.</p>
          <div class="lh-boardcard">
            <div class="lh-movers" id="lh-movers"></div>
            <div class="lh-board" id="lh-board"></div>
@@ -462,7 +491,8 @@
       const tag = b.champ ? `<span class="lh-btag champ">★ Champion</span>`
         : b.runner ? `<span class="lh-btag won">Runner-up</span>`
           : b.win ? `<span class="lh-btag won">Won anyway</span>` : "";
-      const row = ce("div", "lh-burn" + (b.gone ? " gone" : " claimed") + (b.win ? " winrec" : ""));
+      const row = ce("div", "lh-burn lh-hov" + (b.gone ? " gone" : " claimed") + (b.win ? " winrec" : ""));
+      row.dataset.i = i;
       row.innerHTML =
         `<div class="lh-bowner">${b.owner}</div>` +
         `<div class="lh-bmid">` +
@@ -475,6 +505,31 @@
       el.appendChild(row);
       setTimeout(() => { $(".lh-bfill", row).style.width = (b.price / maxP * 100) + "%"; }, 220 + i * 55);
     });
+    el.addEventListener("mousemove", (e) => {
+      const row = e.target.closest(".lh-burn"); if (!row || row.dataset.i == null) { hideTip(); return; }
+      tipAt(burnTip(MONEY.burns[+row.dataset.i]), e.clientX, e.clientY);
+    });
+    el.addEventListener("mouseleave", hideTip);
+  }
+
+  // who finished the season with the player, and the manager's result that year
+  function burnTip(b) {
+    const team = ((DATA.rosters[b.owner] || {})[b.year] || {}).team || "";
+    let end;
+    if (b.gone) {
+      end = `<div class="lh-ttline">Dropped, never re-rostered</div>`;
+    } else {
+      const ct = ((DATA.rosters[b.claimedBy] || {})[b.year] || {}).team || "";
+      end = b.claimedBy
+        ? `<div class="lh-ttline">Finished on <b>${b.claimedBy}</b>'s ${ct}</div>`
+        : `<div class="lh-ttline">Claimed off waivers by a rival</div>`;
+    }
+    const res = b.champ ? '<b class="ch">✦ champion</b>' : (b.runner ? '<b class="ru">runner-up</b>' : (b.win ? "winning record" : "missed the cut"));
+    return `<div class="lh-tth">${b.player}</div>` +
+      `<div class="lh-ttteam">${b.year} · ${b.owner}'s ${team}</div>` +
+      `<div class="lh-ttline">$${b.price} at auction${b.keeper ? " · keeper" : ""}</div>` +
+      end +
+      `<div class="lh-ttline">${b.owner} went ${b.rec} · ${res}</div>`;
   }
 
   /* --- 07 · Player Prices Over Time --------------------------------------- */
