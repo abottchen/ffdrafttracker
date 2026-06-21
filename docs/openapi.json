@@ -367,6 +367,25 @@
         }
       }
     },
+    "/api/v1/league-history": {
+      "get": {
+        "summary": "Get League History",
+        "description": "Get the league history archive: season-by-season champions, standings,\nand end-of-season rosters (2003-present). Static archive; the viewer derives\nits leaderboards and the finish grid from this resource client-side.",
+        "operationId": "get_league_history_api_v1_league_history_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeagueHistory"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/export/csv": {
       "get": {
         "summary": "Export Draft Csv",
@@ -687,6 +706,29 @@
         ],
         "title": "AdminDraftRequest"
       },
+      "BestRecord": {
+        "properties": {
+          "owner": {
+            "type": "string",
+            "title": "Owner"
+          },
+          "team_name": {
+            "type": "string",
+            "title": "Team Name"
+          },
+          "record": {
+            "type": "string",
+            "title": "Record"
+          }
+        },
+        "type": "object",
+        "required": [
+          "owner",
+          "team_name",
+          "record"
+        ],
+        "title": "BestRecord"
+      },
       "BidRequest": {
         "properties": {
           "owner_id": {
@@ -894,6 +936,24 @@
         ],
         "title": "DraftStateResponse"
       },
+      "Finisher": {
+        "properties": {
+          "owner": {
+            "type": "string",
+            "title": "Owner"
+          },
+          "team_name": {
+            "type": "string",
+            "title": "Team Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "owner",
+          "team_name"
+        ],
+        "title": "Finisher"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -957,6 +1017,19 @@
         ],
         "title": "KickingStats",
         "description": "Kicking statistics for kickers."
+      },
+      "LeagueHistory": {
+        "properties": {
+          "seasons": {
+            "items": {
+              "$ref": "#/components/schemas/SeasonResult"
+            },
+            "type": "array",
+            "title": "Seasons"
+          }
+        },
+        "type": "object",
+        "title": "LeagueHistory"
       },
       "NFLTeam": {
         "type": "string",
@@ -1357,6 +1430,62 @@
         "type": "object",
         "title": "ResetRequest"
       },
+      "RosterEntry": {
+        "properties": {
+          "player_name": {
+            "type": "string",
+            "title": "Player Name"
+          },
+          "position": {
+            "type": "string",
+            "title": "Position",
+            "default": ""
+          },
+          "nfl_team": {
+            "type": "string",
+            "title": "Nfl Team",
+            "default": ""
+          },
+          "slot": {
+            "type": "string",
+            "title": "Slot",
+            "default": ""
+          },
+          "acquisition": {
+            "type": "string",
+            "title": "Acquisition",
+            "default": "DRAFTED"
+          },
+          "draft_price": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft Price"
+          },
+          "draft_pick": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft Pick"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_name"
+        ],
+        "title": "RosterEntry",
+        "description": "One player on a team's end-of-season roster."
+      },
       "RushingStats": {
         "properties": {
           "carries": {
@@ -1401,6 +1530,133 @@
         ],
         "title": "RushingStats",
         "description": "Rushing statistics for running backs, wide receivers, and quarterbacks."
+      },
+      "SeasonResult": {
+        "properties": {
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "champion": {
+            "$ref": "#/components/schemas/Finisher"
+          },
+          "runner_up": {
+            "$ref": "#/components/schemas/Finisher"
+          },
+          "best_record": {
+            "$ref": "#/components/schemas/BestRecord"
+          },
+          "shared_title": {
+            "type": "boolean",
+            "title": "Shared Title",
+            "default": false
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "manual"
+          },
+          "draft_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft Type"
+          },
+          "standings": {
+            "items": {
+              "$ref": "#/components/schemas/TeamSeason"
+            },
+            "type": "array",
+            "title": "Standings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "champion",
+          "runner_up",
+          "best_record"
+        ],
+        "title": "SeasonResult"
+      },
+      "TeamSeason": {
+        "properties": {
+          "team_name": {
+            "type": "string",
+            "title": "Team Name"
+          },
+          "owner": {
+            "type": "string",
+            "title": "Owner"
+          },
+          "wins": {
+            "type": "integer",
+            "title": "Wins",
+            "default": 0
+          },
+          "losses": {
+            "type": "integer",
+            "title": "Losses",
+            "default": 0
+          },
+          "ties": {
+            "type": "integer",
+            "title": "Ties",
+            "default": 0
+          },
+          "points_for": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Points For"
+          },
+          "final_rank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Rank"
+          },
+          "roster": {
+            "items": {
+              "$ref": "#/components/schemas/RosterEntry"
+            },
+            "type": "array",
+            "title": "Roster"
+          }
+        },
+        "type": "object",
+        "required": [
+          "team_name",
+          "owner"
+        ],
+        "title": "TeamSeason",
+        "description": "One team's season: record, final finish, and roster."
       },
       "TeamUpdateRequest": {
         "properties": {

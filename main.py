@@ -22,6 +22,7 @@ from src.models import (
     Configuration,
     DraftPick,
     DraftState,
+    LeagueHistory,
     Nominated,
     Owner,
     Player,
@@ -75,6 +76,7 @@ CONFIG_FILE = DATA_DIR / "config.json"
 ACTION_LOG_FILE = DATA_DIR / "action_log.json"
 PLAYER_STATS_FILE = DATA_DIR / "player_stats.json"
 COMMENTS_FILE = DATA_DIR / "analyst-comments.jsonl"
+LEAGUE_HISTORY_FILE = DATA_DIR / "league_history.json"
 
 
 # Request/Response models
@@ -397,6 +399,19 @@ async def _get_player_stats_data():
         return PlayerStatsCollection({})
 
 
+async def _get_league_history_data():
+    """Shared logic for getting the league history archive."""
+    if not LEAGUE_HISTORY_FILE.exists():
+        logger.info("League history file not found, returning empty archive")
+        return LeagueHistory()
+
+    try:
+        return LeagueHistory.model_validate_json(LEAGUE_HISTORY_FILE.read_text())
+    except Exception as e:
+        logger.error(f"Error loading league history: {e}, returning empty archive")
+        return LeagueHistory()
+
+
 async def _get_owners_data():
     """Shared logic for getting all owners."""
     owners_dict = load_owners()
@@ -543,6 +558,14 @@ async def get_comments(
 ):
     """Analyst-booth commentary, ordered oldest-first (ascending `seq`)."""
     return await _get_comments_data(since=since, before=before, limit=limit)
+
+
+@app.get("/api/v1/league-history", response_model=LeagueHistory)
+async def get_league_history():
+    """Get the league history archive: season-by-season champions, standings,
+    and end-of-season rosters (2003-present). Static archive; the viewer derives
+    its leaderboards and the finish grid from this resource client-side."""
+    return await _get_league_history_data()
 
 
 @app.get("/api/v1/export/csv")
@@ -1304,6 +1327,14 @@ async def viewer_get_comments(
 ):
     """Read-only mirror of the admin commentary feed (see `get_comments`)."""
     return await _get_comments_data(since=since, before=before, limit=limit)
+
+
+@viewer_app.get("/api/v1/league-history", response_model=LeagueHistory)
+async def viewer_get_league_history():
+    """Get the league history archive: season-by-season champions, standings,
+    and end-of-season rosters (2003-present). Static archive; the viewer derives
+    its leaderboards and the finish grid from this resource client-side."""
+    return await _get_league_history_data()
 
 
 # Run the application

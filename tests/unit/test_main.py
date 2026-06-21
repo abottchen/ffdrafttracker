@@ -292,6 +292,63 @@ class TestGetEndpoints(TestMainApp):
         assert "CSV generation failed" in response.json()["detail"]
 
 
+class TestLeagueHistoryEndpoint(TestMainApp):
+    """Test GET /api/v1/league-history (the read-only archive resource)."""
+
+    SAMPLE = {
+        "seasons": [
+            {
+                "year": 2024,
+                "champion": {"owner": "Adam", "team_name": "Run CMC"},
+                "runner_up": {"owner": "Greg", "team_name": "Oh no, Romo"},
+                "best_record": {
+                    "owner": "Adam",
+                    "team_name": "Run CMC",
+                    "record": "12-2",
+                },
+                "standings": [
+                    {
+                        "team_name": "Run CMC",
+                        "owner": "Adam",
+                        "wins": 12,
+                        "losses": 2,
+                        "final_rank": 1,
+                        "roster": [{"player_name": "Josh Allen", "position": "QB"}],
+                    }
+                ],
+            }
+        ]
+    }
+
+    @patch("main.LEAGUE_HISTORY_FILE")
+    def test_get_league_history(self, mock_file):
+        """Returns the season archive with standings and rosters intact."""
+        import json
+
+        mock_file.exists.return_value = True
+        mock_file.read_text.return_value = json.dumps(self.SAMPLE)
+
+        response = self.client.get("/api/v1/league-history")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["seasons"]) == 1
+        season = data["seasons"][0]
+        assert season["year"] == 2024
+        assert season["champion"]["owner"] == "Adam"
+        assert season["standings"][0]["roster"][0]["player_name"] == "Josh Allen"
+
+    @patch("main.LEAGUE_HISTORY_FILE")
+    def test_get_league_history_missing_file(self, mock_file):
+        """Returns an empty archive (not a 404/500) when the file is absent."""
+        mock_file.exists.return_value = False
+
+        response = self.client.get("/api/v1/league-history")
+
+        assert response.status_code == 200
+        assert response.json() == {"seasons": []}
+
+
 class TestPostEndpoints(TestMainApp):
     """Test POST endpoints."""
 

@@ -31,6 +31,11 @@ A live auction draft tracking tool for fantasy football leagues. Features a web-
 - Admin: a one-line "Booth" chyron above the Draft Wire; click to expand the last few calls
 - Viewer: a full scrollable transcript in the Draft Analysis tab (headshot panel, infinite scroll for history)
 
+### **League History** (Viewer)
+- A "League History" tab presenting the multi-season archive, served from `GET /api/v1/league-history`
+- Champion banners, a 23-season finish grid (color = regular-season finish, gold = title), régime-vs-crown, player loyalty, title droughts, and most-rostered players
+- Click any grid cell to open that team's full end-of-season roster and step through a manager's seasons
+
 ### **Data Integrity**
 - Optimistic locking prevents concurrent modification conflicts
 - Atomic file operations for crash safety
