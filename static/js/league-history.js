@@ -159,14 +159,14 @@
        retention  — career auction-dollar retention vs. win rate per owner   */
   function deriveMoney(seasons, auctionSeasons) {
     const winpctOf = (t) => { const g = (t.wins || 0) + (t.losses || 0) + (t.ties || 0); return g ? ((t.wins || 0) + 0.5 * (t.ties || 0)) / g : 0; };
-    const posOf = {}, rosterSet = {}, meta = {}, leagueByYear = {}, ownersByYear = {};
+    const rosterSet = {}, meta = {}, leagueByYear = {}, ownersByYear = {};
     seasons.forEach((s) => {
       const champO = s.champion && s.champion.owner, runO = s.runner_up && s.runner_up.owner, shared = !!s.shared_title;
       const lset = leagueByYear[s.year] = new Set();
       const olist = ownersByYear[s.year] = [];
       s.standings.forEach((t) => {
         const set = new Set();
-        (t.roster || []).forEach((e) => { const nn = normName(e.player_name); set.add(nn); lset.add(nn); if (e.position) posOf[nn] = e.position; });
+        (t.roster || []).forEach((e) => { const nn = normName(e.player_name); set.add(nn); lset.add(nn); });
         rosterSet[`${s.year}|${t.owner}`] = set;
         olist.push(t.owner);
         const isC = t.owner === champO || (shared && t.owner === runO);
@@ -225,7 +225,7 @@
         return { owner, retPct: v.retained / v.spend * 100, winPct: g ? (v.wins + 0.5 * v.ties) / g * 100 : 0, seasons: v.seasons, spend: v.spend, retained: v.retained };
       });
 
-    return { years, burns, parc, parcOwner, posOf, retention };
+    return { years, burns, parc, parcOwner, retention };
   }
 
   /* ---------------- scaffold ---------------- */
@@ -468,7 +468,7 @@
   // one detail line for a manager's season: ’YY · team · record ★   (owner added when the list spans managers)
   function seasonLine(owner, year, withOwner) {
     const r = (DATA.rosters[owner] || {})[year] || {};
-    const mid = withOwner ? `${r.team || "?"} · ${owner}` : (r.team || "?");
+    const mid = withOwner ? `${esc(r.team || "?")} · ${esc(owner)}` : esc(r.team || "?");
     return `<div class="lh-ttline"><span class="lh-tty">’${String(year).slice(2)}</span>${mid} · ${r.rec || "—"}${starFor(r)}</div>`;
   }
   const sortYrs = (ys) => (ys || []).slice().sort((a, b) => a - b);
@@ -476,17 +476,17 @@
   // §05 — every season a player was rostered, across managers
   function royaltyTip(p) {
     const rows = (p.app || []).slice().sort((a, b) => a.year - b.year).map((a) => seasonLine(a.owner, a.year, true)).join("");
-    return `<div class="lh-tth">${p.player}</div><div class="lh-ttteam">${p.seasons} seasons rostered</div>${rows}`;
+    return `<div class="lh-tth">${esc(p.player)}</div><div class="lh-ttteam">${p.seasons} seasons rostered</div>${rows}`;
   }
   // top champion banners — the championship seasons
   function bannerTip(o) {
     const ys = sortYrs(DATA.titleYears[o]);
-    return `<div class="lh-tth">${o}</div><div class="lh-ttteam">${ys.length} ${ys.length === 1 ? "title" : "titles"}</div>` + ys.map((y) => seasonLine(o, y)).join("");
+    return `<div class="lh-tth">${esc(o)}</div><div class="lh-ttteam">${ys.length} ${ys.length === 1 ? "title" : "titles"}</div>` + ys.map((y) => seasonLine(o, y)).join("");
   }
   // §02 — the best-record seasons and the title seasons behind the two bars
   function regimeTip(o) {
     const by = sortYrs(DATA.bestYears[o]), ty = sortYrs(DATA.titleYears[o]);
-    let h = `<div class="lh-tth">${o}</div>`;
+    let h = `<div class="lh-tth">${esc(o)}</div>`;
     if (by.length) h += `<div class="lh-ttteam">Best record · ${by.length}</div>` + by.map((y) => seasonLine(o, y)).join("");
     if (ty.length) h += `<div class="lh-ttteam" style="margin-top:8px">Titles · ${ty.length}</div>` + ty.map((y) => seasonLine(o, y)).join("");
     if (!by.length && !ty.length) h += `<div class="lh-ttline">No best records or titles yet</div>`;
@@ -495,12 +495,12 @@
   // §03 — the seasons a manager rostered their go-to player
   function loyaltyTip(l) {
     const ys = sortYrs(l.years);
-    return `<div class="lh-tth">${l.player}</div><div class="lh-ttteam">${l.owner} · ${ys.length} seasons</div>` + ys.map((y) => seasonLine(l.owner, y)).join("");
+    return `<div class="lh-tth">${esc(l.player)}</div><div class="lh-ttteam">${esc(l.owner)} · ${ys.length} seasons</div>` + ys.map((y) => seasonLine(l.owner, y)).join("");
   }
   // §04 — a manager's full season-by-season record
   function ledgerTip(o) {
     const ys = Object.keys(DATA.rosters[o] || {}).map(Number).sort((a, b) => a - b);
-    return `<div class="lh-tth">${o}</div><div class="lh-ttteam">${ys.length} seasons</div>` + ys.map((y) => seasonLine(o, y)).join("");
+    return `<div class="lh-tth">${esc(o)}</div><div class="lh-ttteam">${ys.length} seasons</div>` + ys.map((y) => seasonLine(o, y)).join("");
   }
 
   /* ================= Part II · The Money ================= */
@@ -553,9 +553,9 @@
       const row = ce("div", "lh-burn lh-hov" + (b.gone ? " gone" : " claimed") + (b.win ? " winrec" : ""));
       row.dataset.i = i;
       row.innerHTML =
-        `<div class="lh-bowner">${b.owner}</div>` +
+        `<div class="lh-bowner">${esc(b.owner)}</div>` +
         `<div class="lh-bmid">` +
-          `<div class="lh-bplayer">${b.player}${b.keeper ? `<span class="lh-bkeep">keeper</span>` : ""}` +
+          `<div class="lh-bplayer">${esc(b.player)}${b.keeper ? `<span class="lh-bkeep">keeper</span>` : ""}` +
             `<span class="lh-bstat ${b.gone ? "gone" : "claimed"}">${b.gone ? "Dropped" : "Claimed"}</span></div>` +
           `<div class="lh-btrack"><span class="lh-bfill"></span></div>` +
         `</div>` +
@@ -573,22 +573,22 @@
 
   // who finished the season with the player, and the manager's result that year
   function burnTip(b) {
-    const team = ((DATA.rosters[b.owner] || {})[b.year] || {}).team || "";
+    const team = esc(((DATA.rosters[b.owner] || {})[b.year] || {}).team || "");
     let end;
     if (b.gone) {
       end = `<div class="lh-ttline">Dropped, never re-rostered</div>`;
     } else {
-      const ct = ((DATA.rosters[b.claimedBy] || {})[b.year] || {}).team || "";
+      const ct = esc(((DATA.rosters[b.claimedBy] || {})[b.year] || {}).team || "");
       end = b.claimedBy
-        ? `<div class="lh-ttline">Finished on <b>${b.claimedBy}</b>'s ${ct}</div>`
+        ? `<div class="lh-ttline">Finished on <b>${esc(b.claimedBy)}</b>'s ${ct}</div>`
         : `<div class="lh-ttline">Claimed off waivers by a rival</div>`;
     }
     const res = b.champ ? '<b class="ch">✦ champion</b>' : (b.runner ? '<b class="ru">runner-up</b>' : (b.win ? "winning record" : "missed the cut"));
-    return `<div class="lh-tth">${b.player}</div>` +
-      `<div class="lh-ttteam">${b.year} · ${b.owner}'s ${team}</div>` +
+    return `<div class="lh-tth">${esc(b.player)}</div>` +
+      `<div class="lh-ttteam">${b.year} · ${esc(b.owner)}'s ${team}</div>` +
       `<div class="lh-ttline">$${b.price} at auction${b.keeper ? " · keeper" : ""}</div>` +
       end +
-      `<div class="lh-ttline">${b.owner} went ${b.rec} · ${res}</div>`;
+      `<div class="lh-ttline">${esc(b.owner)} went ${b.rec} · ${res}</div>`;
   }
 
   /* --- 07 · Player Prices Over Time --------------------------------------- */
