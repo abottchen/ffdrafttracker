@@ -27,9 +27,9 @@ from src.models import (
     Nominated,
     Owner,
     Player,
+    SeasonAuction,
     Team,
 )
-from src.models.auction_prices import AuctionPick
 from src.models.player_stats import PlayerStatsCollection
 
 # Configure logging
@@ -592,14 +592,14 @@ async def get_auction_prices():
     return await _get_auction_prices_data()
 
 
-@app.get("/api/v1/auction-prices/{year}", response_model=list[AuctionPick])
+@app.get("/api/v1/auction-prices/{year}", response_model=SeasonAuction)
 async def get_auction_prices_for_year(year: int):
-    """Get one season's auction picks. 404 if the season is not in the archive."""
+    """Get one season's auction, grouped by owner. 404 if not in the archive."""
     archive = await _get_auction_prices_data()
-    picks = archive.seasons.get(str(year))
-    if picks is None:
+    season = archive.seasons.get(str(year))
+    if season is None:
         raise HTTPException(status_code=404, detail=f"No auction prices for {year}")
-    return picks
+    return season
 
 
 @app.get("/api/v1/export/csv")
@@ -1379,14 +1379,14 @@ async def viewer_get_auction_prices():
     return await _get_auction_prices_data()
 
 
-@viewer_app.get("/api/v1/auction-prices/{year}", response_model=list[AuctionPick])
+@viewer_app.get("/api/v1/auction-prices/{year}", response_model=SeasonAuction)
 async def viewer_get_auction_prices_for_year(year: int):
-    """Get one season's auction picks. 404 if the season is not in the archive."""
+    """Get one season's auction, grouped by owner. 404 if not in the archive."""
     archive = await _get_auction_prices_data()
-    picks = archive.seasons.get(str(year))
-    if picks is None:
+    season = archive.seasons.get(str(year))
+    if season is None:
         raise HTTPException(status_code=404, detail=f"No auction prices for {year}")
-    return picks
+    return season
 
 
 # Run the application

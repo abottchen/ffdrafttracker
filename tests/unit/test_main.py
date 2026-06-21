@@ -355,22 +355,25 @@ class TestAuctionPricesEndpoint(TestMainApp):
     SAMPLE = {
         "source": "test",
         "seasons": {
-            "2024": [
-                {
-                    "owner": "Adam",
-                    "player": "Breece Hall",
-                    "price": 13,
-                    "keeper": True,
-                    "espn_id": 4427366,
-                },
-                {"owner": "Greg", "player": "Josh Allen", "price": 11},
-            ]
+            "2024": {
+                "owners": {
+                    "Adam": [
+                        {
+                            "player": "Breece Hall",
+                            "price": 13,
+                            "keeper": True,
+                            "espn_id": 4427366,
+                        }
+                    ],
+                    "Greg": [{"player": "Josh Allen", "price": 11}],
+                }
+            }
         },
     }
 
     @patch("main.AUCTION_PRICES_FILE")
     def test_get_auction_prices(self, mock_file):
-        """Returns the full archive with owner/price/keeper/espn_id intact."""
+        """Returns the archive grouped by owner, price/keeper/espn_id intact."""
         import json
 
         mock_file.exists.return_value = True
@@ -379,19 +382,16 @@ class TestAuctionPricesEndpoint(TestMainApp):
         response = self.client.get("/api/v1/auction-prices")
 
         assert response.status_code == 200
-        data = response.json()
-        picks = data["seasons"]["2024"]
-        assert len(picks) == 2
-        assert picks[0] == {
-            "owner": "Adam",
+        owners = response.json()["seasons"]["2024"]["owners"]
+        assert owners["Adam"][0] == {
             "player": "Breece Hall",
             "price": 13,
             "keeper": True,
             "espn_id": 4427366,
         }
-        # defaults applied for the sparse second record
-        assert picks[1]["keeper"] is False
-        assert picks[1]["espn_id"] is None
+        # defaults applied for the sparse record
+        assert owners["Greg"][0]["keeper"] is False
+        assert owners["Greg"][0]["espn_id"] is None
 
     @patch("main.AUCTION_PRICES_FILE")
     def test_get_auction_prices_missing_file(self, mock_file):
@@ -405,7 +405,7 @@ class TestAuctionPricesEndpoint(TestMainApp):
 
     @patch("main.AUCTION_PRICES_FILE")
     def test_get_auction_prices_for_year(self, mock_file):
-        """The per-year route returns just that season's picks."""
+        """The per-year route returns just that season, grouped by owner."""
         import json
 
         mock_file.exists.return_value = True
@@ -414,8 +414,9 @@ class TestAuctionPricesEndpoint(TestMainApp):
         response = self.client.get("/api/v1/auction-prices/2024")
 
         assert response.status_code == 200
-        picks = response.json()
-        assert [p["player"] for p in picks] == ["Breece Hall", "Josh Allen"]
+        owners = response.json()["owners"]
+        assert sorted(owners) == ["Adam", "Greg"]
+        assert owners["Adam"][0]["player"] == "Breece Hall"
 
     @patch("main.AUCTION_PRICES_FILE")
     def test_get_auction_prices_for_year_404(self, mock_file):
