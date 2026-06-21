@@ -21,7 +21,8 @@
   const posVar = (p) => POSVAR[p] || "--lh-silver";
 
   let DATA = null, MONEY = null, OWNER_COLOR = () => "var(--lh-silver)", built = false;
-  let mvSel = new Set();   // currently-charted players on The Big Board
+  let mvSel = new Set();   // currently-charted players on the price chart
+  let bbMaxY = 80;         // fixed y-axis ceiling so toggling lines never rescales the chart
 
   /* shared hover tooltip (reuses #lhTip) for the money charts */
   function tipAt(html, x, y) {
@@ -188,8 +189,11 @@
           if (!set) return;                                   // no roster to judge against
           const inLeague = (leagueByYear[y] || new Set()).has(nn);
           burns.push({
+            // a "burn" = an auction buy missing from the owner's end-of-season roster.
+            // gone   = not on ANY roster at year's end (dropped, never re-rostered)
+            // claimed = on a RIVAL's end-of-season roster (dropped, then picked up off waivers)
             year: y, owner, player: p.player, price: p.price, keeper: !!p.keeper,
-            gone: !inLeague, traded: inLeague,
+            gone: !inLeague, claimed: inLeague,
             rec: m ? m.rec : "", win: m ? m.wins > m.losses : false,
             champ: m ? m.champ : false, runner: m ? m.runner : false,
           });
@@ -230,27 +234,27 @@
         </section>
 
         <section class="lh-sec">
-          <div class="lh-sec-head"><span class="lh-num">02</span><h2>Régime vs. Crown</h2></div>
-          <p class="lh-sub">Best regular-season record is a régime; a championship is a crown. They don't always go to the same house — the gap between the two columns is the gap between dominant and decisive.</p>
-          <div class="lh-talehead"><div class="l">Best records · régime</div><div class="c">Manager</div><div class="r">Titles · crown</div></div>
+          <div class="lh-sec-head"><span class="lh-num">02</span><h2>Best Records vs. Titles</h2></div>
+          <p class="lh-sub">Most seasons with the best regular-season record, against most championships won. They don't always go to the same manager — the gap between the two columns is the gap between dominant and decisive.</p>
+          <div class="lh-talehead"><div class="l">Best records</div><div class="c">Manager</div><div class="r">Titles</div></div>
           <div class="lh-tale" id="lh-tale"></div>
         </section>
 
         <section class="lh-sec">
-          <div class="lh-sec-head"><span class="lh-num">03</span><h2>Their Guy</h2></div>
-          <p class="lh-sub">Some attachments outlast coaching staffs. These are the players each manager kept coming back for — drafted or stashed, season after season.</p>
+          <div class="lh-sec-head"><span class="lh-num">03</span><h2>Most-Rostered Player, by Manager</h2></div>
+          <p class="lh-sub">The player each manager kept coming back for — drafted or stashed, season after season — and how many seasons they rostered them.</p>
           <div class="lh-loyal" id="lh-loyal"></div>
         </section>
 
         <div class="lh-cols">
           <section class="lh-sec" style="margin-top:0">
-            <div class="lh-sec-head"><span class="lh-num">04</span><h2>The Ledger</h2></div>
+            <div class="lh-sec-head"><span class="lh-num">04</span><h2>Career Win-Loss Records</h2></div>
             <p class="lh-sub">Every manager's career regular-season record — <b>gold is wins, the rest is losses</b>, best rate on top. Three seasons or more.</p>
             <div id="lh-ledger"></div>
             <p class="lh-foot">Regular-season games only — playoffs aren't counted. <b>Ties score as half a win.</b></p>
           </section>
           <section class="lh-sec lh-roy" style="margin-top:0">
-            <div class="lh-sec-head"><span class="lh-num">05</span><h2>League Royalty</h2></div>
+            <div class="lh-sec-head"><span class="lh-num">05</span><h2>Most-Rostered Players, League-Wide</h2></div>
             <p class="lh-sub">The NFL names that defined the era — most seasons rostered by <i>anyone</i> in the league.</p>
             <div id="lh-royalty"></div>
           </section>
@@ -417,21 +421,21 @@
     return (
       `<div class="lh-act">
          <span class="lh-actrule"></span>
-         <span class="lh-acttext">Part II &middot; The Money</span>
+         <span class="lh-acttext">Auction Money &middot; ${span}</span>
          <span class="lh-actrule"></span>
        </div>
-       <p class="lh-actsub">Auction salaries, ${span} &mdash; what the room paid, what survived the season, and who turned it into wins.</p>
+       <p class="lh-actsub">What each player cost at auction, what stayed on the roster, and how it lined up with winning.</p>
 
        <section class="lh-sec">
-         <div class="lh-sec-head"><span class="lh-num">06</span><h2>Sunk Costs</h2></div>
-         <p class="lh-sub">Big money at the block, gone by the final whistle &mdash; auction buys that weren't on the roster at season's end. <b>Charred bars left the league entirely; amber ones were traded away.</b> The glowing tags are the managers who <b>won anyway.</b></p>
+         <div class="lh-sec-head"><span class="lh-num">06</span><h2>Priciest Dropped Players</h2></div>
+         <p class="lh-sub">The most expensive players who weren't on their manager's roster at season's end. <b>Charred bars were dropped and never re-rostered; amber bars were dropped, then claimed by a rival off waivers.</b> Glowing tags mark managers who <b>won anyway.</b></p>
          <div class="lh-sunkcard"><div id="lh-sunk"></div></div>
-         <p class="lh-foot">Keepers count as committed dollars. A burn is any auction buy missing from that manager's end-of-season roster.</p>
+         <p class="lh-foot">Keepers count as committed dollars. This counts any auction buy missing from the manager's end-of-season roster.</p>
        </section>
 
        <section class="lh-sec">
-         <div class="lh-sec-head"><span class="lh-num">07</span><h2>The Big Board</h2></div>
-         <p class="lh-sub">Nine auctions, one ticker. What the room was willing to pay for the names that moved the market &mdash; <b>lines are colored by position.</b> Tap a player to chart or drop their price line.</p>
+         <div class="lh-sec-head"><span class="lh-num">07</span><h2>Player Prices Over Time</h2></div>
+         <p class="lh-sub">What each player cost at auction, season by season &mdash; <b>lines are colored by position.</b> Four names are charted to start; tap any chip below to add or remove a line.</p>
          <div class="lh-boardcard">
            <div class="lh-movers" id="lh-movers"></div>
            <div class="lh-board" id="lh-board"></div>
@@ -440,14 +444,15 @@
        </section>
 
        <section class="lh-sec">
-         <div class="lh-sec-head"><span class="lh-num">08</span><h2>Maestro &amp; Wizard</h2></div>
-         <p class="lh-sub">Two ways to win: <b>master the auction</b> (keep the players you paid for) or <b>master the waiver wire</b> (win with the ones you didn't). Career auction-dollar retention against regular-season win rate. <b>Bigger tokens mean more seasons played.</b></p>
+         <div class="lh-sec-head"><span class="lh-num">08</span><h2>Auction Retention vs. Win Rate</h2></div>
+         <p class="lh-sub">Two ways to win: keep the players you paid for at auction, or win with players added off waivers. Each manager's share of auction dollars still on the roster at season's end, plotted against win rate over the auction years. <b>Bigger tokens mean more seasons played.</b></p>
          <div class="lh-quad" id="lh-quad"></div>
+         <p class="lh-foot">Win rate here covers the auction years (${span}) only, so it won't match the all-time Ledger above.</p>
        </section>`
     );
   }
 
-  /* --- 06 · Sunk Costs ----------------------------------------------------- */
+  /* --- 06 · Priciest Dropped Players -------------------------------------- */
   function renderSunkCosts() {
     const el = $("#lh-sunk"); if (!el) return;
     el.innerHTML = "";
@@ -457,12 +462,12 @@
       const tag = b.champ ? `<span class="lh-btag champ">★ Champion</span>`
         : b.runner ? `<span class="lh-btag won">Runner-up</span>`
           : b.win ? `<span class="lh-btag won">Won anyway</span>` : "";
-      const row = ce("div", "lh-burn" + (b.gone ? " gone" : " traded") + (b.win ? " winrec" : ""));
+      const row = ce("div", "lh-burn" + (b.gone ? " gone" : " claimed") + (b.win ? " winrec" : ""));
       row.innerHTML =
         `<div class="lh-bowner">${b.owner}</div>` +
         `<div class="lh-bmid">` +
           `<div class="lh-bplayer">${b.player}${b.keeper ? `<span class="lh-bkeep">keeper</span>` : ""}` +
-            `<span class="lh-bstat ${b.gone ? "gone" : "traded"}">${b.gone ? "Gone" : "Traded"}</span></div>` +
+            `<span class="lh-bstat ${b.gone ? "gone" : "claimed"}">${b.gone ? "Dropped" : "Claimed"}</span></div>` +
           `<div class="lh-btrack"><span class="lh-bfill"></span></div>` +
         `</div>` +
         `<div class="lh-bend"><div class="lh-bprice">$${b.price}</div>` +
@@ -472,7 +477,7 @@
     });
   }
 
-  /* --- 07 · The Big Board -------------------------------------------------- */
+  /* --- 07 · Player Prices Over Time --------------------------------------- */
   let bbChips = [];
   function renderBigBoard() {
     const years = MONEY.years, y0 = years[0], yN = years[years.length - 1];
@@ -483,6 +488,7 @@
     }).filter((c) => c.n >= 5);
     cand.sort((a, b) => b.peak - a.peak);
     bbChips = cand.slice(0, 16);
+    bbMaxY = Math.ceil(Math.max(10, ...cand.map((c) => c.peak)) / 10) * 10;   // stable axis across all selections
     const full = cand.filter((c) => c.full);
     // default to the most dramatic arcs that also have a toggle chip on screen,
     // preferring full-decade players, then topping up to four by sheer drama
@@ -521,17 +527,18 @@
     const sel = [...mvSel], years = MONEY.years, y0 = years[0], yN = years[years.length - 1];
     const W = 920, H = 360, padL = 52, padR = 78, padT = 16, padB = 34, plotW = W - padL - padR, plotH = H - padT - padB;
     const xFor = (y) => padL + (yN === y0 ? 0 : (y - y0) / (yN - y0)) * plotW;
-    let maxY = Math.max(10, ...sel.flatMap((pl) => Object.values(MONEY.parc[pl] || {})));
-    maxY = Math.ceil(maxY / 10) * 10;
+    const maxY = bbMaxY;                              // fixed: toggling lines never rescales the chart
     const yFor = (v) => padT + (1 - v / maxY) * plotH;
+    const step = maxY > 60 ? 20 : 10;
 
+    // axes + gridlines are always drawn, so the chart keeps a stable footprint even with nothing selected
     let grid = "";
-    for (let v = 0; v <= maxY; v += 10) {
+    for (let v = 0; v <= maxY; v += step) {
       const yy = yFor(v);
-      grid += `<line class="bb-grid" x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}"/>` +
-        `<text class="bb-yl" x="${padL - 8}" y="${yy + 3.5}" text-anchor="end">$${v}</text>`;
+      grid += `<line class="bb-grid" x1="${padL}" y1="${yy.toFixed(1)}" x2="${W - padR}" y2="${yy.toFixed(1)}"/>` +
+        `<text class="bb-yl" x="${padL - 8}" y="${(yy + 3.5).toFixed(1)}" text-anchor="end">$${v}</text>`;
     }
-    years.forEach((y) => { grid += `<text class="bb-xl" x="${xFor(y)}" y="${H - 12}" text-anchor="middle">’${String(y).slice(2)}</text>`; });
+    years.forEach((y) => { grid += `<text class="bb-xl" x="${xFor(y).toFixed(1)}" y="${H - 12}" text-anchor="middle">’${String(y).slice(2)}</text>`; });
 
     let lines = "";
     sel.forEach((pl) => {
@@ -545,13 +552,12 @@
       lines += `<text class="bb-end" style="fill:var(${cv})" x="${(xFor(ly) + 8).toFixed(1)}" y="${(yFor(d[ly]) + 3.5).toFixed(1)}">${esc(pl.split(" ").slice(-1)[0])}</text>`;
     });
 
-    $("#lh-board").innerHTML = sel.length
-      ? `<svg class="bb-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Auction price by year">${grid}${lines}</svg>`
-      : `<div class="lh-boardempty">Tap a player below to chart their auction price.</div>`;
+    const hint = sel.length ? "" : `<text class="bb-hint" x="${(padL + plotW / 2).toFixed(1)}" y="${(padT + plotH / 2).toFixed(1)}" text-anchor="middle">Tap a player below to chart their auction price</text>`;
+    $("#lh-board").innerHTML = `<svg class="bb-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Auction price by year">${grid}${lines}${hint}</svg>`;
     $("#lh-chips").querySelectorAll(".lh-chip").forEach((c) => c.classList.toggle("on", mvSel.has(c.dataset.p)));
   }
 
-  /* --- 08 · Maestro & Wizard ---------------------------------------------- */
+  /* --- 08 · Auction Retention vs. Win Rate -------------------------------- */
   function renderManagerMap() {
     const el = $("#lh-quad"); if (!el) return;
     const pts = MONEY.retention.slice();
@@ -565,10 +571,10 @@
     const mxp = X(medX), myp = Y(medY), maxS = Math.max(...pts.map((p) => p.seasons));
 
     let inner =
-      `<div class="lh-qzone maestro" style="left:${mxp}%;top:0;width:${100 - mxp}%;height:${myp}%"><span>The Maestro</span></div>` +
-      `<div class="lh-qzone wizard" style="left:0;top:0;width:${mxp}%;height:${myp}%"><span>The Wizard</span></div>` +
-      `<div class="lh-qzone forget" style="left:${mxp}%;top:${myp}%;width:${100 - mxp}%;height:${100 - myp}%"><span>Set &amp; Forget</span></div>` +
-      `<div class="lh-qzone adrift" style="left:0;top:${myp}%;width:${mxp}%;height:${100 - myp}%"><span>Adrift</span></div>` +
+      `<div class="lh-qzone maestro" style="left:${mxp}%;top:0;width:${100 - mxp}%;height:${myp}%"><span>Won via auction</span></div>` +
+      `<div class="lh-qzone wizard" style="left:0;top:0;width:${mxp}%;height:${myp}%"><span>Won via waivers</span></div>` +
+      `<div class="lh-qzone forget" style="left:${mxp}%;top:${myp}%;width:${100 - mxp}%;height:${100 - myp}%"><span>Kept players, lost</span></div>` +
+      `<div class="lh-qzone adrift" style="left:0;top:${myp}%;width:${mxp}%;height:${100 - myp}%"><span>Lost both ways</span></div>` +
       `<div class="lh-qx" style="left:${mxp}%"><span>med ${Math.round(medX)}%</span></div>` +
       `<div class="lh-qy" style="top:${myp}%"><span>med ${Math.round(medY)}%</span></div>`;
     pts.forEach((p) => {
