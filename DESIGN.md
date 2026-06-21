@@ -171,6 +171,11 @@ This allows frontend to handle errors appropriately:
 - `GET /api/v1/league-history` returns the league archive resource: a `seasons` array where each season carries its `champion`, `runner_up`, `best_record`, full `standings`, and per-team end-of-season `roster`. Mirrored on both ports (read-only on the viewer).
 - It returns RESTful primitives only — the viewer derives every leaderboard (championship counts, the regular-season finish grid, régime-vs-crown, loyalty, droughts, royalty) on the client. The file is re-read per request and the response is cached client-side since the archive is static.
 
+**Auction Price Archive:**
+- `GET /api/v1/auction-prices` returns the auction-price archive: a `seasons` object keyed by year, each holding an array of `{owner, player, price, keeper, espn_id}` records — every player bought at auction (2016-present), what their owner paid, whether they were a keeper, and the ESPN player id. Mirrored on both ports (read-only on the viewer).
+- `GET /api/v1/auction-prices/{year}` returns just that season's array, or `404` if the season is not in the archive.
+- A standalone dataset from league-history (prices come from the league's draft sheets; identity, keeper flag, and `espn_id` from ESPN draft data). `player` joins to league-history by name; `espn_id` keys ESPN headshots and is populated for every pick (picks ESPN never recorded — one team's 2022 non-keeper picks — were resolved by player-name lookup). The file is re-read per request and is static.
+
 ## File Structure
 ```
 ffdrafttracker/

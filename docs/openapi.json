@@ -386,6 +386,69 @@
         }
       }
     },
+    "/api/v1/auction-prices": {
+      "get": {
+        "summary": "Get Auction Prices",
+        "description": "Get the auction-price archive: every player's auction salary by season\n(2016-present), with owner, keeper flag, and ESPN player id. Static archive;\njoins to league-history by player name.",
+        "operationId": "get_auction_prices_api_v1_auction_prices_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuctionPrices"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auction-prices/{year}": {
+      "get": {
+        "summary": "Get Auction Prices For Year",
+        "description": "Get one season's auction picks. 404 if the season is not in the archive.",
+        "operationId": "get_auction_prices_for_year_api_v1_auction_prices__year__get",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Year"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuctionPick"
+                  },
+                  "title": "Response Get Auction Prices For Year Api V1 Auction Prices  Year  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/export/csv": {
       "get": {
         "summary": "Export Draft Csv",
@@ -705,6 +768,68 @@
           "expected_version"
         ],
         "title": "AdminDraftRequest"
+      },
+      "AuctionPick": {
+        "properties": {
+          "owner": {
+            "type": "string",
+            "title": "Owner"
+          },
+          "player": {
+            "type": "string",
+            "title": "Player"
+          },
+          "price": {
+            "type": "integer",
+            "title": "Price"
+          },
+          "keeper": {
+            "type": "boolean",
+            "title": "Keeper",
+            "default": false
+          },
+          "espn_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Espn Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "owner",
+          "player",
+          "price"
+        ],
+        "title": "AuctionPick",
+        "description": "One player bought at auction: who bought them, for how much."
+      },
+      "AuctionPrices": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": ""
+          },
+          "seasons": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/AuctionPick"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Seasons"
+          }
+        },
+        "type": "object",
+        "title": "AuctionPrices",
+        "description": "The full archive: auction picks grouped by season year."
       },
       "BestRecord": {
         "properties": {

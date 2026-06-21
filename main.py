@@ -19,6 +19,7 @@ from src.draft_rules import (
     remaining_roster_spots,
 )
 from src.models import (
+    AuctionPrices,
     Configuration,
     DraftPick,
     DraftState,
@@ -28,6 +29,7 @@ from src.models import (
     Player,
     Team,
 )
+from src.models.auction_prices import AuctionPick
 from src.models.player_stats import PlayerStatsCollection
 
 # Configure logging
@@ -77,6 +79,7 @@ ACTION_LOG_FILE = DATA_DIR / "action_log.json"
 PLAYER_STATS_FILE = DATA_DIR / "player_stats.json"
 COMMENTS_FILE = DATA_DIR / "analyst-comments.jsonl"
 LEAGUE_HISTORY_FILE = DATA_DIR / "league_history.json"
+AUCTION_PRICES_FILE = DATA_DIR / "auction_prices.json"
 
 
 # Request/Response models
@@ -412,6 +415,19 @@ async def _get_league_history_data():
         return LeagueHistory()
 
 
+async def _get_auction_prices_data():
+    """Shared logic for getting the auction-price archive."""
+    if not AUCTION_PRICES_FILE.exists():
+        logger.info("Auction prices file not found, returning empty archive")
+        return AuctionPrices()
+
+    try:
+        return AuctionPrices.model_validate_json(AUCTION_PRICES_FILE.read_text())
+    except Exception as e:
+        logger.error(f"Error loading auction prices: {e}, returning empty archive")
+        return AuctionPrices()
+
+
 async def _get_owners_data():
     """Shared logic for getting all owners."""
     owners_dict = load_owners()
@@ -566,6 +582,24 @@ async def get_league_history():
     and end-of-season rosters (2003-present). Static archive; the viewer derives
     its leaderboards and the finish grid from this resource client-side."""
     return await _get_league_history_data()
+
+
+@app.get("/api/v1/auction-prices", response_model=AuctionPrices)
+async def get_auction_prices():
+    """Get the auction-price archive: every player's auction salary by season
+    (2016-present), with owner, keeper flag, and ESPN player id. Static archive;
+    joins to league-history by player name."""
+    return await _get_auction_prices_data()
+
+
+@app.get("/api/v1/auction-prices/{year}", response_model=list[AuctionPick])
+async def get_auction_prices_for_year(year: int):
+    """Get one season's auction picks. 404 if the season is not in the archive."""
+    archive = await _get_auction_prices_data()
+    picks = archive.seasons.get(str(year))
+    if picks is None:
+        raise HTTPException(status_code=404, detail=f"No auction prices for {year}")
+    return picks
 
 
 @app.get("/api/v1/export/csv")
@@ -1335,6 +1369,24 @@ async def viewer_get_league_history():
     and end-of-season rosters (2003-present). Static archive; the viewer derives
     its leaderboards and the finish grid from this resource client-side."""
     return await _get_league_history_data()
+
+
+@viewer_app.get("/api/v1/auction-prices", response_model=AuctionPrices)
+async def viewer_get_auction_prices():
+    """Get the auction-price archive: every player's auction salary by season
+    (2016-present), with owner, keeper flag, and ESPN player id. Static archive;
+    joins to league-history by player name."""
+    return await _get_auction_prices_data()
+
+
+@viewer_app.get("/api/v1/auction-prices/{year}", response_model=list[AuctionPick])
+async def viewer_get_auction_prices_for_year(year: int):
+    """Get one season's auction picks. 404 if the season is not in the archive."""
+    archive = await _get_auction_prices_data()
+    picks = archive.seasons.get(str(year))
+    if picks is None:
+        raise HTTPException(status_code=404, detail=f"No auction prices for {year}")
+    return picks
 
 
 # Run the application
