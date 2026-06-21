@@ -1,5 +1,6 @@
 from .action_log import ActionLog
 from .action_logger import ActionLogger
+from .auction_prices import AuctionPick, AuctionPrices, SeasonAuction
 from .configuration import Configuration
 from .draft_pick import DraftPick
 from .draft_state import DraftState
@@ -20,6 +21,8 @@ from .team import Team
 __all__ = [
     "ActionLog",
     "ActionLogger",
+    "AuctionPick",
+    "AuctionPrices",
     "BestRecord",
     "ChampionCount",
     "Configuration",
@@ -31,6 +34,7 @@ __all__ = [
     "Owner",
     "Player",
     "RosterEntry",
+    "SeasonAuction",
     "SeasonResult",
     "Team",
     "TeamSeason",

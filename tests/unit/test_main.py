@@ -349,6 +349,87 @@ class TestLeagueHistoryEndpoint(TestMainApp):
         assert response.json() == {"seasons": []}
 
 
+class TestAuctionPricesEndpoint(TestMainApp):
+    """Test GET /api/v1/auction-prices (the read-only auction archive)."""
+
+    SAMPLE = {
+        "seasons": {
+            "2024": {
+                "owners": {
+                    "Adam": [
+                        {
+                            "player": "Breece Hall",
+                            "price": 13,
+                            "keeper": True,
+                            "espn_id": 4427366,
+                        }
+                    ],
+                    "Greg": [{"player": "Josh Allen", "price": 11}],
+                }
+            }
+        },
+    }
+
+    @patch("main.AUCTION_PRICES_FILE")
+    def test_get_auction_prices(self, mock_file):
+        """Returns the archive grouped by owner, price/keeper/espn_id intact."""
+        import json
+
+        mock_file.exists.return_value = True
+        mock_file.read_text.return_value = json.dumps(self.SAMPLE)
+
+        response = self.client.get("/api/v1/auction-prices")
+
+        assert response.status_code == 200
+        owners = response.json()["seasons"]["2024"]["owners"]
+        assert owners["Adam"][0] == {
+            "player": "Breece Hall",
+            "price": 13,
+            "keeper": True,
+            "espn_id": 4427366,
+        }
+        # defaults applied for the sparse record
+        assert owners["Greg"][0]["keeper"] is False
+        assert owners["Greg"][0]["espn_id"] is None
+
+    @patch("main.AUCTION_PRICES_FILE")
+    def test_get_auction_prices_missing_file(self, mock_file):
+        """Returns an empty archive (not a 404/500) when the file is absent."""
+        mock_file.exists.return_value = False
+
+        response = self.client.get("/api/v1/auction-prices")
+
+        assert response.status_code == 200
+        assert response.json() == {"seasons": {}}
+
+    @patch("main.AUCTION_PRICES_FILE")
+    def test_get_auction_prices_for_year(self, mock_file):
+        """The per-year route returns just that season, grouped by owner."""
+        import json
+
+        mock_file.exists.return_value = True
+        mock_file.read_text.return_value = json.dumps(self.SAMPLE)
+
+        response = self.client.get("/api/v1/auction-prices/2024")
+
+        assert response.status_code == 200
+        owners = response.json()["owners"]
+        assert sorted(owners) == ["Adam", "Greg"]
+        assert owners["Adam"][0]["player"] == "Breece Hall"
+
+    @patch("main.AUCTION_PRICES_FILE")
+    def test_get_auction_prices_for_year_404(self, mock_file):
+        """A season not in the archive is a 404, not an empty list."""
+        import json
+
+        mock_file.exists.return_value = True
+        mock_file.read_text.return_value = json.dumps(self.SAMPLE)
+
+        response = self.client.get("/api/v1/auction-prices/1999")
+
+        assert response.status_code == 404
+
+
 class TestPostEndpoints(TestMainApp):
     """Test POST endpoints."""
 
