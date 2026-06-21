@@ -22,14 +22,19 @@ python -m pytest tests/unit/models/test_draft_state.py -v
 python -m pytest tests/ --cov=src --cov-report=term-missing
 ```
 
+### Running the App
+```bash
+uv run python main.py
+# Main draft tracker: http://localhost:8175
+# Team viewer app:   http://localhost:8176
+```
+
 ### Code Quality
 ```bash
 # Lint and format
 ruff check src/ tests/     # Linting
 ruff format src/ tests/    # Formatting (replaces black)
-
-# Type checking (if mypy is added)
-mypy src/
+djlint templates/          # Lint Jinja2 templates (run after any template change)
 ```
 
 ### Development Setup
@@ -38,6 +43,12 @@ mypy src/
 uv sync --extra dev
 ```
 
+### API Changes
+Whenever an API route is added, modified, or removed:
+1. Update `DESIGN.md` to reflect the change
+2. Update `README.md` if user-visible behavior changed
+3. Run `uv run python utils/generate_docs.py` to regenerate OpenAPI docs
+
 ### Dependency Management
 - `pyproject.toml` holds abstract deps (`>=`); **`uv.lock` is the pinned + hashed source of truth** (including transitive deps).
 - After editing deps in `pyproject.toml`: run `uv lock`, then regenerate the pip fallback with `uv export --extra dev --no-emit-project -o requirements.txt` (generated file — do not hand-edit).
@@ -45,7 +56,7 @@ uv sync --extra dev
 
 ## Architecture Overview
 
-This is a **Fantasy Football Auction Draft Tracker** - a FastAPI web application for managing live fantasy football auctions. It has a full web UI (routes in `main.py`, Jinja2 `templates/`, `static/` assets) backed by Pydantic models with JSON-file persistence in `data/`.
+This is a **Fantasy Football Auction Draft Tracker** - a FastAPI web application for managing live fantasy football auctions. It serves **two** FastAPI apps from `main.py`, run on separate threads by `python main.py`: an **admin** app (port 8175, full read/write) and a **read-only viewer** app (port 8176) for remote participants — write endpoints are isolated to the admin app by design. Both use Jinja2 `templates/` + `static/` assets, backed by Pydantic models with JSON-file persistence in `data/`.
 
 ### Current Structure (Models Layer)
 
@@ -57,10 +68,20 @@ This is a **Fantasy Football Auction Draft Tracker** - a FastAPI web application
 - **Team**: Owner's roster with budget and draft picks
 - **DraftPick**: Individual draft selection with price
 - **Configuration**: App settings (budgets, position limits, data directory)
+- **PlayerStats**: Per-player stat lines (passing/rushing/receiving) shown in the viewer
 
 **Infrastructure**:
 - **ActionLog**: Audit trail entries for undo capability  
 - **ActionLogger**: Utility for atomic logging to JSON files
+
+**Booth Module** (`src/booth/`):
+- Live draft commentary system — personas react to `draft_state.json` changes
+- Posts running commentary to `data/analyst-comments.jsonl`
+- `watch.py` monitors state, `slice.py` prepares context, `log.py` reads comments, `personas/` holds per-persona configs
+
+**Domain Rules** (`src/draft_rules.py`):
+- `max_bid()`, `next_eligible_nominator()`, `position_count()`, `remaining_roster_spots()`
+- Business logic separate from models; used directly in FastAPI route handlers
 
 ### Key Architectural Patterns
 
@@ -97,11 +118,12 @@ def save_to_file(self, filepath: Path) -> None:
 
 **Strict Unit/Integration Separation**:
 
-**Unit Tests** (`tests/unit/models/`):
+**Unit Tests** (`tests/unit/models/`, `tests/unit/booth/`):
 - Test business logic only with full mocking
-- 100% code coverage achieved
+- High coverage (no enforced `fail_under` gate)
 - Each model has focused validation and behavior tests
 - ActionLogger tests use mocked file I/O
+- `tests/unit/booth/` covers the commentary module (`watch`/`slice`/`log`)
 
 **Integration Tests** (`tests/integration/`):
 - Test real file persistence with `tempfile` directories
@@ -111,14 +133,15 @@ def save_to_file(self, filepath: Path) -> None:
   ```python
   # Ensures test covers all defined model fields
   defined_fields = set(DraftState.__annotations__.keys())
-  expected_fields = {'nominated', 'available_player_ids', 'teams', 'next_to_nominate'}
+  expected_fields = {'nominated', 'available_player_ids', 'teams', 'next_to_nominate', 'version'}
   assert defined_fields == expected_fields
   ```
 
+**End-to-End Tests** (`tests/e2e/`):
+- `test_complete_draft.py` drives a full draft flow against the app
+
 **Test Quality Standards**:
-- Removed 59 framework-testing tests (Pydantic validation, serialization)
-- Focus only on custom business logic
-- Rick and Morty themed test data for fun
+- Focus only on custom business logic, not framework behavior (Pydantic handles that)
 - Reflection-based field coverage prevents serialization blind spots
 
 ## Data Model Relationships
@@ -128,7 +151,8 @@ DraftState
 ├── nominated: Optional[Nominated]           # Current auction
 ├── available_player_ids: List[int]          # Undrafted players  
 ├── teams: List[Team]                        # All fantasy teams
-└── next_to_nominate: int                    # Whose turn to nominate
+├── next_to_nominate: int                    # Whose turn to nominate
+└── version: int                             # Optimistic-locking counter (bumped on save)
 
 Team
 ├── owner_id: int                            # References Owner
@@ -158,5 +182,4 @@ Nominated
 
 **Fantasy Football Domain**: Models reflect auction draft mechanics (nominations, bids, position limits)
 
-**Future FastAPI Integration**: Models designed for direct use in API endpoints with automatic validation and OpenAPI generation
-- whenever the API changes, update DESIGN.md to reflect the changes.  Then run the utils/generate_docs.py script to regenerate swagger docs
+**Optimistic Locking**: All mutating API endpoints accept `expected_version` and reject stale reads with HTTP 409, preventing concurrent edit conflicts.
