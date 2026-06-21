@@ -21,9 +21,12 @@
     const years = seasons.map((s) => s.year);
     const latest = years[years.length - 1];
     const active = new Set(seasons.find((s) => s.year === latest).standings.map((t) => t.owner));
-    const appear = {};
-    seasons.forEach((s) => s.standings.forEach((t) => { appear[t.owner] = (appear[t.owner] || 0) + 1; }));
-    const ironmen = Object.values(appear).filter((c) => c === seasons.length).length;
+    const appear = {}, career = {};
+    seasons.forEach((s) => s.standings.forEach((t) => {
+      appear[t.owner] = (appear[t.owner] || 0) + 1;
+      const c = career[t.owner] || (career[t.owner] = { w: 0, l: 0, t: 0 });
+      c.w += t.wins || 0; c.l += t.losses || 0; c.t += t.ties || 0;
+    }));
 
     const titles = {}, lastTitle = {};
     seasons.forEach((s) => {
@@ -46,12 +49,14 @@
     const size = {}, cells = {}, rosters = {};
     seasons.forEach((s) => {
       size[s.year] = s.standings.length;
-      const champO = s.champion.owner, runO = s.runner_up.owner;
+      const champO = s.champion.owner, runO = s.runner_up.owner, shared = !!s.shared_title;
       const order = s.standings.slice().sort((a, b) => winpct(b) - winpct(a) || (b.points_for || 0) - (a.points_for || 0));
       order.forEach((t, i) => {
         const rank = i + 1;
         const rec = `${t.wins}-${t.losses}` + (t.ties ? `-${t.ties}` : "");
-        const isC = t.owner === champO, isR = t.owner === runO;
+        // a shared title makes the runner-up a co-champion, not a runner-up
+        const isC = t.owner === champO || (shared && t.owner === runO);
+        const isR = t.owner === runO && !shared;
         (cells[t.owner] = cells[t.owner] || {})[s.year] = { r: rank, rec, champ: isC, runner: isR };
         (rosters[t.owner] = rosters[t.owner] || {})[s.year] = {
           team: t.team_name, rec, rsRank: rank, final: t.final_rank, champ: isC, runner: isR,
@@ -88,10 +93,12 @@
     const loyaltyActive = loy.filter((l) => active.has(l.owner)).slice(0, 8);
     const loyalty = loyaltyActive.length ? loyaltyActive : loy.slice(0, 8);
 
-    // drought BETWEEN titles — active managers who have won at least once
-    const drought = [...active].filter((o) => lastTitle[o])
-      .map((o) => ({ owner: o, since: latest - lastTitle[o] }))
-      .sort((a, b) => b.since - a.since);
+    // the ledger: career regular-season records, best win rate first (min 3 seasons)
+    const winPct = (c) => { const g = c.w + c.l + c.t; return g ? (c.w + 0.5 * c.t) / g : 0; };
+    const ledger = Object.keys(career)
+      .filter((o) => appear[o] >= 3)
+      .map((o) => ({ owner: o, ...career[o], pct: winPct(career[o]), active: active.has(o) }))
+      .sort((a, b) => b.pct - a.pct || (b.w - b.l) - (a.w - a.l) || a.owner.localeCompare(b.owner));
 
     // league royalty: most-rostered NFL players ever
     const pop = {};
@@ -102,8 +109,8 @@
     const royalty = Object.entries(pop).map(([player, n]) => ({ player, seasons: n })).sort((a, b) => b.seasons - a.seasons).slice(0, 12);
 
     return {
-      meta: { years, nSeasons: seasons.length, nManagers: Object.keys(appear).length, ironmen, latest, active },
-      champions, regime, grid: { years, size, rows: gridRows }, loyalty, drought, royalty, rosters,
+      meta: { years, nSeasons: seasons.length, nManagers: Object.keys(appear).length, latest, active },
+      champions, regime, grid: { years, size, rows: gridRows }, loyalty, ledger, royalty, rosters,
     };
   }
 
@@ -142,10 +149,10 @@
 
         <div class="lh-cols">
           <section class="lh-sec" style="margin-top:0">
-            <div class="lh-sec-head"><span class="lh-num">04</span><h2>Time Since a Title</h2></div>
-            <p class="lh-sub">Every champion eventually waits again — years since each manager who's <b>won at least once</b> last hoisted the trophy.</p>
-            <div id="lh-drought"></div>
-            <p class="lh-foot">Only past champions appear here — <b>win one and the clock starts.</b> Managers still chasing their first aren't on the board.</p>
+            <div class="lh-sec-head"><span class="lh-num">04</span><h2>The Ledger</h2></div>
+            <p class="lh-sub">Every manager's career regular-season record — <b>gold is wins, the rest is losses</b>, best rate on top. Three seasons or more.</p>
+            <div id="lh-ledger"></div>
+            <p class="lh-foot">Regular-season games only — playoffs aren't counted. <b>Ties score as half a win.</b></p>
           </section>
           <section class="lh-sec lh-roy" style="margin-top:0">
             <div class="lh-sec-head"><span class="lh-num">05</span><h2>League Royalty</h2></div>
@@ -173,7 +180,7 @@
   /* ---------------- sections ---------------- */
   function renderBanners() {
     $("#lh-span").innerHTML =
-      `<b>${DATA.meta.nSeasons}</b> seasons · <b>${DATA.meta.nManagers}</b> managers · <b>${DATA.meta.ironmen}</b> iron men`;
+      `<b>${DATA.meta.nSeasons}</b> seasons · <b>${DATA.meta.nManagers}</b> managers · <b>${DATA.champions.length}</b> champions`;
     const raf = $("#lh-rafters"), maxT = DATA.champions[0].titles;
     DATA.champions.forEach((c, i) => {
       const b = ce("div", "lh-banner" + (c.titles > 1 ? " champ" : ""));
@@ -227,6 +234,12 @@
         c.style.opacity = ""; c.style.transform = "";
       });
     }));
+    // once the cascade settles, drop the slow inline reveal transition so the
+    // snappy hover lift (.12s, from the stylesheet) takes over on each cell.
+    const settle = (0.15 + Math.max(0, rows.length - 1) * 0.03 + 22 * 0.018 + 0.55) * 1000;
+    setTimeout(() => rows.forEach((rw) => rw.querySelectorAll(".lh-cell").forEach((c) => {
+      c.style.transition = ""; c.style.transitionDelay = "";
+    })), settle);
     wireGrid(gridEl);
   }
 
@@ -273,20 +286,18 @@
     });
   }
 
-  function renderDrought() {
-    const dr = $("#lh-drought"); dr.innerHTML = "";
-    const maxD = Math.max(...DATA.drought.map((d) => d.since), 1);
-    DATA.drought.forEach((d, i) => {
-      const defending = d.since === 0;
-      const row = ce("div", "lh-row");
+  function renderLedger() {
+    const el = $("#lh-ledger"); el.innerHTML = "";
+    DATA.ledger.forEach((m, i) => {
+      const row = ce("div", "lh-row lh-led" + (m.active ? "" : " gone") + (i === 0 ? " top" : ""));
+      const rec = `${m.w}–${m.l}` + (m.t ? `–${m.t}` : "");
+      const pct = m.pct.toFixed(3).replace(/^0/, ""); // ".597"
       row.innerHTML =
-        `<div class="lh-nm">${d.owner}</div>` +
-        `<div class="lh-track"><span class="lh-fill ${defending ? "gold" : "pew"}"></span></div>` +
-        `<div style="display:flex;gap:9px;align-items:center"><span class="lh-val">${defending ? "★" : d.since}` +
-        `<span style="font-size:10px;color:var(--lh-ink3)"> ${defending ? "now" : "yr"}</span></span>` +
-        (defending ? '<span class="lh-tag def">Defending</span>' : "") + `</div>`;
-      dr.appendChild(row);
-      setTimeout(() => { $(".lh-fill", row).style.width = Math.max(4, d.since / maxD * 100) + "%"; }, 250 + i * 60);
+        `<div class="lh-nm">${m.owner}</div>` +
+        `<div class="lh-led-track"><span class="lh-led-fill"></span></div>` +
+        `<div class="lh-led-val"><span class="lh-led-pct">${pct}</span><span class="lh-led-rec">${rec}</span></div>`;
+      el.appendChild(row);
+      setTimeout(() => { $(".lh-led-fill", row).style.width = (m.pct * 100) + "%"; }, 250 + i * 55);
     });
   }
 
@@ -307,7 +318,18 @@
   /* ---------------- interactions: grid tooltip + roster drawer ---------------- */
   function wireGrid(gridEl) {
     const tip = $("#lhTip");
+    // trace one manager: light up only the row the cursor is genuinely over.
+    // Hovering the gaps, the era strip or the year header marks no row, so nothing
+    // is promoted on dead space. No dimming — just a spotlight on the active row.
+    let activeRow = null;
+    const trace = (row) => {
+      if (row === activeRow) return;
+      if (activeRow) activeRow.classList.remove("is-active");
+      activeRow = row;
+      if (activeRow) activeRow.classList.add("is-active");
+    };
     gridEl.addEventListener("mousemove", (e) => {
+      trace(e.target.closest(".lh-grow:not(.ghead)"));
       const cell = e.target.closest(".lh-cell.clk");
       if (!cell) { tip.classList.remove("on"); return; }
       const o = cell.dataset.o, y = +cell.dataset.y, d = (DATA.rosters[o] || {})[y];
@@ -325,7 +347,7 @@
       if (top + h > innerHeight - 8) top = e.clientY - pad - h;
       tip.style.left = x + "px"; tip.style.top = top + "px";
     });
-    gridEl.addEventListener("mouseleave", () => tip.classList.remove("on"));
+    gridEl.addEventListener("mouseleave", () => { tip.classList.remove("on"); trace(null); });
     gridEl.addEventListener("click", (e) => {
       const cell = e.target.closest(".lh-cell.clk");
       if (cell) { openRoster(cell.dataset.o, +cell.dataset.y); return; }
@@ -397,7 +419,7 @@
       if (!seasons.length) { host.innerHTML = '<div class="lh-error">No league history is available yet.</div>'; built = true; return; }
       DATA = derive(seasons);
       scaffold(host);
-      renderBanners(); renderGrid(); renderRegime(); renderLoyalty(); renderDrought(); renderRoyalty();
+      renderBanners(); renderGrid(); renderRegime(); renderLoyalty(); renderLedger(); renderRoyalty();
       wireDrawerOnce();
       built = true;
     }).catch(() => { host.innerHTML = '<div class="lh-error">Couldn’t load the league history.</div>'; });
