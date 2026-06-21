@@ -101,14 +101,20 @@ def test_team_season_roster_round_trip():
 
 
 @pytest.mark.skipif(not DATA_FILE.exists(), reason="archive not present")
-def test_committed_archive_leaderboard_and_pii_clean():
+def test_committed_archive_invariants_and_pii_clean():
+    """Validate the committed archive with invariants, not a snapshot of the
+    standings (championship totals change as new seasons are added)."""
     history = LeagueHistory.model_validate_json(DATA_FILE.read_text())
-    counts = {c.owner: c.titles for c in history.championship_counts()}
-    assert counts["Greg"] == 6
-    assert counts["Adam"] == 4
-    assert counts["Steve"] == 4
-    assert counts["Raman"] == 3
-    assert counts["Mitch"] == 1  # 2022 split-title credit
+    assert history.seasons
+    # Every season is fully attributed; no unresolved owners leaked through.
+    for s in history.seasons:
+        assert s.champion.owner not in ("", "UNKNOWN")
+        assert s.runner_up.owner not in ("", "UNKNOWN")
+        assert all(t.owner not in ("", "UNKNOWN") for t in s.standings)
+    # Leaderboard invariant: one title per season, plus one per shared title.
+    total_titles = sum(c.titles for c in history.championship_counts())
+    expected = len(history.seasons) + sum(s.shared_title for s in history.seasons)
+    assert total_titles == expected
     # Privacy: no emails or ESPN GUIDs leaked into the committed file.
     blob = DATA_FILE.read_text()
     assert "@" not in blob
