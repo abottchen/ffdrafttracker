@@ -8,13 +8,26 @@ Each endpoint test confirms:
 - Error handling
 """
 
+import asyncio
+import json
+import os
 from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
-from main import app
-from src.models import Configuration, DraftPick, DraftState, Nominated, Player, Team
+import main
+from main import app, viewer_app
+from src.models import (
+    AuctionPrices,
+    Configuration,
+    DraftPick,
+    DraftState,
+    LeagueHistory,
+    Nominated,
+    Player,
+    Team,
+)
 
 
 class TestMainApp:
@@ -320,13 +333,12 @@ class TestLeagueHistoryEndpoint(TestMainApp):
         ]
     }
 
-    @patch("main.LEAGUE_HISTORY_FILE")
-    def test_get_league_history(self, mock_file):
+    def test_get_league_history(self, tmp_path, monkeypatch):
         """Returns the season archive with standings and rosters intact."""
-        import json
-
-        mock_file.exists.return_value = True
-        mock_file.read_text.return_value = json.dumps(self.SAMPLE)
+        f = tmp_path / "league_history.json"
+        f.write_text(json.dumps(self.SAMPLE))
+        monkeypatch.setattr(main, "LEAGUE_HISTORY_FILE", f)
+        main._archive_cache.clear()
 
         response = self.client.get("/api/v1/league-history")
 
@@ -370,13 +382,12 @@ class TestAuctionPricesEndpoint(TestMainApp):
         },
     }
 
-    @patch("main.AUCTION_PRICES_FILE")
-    def test_get_auction_prices(self, mock_file):
+    def test_get_auction_prices(self, tmp_path, monkeypatch):
         """Returns the archive grouped by owner, price/keeper/espn_id intact."""
-        import json
-
-        mock_file.exists.return_value = True
-        mock_file.read_text.return_value = json.dumps(self.SAMPLE)
+        f = tmp_path / "auction_prices.json"
+        f.write_text(json.dumps(self.SAMPLE))
+        monkeypatch.setattr(main, "AUCTION_PRICES_FILE", f)
+        main._archive_cache.clear()
 
         response = self.client.get("/api/v1/auction-prices")
 
@@ -428,6 +439,224 @@ class TestAuctionPricesEndpoint(TestMainApp):
         response = self.client.get("/api/v1/auction-prices/1999")
 
         assert response.status_code == 404
+
+
+class TestArchiveCaching(TestMainApp):
+    """The static history archives are memoized on the file's mtime so they
+    aren't re-read + re-validated through Pydantic on every request, while
+    mutable state (draft_state/config) stays uncached and stateless per
+    CLAUDE.md."""
+
+    LH_SAMPLE = {
+        "seasons": [
+            {
+                "year": 2024,
+                "champion": {"owner": "Adam", "team_name": "Run CMC"},
+                "runner_up": {"owner": "Greg", "team_name": "Oh no, Romo"},
+                "best_record": {
+                    "owner": "Adam",
+                    "team_name": "Run CMC",
+                    "record": "12-2",
+                },
+            }
+        ]
+    }
+
+    def setup_method(self):
+        super().setup_method()
+        # Module-global cache; start each test cold to avoid cross-test bleed.
+        main._archive_cache.clear()
+
+    def teardown_method(self):
+        main._archive_cache.clear()
+
+    def test_archive_memoized_between_requests(self, tmp_path, monkeypatch):
+        """A second load returns the identical parsed instance (served from the
+        cache), proving the file is not re-read + re-validated per request."""
+        f = tmp_path / "league_history.json"
+        f.write_text(json.dumps(self.LH_SAMPLE))
+        monkeypatch.setattr(main, "LEAGUE_HISTORY_FILE", f)
+
+        first = asyncio.run(main._get_league_history_data())
+        second = asyncio.run(main._get_league_history_data())
+
+        assert first is second  # same cached object -> no re-parse
+        assert isinstance(first, LeagueHistory)
+        assert len(first.seasons) == 1
+        assert str(f) in main._archive_cache
+
+    def test_archive_reloaded_when_file_mtime_changes(self, tmp_path, monkeypatch):
+        """An out-of-band regeneration (new content + newer mtime) is picked up
+        on the next request without a process restart."""
+        f = tmp_path / "auction_prices.json"
+        f.write_text(json.dumps({"seasons": {}}))
+        monkeypatch.setattr(main, "AUCTION_PRICES_FILE", f)
+
+        first = asyncio.run(main._get_auction_prices_data())
+        assert first.seasons == {}
+
+        # Regenerate the archive, then force a strictly-newer mtime so the bump
+        # is detected regardless of the filesystem's mtime resolution.
+        f.write_text(json.dumps({"seasons": {"2024": {"owners": {}}}}))
+        bumped = f.stat().st_mtime + 10
+        os.utime(f, (bumped, bumped))
+
+        second = asyncio.run(main._get_auction_prices_data())
+        assert second is not first  # mtime changed -> re-read
+        assert "2024" in second.seasons
+
+    def test_missing_file_failure_is_not_cached(self, tmp_path, monkeypatch):
+        """A missing file yields an empty archive but is NOT memoized, so a
+        later good file (regen completes) is served on the next request."""
+        f = tmp_path / "league_history.json"  # does not exist yet
+        monkeypatch.setattr(main, "LEAGUE_HISTORY_FILE", f)
+
+        empty = asyncio.run(main._get_league_history_data())
+        assert empty.seasons == []
+        assert str(f) not in main._archive_cache  # failure not cached
+
+        f.write_text(json.dumps(self.LH_SAMPLE))
+        loaded = asyncio.run(main._get_league_history_data())
+        assert len(loaded.seasons) == 1
+
+    def test_corrupt_file_returns_empty_without_caching(self, tmp_path, monkeypatch):
+        """A corrupt archive degrades to an empty model and is not memoized."""
+        f = tmp_path / "auction_prices.json"
+        f.write_text("{ not valid json")
+        monkeypatch.setattr(main, "AUCTION_PRICES_FILE", f)
+
+        result = asyncio.run(main._get_auction_prices_data())
+        assert isinstance(result, AuctionPrices)
+        assert result.seasons == {}
+        assert str(f) not in main._archive_cache
+
+    def test_draft_state_remains_uncached(self, tmp_path, monkeypatch):
+        """CLAUDE.md stateless design: mutable draft state is re-read every call
+        and never enters the archive cache."""
+        ds = tmp_path / "draft_state.json"
+        self.sample_draft_state.save_to_file(ds, increment_version=False)
+        monkeypatch.setattr(main, "DRAFT_STATE_FILE", ds)
+
+        first = main.load_draft_state()
+        second = main.load_draft_state()
+
+        assert first is not second  # fresh read each call
+        assert str(ds) not in main._archive_cache
+
+    def test_configuration_remains_uncached(self, tmp_path, monkeypatch):
+        """Config also mutates at runtime, so it is re-read every call and never
+        enters the archive cache."""
+        cfg_obj = Configuration(
+            initial_budget=200,
+            min_bid=1,
+            position_maximums={"QB": 2, "RB": 4, "WR": 5, "TE": 2, "K": 1, "D/ST": 1},
+            total_rounds=15,
+            data_directory=str(tmp_path),
+        )
+        cfg = tmp_path / "config.json"
+        cfg.write_text(cfg_obj.model_dump_json())
+        monkeypatch.setattr(main, "CONFIG_FILE", cfg)
+
+        first = main.load_configuration()
+        second = main.load_configuration()
+
+        assert first is not second  # fresh read each call
+        assert str(cfg) not in main._archive_cache
+
+
+class TestArchiveConditionalRequests(TestMainApp):
+    """The archive GETs support conditional requests: a 200 carries ETag /
+    Last-Modified / Cache-Control validators, and a matching If-None-Match /
+    If-Modified-Since yields an empty 304 until the file changes."""
+
+    LH_SAMPLE = TestArchiveCaching.LH_SAMPLE
+
+    def setup_method(self):
+        super().setup_method()
+        main._archive_cache.clear()
+
+    def teardown_method(self):
+        main._archive_cache.clear()
+
+    def test_200_carries_validators(self, tmp_path, monkeypatch):
+        f = tmp_path / "league_history.json"
+        f.write_text(json.dumps(self.LH_SAMPLE))
+        monkeypatch.setattr(main, "LEAGUE_HISTORY_FILE", f)
+
+        r = self.client.get("/api/v1/league-history")
+
+        assert r.status_code == 200
+        assert r.headers["etag"]
+        assert r.headers["last-modified"]
+        assert r.headers["cache-control"] == "no-cache"
+        assert len(r.json()["seasons"]) == 1
+
+    def test_if_none_match_returns_empty_304(self, tmp_path, monkeypatch):
+        f = tmp_path / "auction_prices.json"
+        f.write_text(json.dumps({"seasons": {"2024": {"owners": {}}}}))
+        monkeypatch.setattr(main, "AUCTION_PRICES_FILE", f)
+
+        etag = self.client.get("/api/v1/auction-prices").headers["etag"]
+        r = self.client.get("/api/v1/auction-prices", headers={"If-None-Match": etag})
+
+        assert r.status_code == 304
+        assert r.content == b""  # body not re-sent
+        assert r.headers["etag"] == etag
+
+    def test_stale_etag_after_file_change_gets_200(self, tmp_path, monkeypatch):
+        f = tmp_path / "league_history.json"
+        f.write_text(json.dumps(self.LH_SAMPLE))
+        monkeypatch.setattr(main, "LEAGUE_HISTORY_FILE", f)
+
+        old_etag = self.client.get("/api/v1/league-history").headers["etag"]
+
+        # Out-of-band regen: new content + strictly-newer mtime.
+        f.write_text(json.dumps({"seasons": []}))
+        bumped = f.stat().st_mtime + 10
+        os.utime(f, (bumped, bumped))
+
+        r = self.client.get(
+            "/api/v1/league-history", headers={"If-None-Match": old_etag}
+        )
+
+        assert r.status_code == 200  # validator no longer matches
+        assert r.headers["etag"] != old_etag
+
+    def test_if_modified_since_returns_304(self, tmp_path, monkeypatch):
+        f = tmp_path / "auction_prices.json"
+        f.write_text(json.dumps({"seasons": {"2024": {"owners": {}}}}))
+        monkeypatch.setattr(main, "AUCTION_PRICES_FILE", f)
+
+        last_modified = self.client.get("/api/v1/auction-prices").headers[
+            "last-modified"
+        ]
+        r = self.client.get(
+            "/api/v1/auction-prices",
+            headers={"If-Modified-Since": last_modified},
+        )
+
+        assert r.status_code == 304
+
+    def test_missing_file_has_no_validators(self, tmp_path, monkeypatch):
+        f = tmp_path / "league_history.json"  # absent
+        monkeypatch.setattr(main, "LEAGUE_HISTORY_FILE", f)
+
+        r = self.client.get("/api/v1/league-history")
+
+        assert r.status_code == 200
+        assert r.json() == {"seasons": []}
+        assert "etag" not in r.headers  # nothing stable to cache yet
+
+    def test_viewer_app_also_supports_conditional_requests(self, tmp_path, monkeypatch):
+        f = tmp_path / "league_history.json"
+        f.write_text(json.dumps(self.LH_SAMPLE))
+        monkeypatch.setattr(main, "LEAGUE_HISTORY_FILE", f)
+        viewer_client = TestClient(viewer_app)
+
+        etag = viewer_client.get("/api/v1/league-history").headers["etag"]
+        r = viewer_client.get("/api/v1/league-history", headers={"If-None-Match": etag})
+
+        assert r.status_code == 304
 
 
 class TestPostEndpoints(TestMainApp):

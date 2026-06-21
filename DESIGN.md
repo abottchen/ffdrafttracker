@@ -169,12 +169,14 @@ This allows frontend to handle errors appropriately:
 
 **League History Archive:**
 - `GET /api/v1/league-history` returns the league archive resource: a `seasons` array where each season carries its `champion`, `runner_up`, `best_record`, full `standings`, and per-team end-of-season `roster`. Mirrored on both ports (read-only on the viewer).
-- It returns RESTful primitives only — the viewer derives every leaderboard (championship counts, the regular-season finish grid, régime-vs-crown, loyalty, droughts, royalty) on the client. The file is re-read per request and the response is cached client-side since the archive is static.
+- It returns RESTful primitives only — the viewer derives every leaderboard (championship counts, the regular-season finish grid, régime-vs-crown, loyalty, droughts, royalty) on the client.
 
 **Auction Price Archive:**
 - `GET /api/v1/auction-prices` returns the auction-price archive: a `seasons` object keyed by year, each season holding an `owners` object that maps owner → an array of `{player, price, keeper, espn_id}` picks — every player bought at auction (2016-present), what was paid, whether they were a keeper, and the ESPN player id. Grouping by owner avoids repeating the owner on every pick. Mirrored on both ports (read-only on the viewer).
 - `GET /api/v1/auction-prices/{year}` returns just that season (its `owners` map), or `404` if the season is not in the archive.
-- A standalone dataset from league-history (prices come from the league's draft sheets; identity, keeper flag, and `espn_id` from ESPN draft data). `player` joins to league-history by name; `espn_id` keys ESPN headshots and is populated for every pick (picks ESPN never recorded — one team's 2022 non-keeper picks — were resolved by player-name lookup). The file is re-read per request and is static.
+- A standalone dataset from league-history (prices come from the league's draft sheets; identity, keeper flag, and `espn_id` from ESPN draft data). `player` joins to league-history by name; `espn_id` keys ESPN headshots and is populated for every pick (picks ESPN never recorded — one team's 2022 non-keeper picks — were resolved by player-name lookup).
+
+**Static-archive performance (both archives):** these two resources are large and static — regenerated only out-of-band by the `raw_history/` pipeline, never during a draft. Unlike the mutable draft state (which is re-read per request by the stateless design), the parsed archives are **server-side cached** keyed on the file's mtime: an out-of-band regeneration bumps the mtime and the next request transparently reloads, so the data is never stale and no restart is needed. The GETs also support **conditional requests**: each `200` carries `ETag` + `Last-Modified` (derived from the file's mtime/size) and `Cache-Control: no-cache`; a client that sends `If-None-Match`/`If-Modified-Since` gets an empty `304 Not Modified` while the archive is unchanged, so repeat tab loads avoid re-downloading the multi-megabyte body. Both behaviors apply identically on the admin and viewer ports.
 
 ## File Structure
 ```

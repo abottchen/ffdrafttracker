@@ -2,9 +2,11 @@
 
 import io
 import logging
+import threading
+from email.utils import formatdate, parsedate_to_datetime
 from pathlib import Path
 
-from fastapi import FastAPI, Header, HTTPException, Query, Request
+from fastapi import FastAPI, Header, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -402,30 +404,165 @@ async def _get_player_stats_data():
         return PlayerStatsCollection({})
 
 
+# --- Static-archive cache ----------------------------------------------------
+# CLAUDE.md mandates a deliberately stateless design: every request reloads its
+# data from JSON so the files stay the single source of truth and can be
+# hand-edited mid-draft. That rule is about data that MUTATES at runtime
+# (draft_state.json, config.json, owners/players) and those loaders stay
+# uncached on purpose.
+#
+# The two history archives below are the exception. They are large
+# (league_history.json ~1.2 MB, auction_prices.json ~234 KB), read on every
+# League-History tab load (which fires multiple fetches), and never change
+# during a draft -- they are only regenerated out-of-band by the raw_history/
+# pipeline. Rather than re-read and re-validate them through Pydantic on every
+# request, we memoize the parsed model keyed on the file's mtime: an
+# out-of-band regeneration bumps the mtime, so the next
+# request transparently reloads -- no stale data and no restart required. The
+# cache is shared by the admin and viewer apps (separate threads), so access is
+# guarded by a lock and the cached models are treated as read-only by callers.
+_archive_cache: dict[str, tuple[float, BaseModel]] = {}
+_archive_cache_lock = threading.Lock()
+
+
+def _load_cached_archive(path: Path, parse):
+    """Return a parsed archive model, memoized on the file's ``(path, mtime)``.
+
+    ``parse`` (e.g. ``LeagueHistory.model_validate_json``) is invoked only on a
+    cold or stale cache; its result is reused until the file's mtime changes (an
+    out-of-band regen) or the process restarts. The returned model is shared
+    across requests and threads and MUST be treated as read-only. Raises if the
+    file is unreadable or fails validation -- callers catch that and fall back
+    to an empty archive, so a transient failure is never memoized.
+    """
+    mtime = path.stat().st_mtime
+    key = str(path)
+    with _archive_cache_lock:
+        cached = _archive_cache.get(key)
+        if cached is not None and cached[0] == mtime:
+            return cached[1]
+    # Parse outside the lock: a cold-cache race may parse twice, but that is
+    # harmless (both produce an equivalent model) and avoids holding the lock
+    # across a multi-megabyte parse.
+    model = parse(path.read_text())
+    with _archive_cache_lock:
+        _archive_cache[key] = (mtime, model)
+    return model
+
+
 async def _get_league_history_data():
-    """Shared logic for getting the league history archive."""
+    """Shared logic for getting the league history archive.
+
+    Memoized on the file's mtime (see ``_load_cached_archive``); the archive is
+    a static dataset, regenerated only out-of-band, so caching it is safe.
+    """
     if not LEAGUE_HISTORY_FILE.exists():
         logger.info("League history file not found, returning empty archive")
         return LeagueHistory()
 
     try:
-        return LeagueHistory.model_validate_json(LEAGUE_HISTORY_FILE.read_text())
+        return _load_cached_archive(
+            LEAGUE_HISTORY_FILE, LeagueHistory.model_validate_json
+        )
     except Exception as e:
         logger.error(f"Error loading league history: {e}, returning empty archive")
         return LeagueHistory()
 
 
 async def _get_auction_prices_data():
-    """Shared logic for getting the auction-price archive."""
+    """Shared logic for getting the auction-price archive.
+
+    Memoized on the file's mtime (see ``_load_cached_archive``); the archive is
+    a static dataset, regenerated only out-of-band, so caching it is safe.
+    """
     if not AUCTION_PRICES_FILE.exists():
         logger.info("Auction prices file not found, returning empty archive")
         return AuctionPrices()
 
     try:
-        return AuctionPrices.model_validate_json(AUCTION_PRICES_FILE.read_text())
+        return _load_cached_archive(
+            AUCTION_PRICES_FILE, AuctionPrices.model_validate_json
+        )
     except Exception as e:
         logger.error(f"Error loading auction prices: {e}, returning empty archive")
         return AuctionPrices()
+
+
+# --- Archive conditional requests (ETag / Last-Modified) ---------------------
+# The static archives are large and re-fetched on every League-History tab load.
+# The mtime cache above spares the server from re-parsing them; conditional
+# requests spare the *network* from re-sending them. We derive validators from
+# the file's mtime + size, so an out-of-band regen changes the validator and the
+# client re-downloads, while an unchanged file yields a tiny 304 instead of a
+# multi-megabyte body. ``Cache-Control: no-cache`` tells the browser to cache
+# the body but always revalidate, so it never serves a stale archive -- the
+# revalidation is the cheap conditional GET. Documented for both apps so the
+# admin and viewer specs stay identical.
+_ARCHIVE_304_RESPONSE = {
+    304: {"description": "Archive unchanged since the client's cached copy."}
+}
+
+
+def _strip_weak(etag: str) -> str:
+    """Normalize an entity-tag for weak comparison (drop any ``W/`` prefix)."""
+    return etag[2:] if etag.startswith("W/") else etag
+
+
+def _archive_not_modified(request: Request, etag: str, last_modified: str) -> bool:
+    """Decide a 304 from the request's conditional headers (RFC 9110 §13).
+
+    ``If-None-Match`` takes precedence over ``If-Modified-Since``; both use the
+    weak comparison appropriate for a cache revalidation.
+    """
+    inm = request.headers.get("if-none-match")
+    if inm is not None:
+        if inm.strip() == "*":
+            return True
+        wanted = _strip_weak(etag)
+        return any(_strip_weak(t.strip()) == wanted for t in inm.split(","))
+
+    ims = request.headers.get("if-modified-since")
+    if ims is not None:
+        try:
+            ims_dt = parsedate_to_datetime(ims)
+            lm_dt = parsedate_to_datetime(last_modified)
+        except (TypeError, ValueError):
+            return False
+        # HTTP dates are second-granular; not-modified iff the file is no newer.
+        return ims_dt is not None and lm_dt is not None and lm_dt <= ims_dt
+
+    return False
+
+
+async def _conditional_archive(
+    request: Request, response: Response, path: Path, get_data
+):
+    """Serve a static archive (``get_data``) with conditional-request support.
+
+    When the file exists we tag the 200 with ETag/Last-Modified validators
+    derived from its mtime + size; if the client already holds that version we
+    skip the load entirely and return ``304 Not Modified``. A missing file falls
+    through to ``get_data`` (an empty archive) with no validators -- there is no
+    stable representation to cache yet.
+    """
+    try:
+        if path.exists():
+            st = path.stat()
+            etag = f'"{st.st_mtime_ns:x}-{st.st_size:x}"'
+            last_modified = formatdate(st.st_mtime, usegmt=True)
+            headers = {
+                "ETag": etag,
+                "Last-Modified": last_modified,
+                "Cache-Control": "no-cache",
+            }
+            if _archive_not_modified(request, etag, last_modified):
+                return Response(status_code=304, headers=headers)
+            response.headers.update(headers)
+    except OSError:
+        # Lost a race with an out-of-band regen (file vanished mid-stat); just
+        # serve the body without validators rather than 500.
+        pass
+    return await get_data()
 
 
 async def _get_owners_data():
@@ -576,20 +713,38 @@ async def get_comments(
     return await _get_comments_data(since=since, before=before, limit=limit)
 
 
-@app.get("/api/v1/league-history", response_model=LeagueHistory)
-async def get_league_history():
+@app.get(
+    "/api/v1/league-history",
+    response_model=LeagueHistory,
+    responses=_ARCHIVE_304_RESPONSE,
+)
+async def get_league_history(request: Request, response: Response):
     """Get the league history archive: season-by-season champions, standings,
     and end-of-season rosters (2003-present). Static archive; the viewer derives
-    its leaderboards and the finish grid from this resource client-side."""
-    return await _get_league_history_data()
+    its leaderboards and the finish grid from this resource client-side.
+
+    Supports conditional requests: send `If-None-Match`/`If-Modified-Since` to
+    get a `304 Not Modified` while the archive is unchanged."""
+    return await _conditional_archive(
+        request, response, LEAGUE_HISTORY_FILE, _get_league_history_data
+    )
 
 
-@app.get("/api/v1/auction-prices", response_model=AuctionPrices)
-async def get_auction_prices():
+@app.get(
+    "/api/v1/auction-prices",
+    response_model=AuctionPrices,
+    responses=_ARCHIVE_304_RESPONSE,
+)
+async def get_auction_prices(request: Request, response: Response):
     """Get the auction-price archive: every player's auction salary by season
     (2016-present), with owner, keeper flag, and ESPN player id. Static archive;
-    joins to league-history by player name."""
-    return await _get_auction_prices_data()
+    joins to league-history by player name.
+
+    Supports conditional requests: send `If-None-Match`/`If-Modified-Since` to
+    get a `304 Not Modified` while the archive is unchanged."""
+    return await _conditional_archive(
+        request, response, AUCTION_PRICES_FILE, _get_auction_prices_data
+    )
 
 
 @app.get("/api/v1/auction-prices/{year}", response_model=SeasonAuction)
@@ -1363,20 +1518,38 @@ async def viewer_get_comments(
     return await _get_comments_data(since=since, before=before, limit=limit)
 
 
-@viewer_app.get("/api/v1/league-history", response_model=LeagueHistory)
-async def viewer_get_league_history():
+@viewer_app.get(
+    "/api/v1/league-history",
+    response_model=LeagueHistory,
+    responses=_ARCHIVE_304_RESPONSE,
+)
+async def viewer_get_league_history(request: Request, response: Response):
     """Get the league history archive: season-by-season champions, standings,
     and end-of-season rosters (2003-present). Static archive; the viewer derives
-    its leaderboards and the finish grid from this resource client-side."""
-    return await _get_league_history_data()
+    its leaderboards and the finish grid from this resource client-side.
+
+    Supports conditional requests: send `If-None-Match`/`If-Modified-Since` to
+    get a `304 Not Modified` while the archive is unchanged."""
+    return await _conditional_archive(
+        request, response, LEAGUE_HISTORY_FILE, _get_league_history_data
+    )
 
 
-@viewer_app.get("/api/v1/auction-prices", response_model=AuctionPrices)
-async def viewer_get_auction_prices():
+@viewer_app.get(
+    "/api/v1/auction-prices",
+    response_model=AuctionPrices,
+    responses=_ARCHIVE_304_RESPONSE,
+)
+async def viewer_get_auction_prices(request: Request, response: Response):
     """Get the auction-price archive: every player's auction salary by season
     (2016-present), with owner, keeper flag, and ESPN player id. Static archive;
-    joins to league-history by player name."""
-    return await _get_auction_prices_data()
+    joins to league-history by player name.
+
+    Supports conditional requests: send `If-None-Match`/`If-Modified-Since` to
+    get a `304 Not Modified` while the archive is unchanged."""
+    return await _conditional_archive(
+        request, response, AUCTION_PRICES_FILE, _get_auction_prices_data
+    )
 
 
 @viewer_app.get("/api/v1/auction-prices/{year}", response_model=SeasonAuction)
