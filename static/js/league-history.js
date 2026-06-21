@@ -63,7 +63,7 @@
     const avg = (o) => { const rs = Object.values(cells[o]).map((c) => c.r); return rs.reduce((a, b) => a + b, 0) / rs.length; };
     const gridRows = Object.keys(cells)
       .map((o) => ({ owner: o, active: active.has(o), titles: titles[o] || 0, seasons: appear[o], cells: cells[o] }))
-      .sort((a, b) => b.titles - a.titles || b.seasons - a.seasons || avg(a.owner) - avg(b.owner) || a.owner.localeCompare(b.owner));
+      .sort((a, b) => (b.active - a.active) || b.titles - a.titles || b.seasons - a.seasons || avg(a.owner) - avg(b.owner) || a.owner.localeCompare(b.owner));
 
     // loyalty: the player each manager kept rostering
     const po = {}, posmap = {};
