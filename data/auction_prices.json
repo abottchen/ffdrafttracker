@@ -1,5 +1,4 @@
 {
-  "source": "Auction prices from league draft sheets (2016-2024); player identity, keeper flag, and espn_id from ESPN draft data. ESPN did not record one team\u2019s 2022 non-keeper picks; those espn_ids were resolved by player-name lookup against ESPN\u2019s player pool.",
   "seasons": {
     "2016": {
       "owners": {

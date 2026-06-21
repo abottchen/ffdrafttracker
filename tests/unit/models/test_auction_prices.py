@@ -19,13 +19,11 @@ class TestAuctionPick:
 class TestAuctionPrices:
     def test_empty_default(self):
         archive = AuctionPrices()
-        assert archive.source == ""
         assert archive.seasons == {}
 
     def test_round_trip(self):
         """JSON round-trips losslessly, grouped by season then owner."""
         archive = AuctionPrices(
-            source="test",
             seasons={
                 "2024": SeasonAuction(
                     owners={
@@ -50,4 +48,4 @@ class TestAuctionPrices:
         """Guard against silent field drift in the serialized shape."""
         assert set(AuctionPick.model_fields) == {"player", "price", "keeper", "espn_id"}
         assert set(SeasonAuction.model_fields) == {"owners"}
-        assert set(AuctionPrices.model_fields) == {"source", "seasons"}
+        assert set(AuctionPrices.model_fields) == {"seasons"}

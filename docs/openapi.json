@@ -802,11 +802,6 @@
       },
       "AuctionPrices": {
         "properties": {
-          "source": {
-            "type": "string",
-            "title": "Source",
-            "default": ""
-          },
           "seasons": {
             "additionalProperties": {
               "$ref": "#/components/schemas/SeasonAuction"

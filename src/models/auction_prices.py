@@ -37,5 +37,4 @@ class SeasonAuction(BaseModel):
 class AuctionPrices(BaseModel):
     """The full archive: each season's auction, keyed by year."""
 
-    source: str = ""
     seasons: dict[str, SeasonAuction] = Field(default_factory=dict)

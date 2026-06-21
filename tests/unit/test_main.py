@@ -353,7 +353,6 @@ class TestAuctionPricesEndpoint(TestMainApp):
     """Test GET /api/v1/auction-prices (the read-only auction archive)."""
 
     SAMPLE = {
-        "source": "test",
         "seasons": {
             "2024": {
                 "owners": {
@@ -401,7 +400,7 @@ class TestAuctionPricesEndpoint(TestMainApp):
         response = self.client.get("/api/v1/auction-prices")
 
         assert response.status_code == 200
-        assert response.json() == {"source": "", "seasons": {}}
+        assert response.json() == {"seasons": {}}
 
     @patch("main.AUCTION_PRICES_FILE")
     def test_get_auction_prices_for_year(self, mock_file):
