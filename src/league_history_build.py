@@ -4,8 +4,8 @@ Reads the gitignored ``data/raw_history/{espn,yahoo}/<year>.json`` captures,
 resolves owners to first names, derives each season's headline (champion /
 runner-up / best record), and emits a validated :class:`LeagueHistory`.
 
-The raw captures are produced by the read-only browser capture step (see the
-plan). This module is the pure, testable transform: no network access.
+The raw captures are produced by the read-only capture/update scripts in
+``utils/``. This module is the pure, testable transform: no network access.
 """
 
 from __future__ import annotations

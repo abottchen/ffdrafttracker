@@ -5,8 +5,7 @@ regular-season record, and -- where the source platform exposes it -- every
 team's full standings and end-of-season roster with draft prices/picks.
 
 Sourced from ESPN (2012-2025) and Yahoo (2003-2011). League members are stored
-as first names only; no last names, emails, or account handles. See
-``docs/superpowers/specs/2026-06-20-league-history-design.md``.
+as first names only; no last names, emails, or account handles.
 """
 
 from __future__ import annotations
