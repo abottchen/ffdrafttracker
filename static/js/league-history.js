@@ -7,13 +7,43 @@
 (function () {
   "use strict";
   const API = "/api/v1/league-history";
+  const AUCTION_API = "/api/v1/auction-prices";
+  const OWNERS_API = "/api/v1/owners";
   const $ = (s, el) => (el || document).querySelector(s);
   const ce = (t, c) => { const e = document.createElement(t); if (c) e.className = c; return e; };
   const ord = (n) => n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" }[n % 10] || "th"));
   const posClass = (p) => (p || "").replace("/", "") || "NA";
   const skipPlayer = (n) => /D\/ST| - DEF/.test(n);
+  // normalize a player name for joining auction prices ↔ end-of-season rosters
+  const normName = (n) => (n || "").toLowerCase().replace(/\b(jr|sr|ii|iii|iv|v)\b\.?/g, "").replace(/[^a-z ]/g, "").replace(/\s+/g, " ").trim();
+  const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const POSVAR = { QB: "--qb", RB: "--rb", WR: "--wr", TE: "--te", K: "--k", "D/ST": "--dst" };
+  const posVar = (p) => POSVAR[p] || "--lh-silver";
 
-  let DATA = null, built = false;
+  let DATA = null, MONEY = null, OWNER_COLOR = () => "var(--lh-silver)", built = false;
+  let mvSel = new Set();   // currently-charted players on The Big Board
+
+  /* shared hover tooltip (reuses #lhTip) for the money charts */
+  function tipAt(html, x, y) {
+    const tip = $("#lhTip"); tip.innerHTML = html; tip.classList.add("on");
+    const pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+    let L = x + pad, T = y + pad;
+    if (L + w > innerWidth - 8) L = x - pad - w;
+    if (T + h > innerHeight - 8) T = y - pad - h;
+    tip.style.left = L + "px"; tip.style.top = T + "px";
+  }
+  const hideTip = () => $("#lhTip").classList.remove("on");
+
+  // owner → brand color (owners.json for the active league, stable hash for departed owners)
+  function buildOwnerColor(owners) {
+    const map = {};
+    (owners || []).forEach((o) => { if (o && o.owner_name && o.color) map[o.owner_name] = o.color; });
+    return (name) => {
+      if (map[name]) return map[name];
+      let h = 0; for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
+      return `hsl(${h} 55% 62%)`;
+    };
+  }
 
   /* ---------------- derive everything from raw seasons ---------------- */
   function derive(seasonsIn) {
@@ -114,8 +144,73 @@
     };
   }
 
+  /* ---------------- derive the auction-money views ----------------
+     Joins the auction archive (season → owner → picks) against the
+     end-of-season rosters in league history. Produces:
+       burns      — auction buys NOT on their owner's final roster
+       parc       — every player's price arc across the auction years
+       retention  — career auction-dollar retention vs. win rate per owner   */
+  function deriveMoney(seasons, auctionSeasons) {
+    const winpctOf = (t) => { const g = (t.wins || 0) + (t.losses || 0) + (t.ties || 0); return g ? ((t.wins || 0) + 0.5 * (t.ties || 0)) / g : 0; };
+    const posOf = {}, rosterSet = {}, meta = {}, leagueByYear = {};
+    seasons.forEach((s) => {
+      const champO = s.champion && s.champion.owner, runO = s.runner_up && s.runner_up.owner, shared = !!s.shared_title;
+      const lset = leagueByYear[s.year] = new Set();
+      s.standings.forEach((t) => {
+        const set = new Set();
+        (t.roster || []).forEach((e) => { const nn = normName(e.player_name); set.add(nn); lset.add(nn); if (e.position) posOf[nn] = e.position; });
+        rosterSet[`${s.year}|${t.owner}`] = set;
+        const isC = t.owner === champO || (shared && t.owner === runO);
+        const isR = t.owner === runO && !shared;
+        meta[`${s.year}|${t.owner}`] = {
+          wins: t.wins || 0, losses: t.losses || 0, ties: t.ties || 0, winpct: winpctOf(t),
+          rec: `${t.wins || 0}-${t.losses || 0}` + (t.ties ? `-${t.ties}` : ""),
+          champ: isC, runner: isR, team: t.team_name,
+        };
+      });
+    });
+
+    const years = Object.keys(auctionSeasons).map(Number).sort((a, b) => a - b);
+    const burns = [], parc = {}, ret = {};
+    years.forEach((y) => {
+      const owners = (auctionSeasons[String(y)] || {}).owners || {};
+      Object.entries(owners).forEach(([owner, picks]) => {
+        const set = rosterSet[`${y}|${owner}`], m = meta[`${y}|${owner}`];
+        const r = ret[owner] || (ret[owner] = { spend: 0, retained: 0, wins: 0, losses: 0, ties: 0, seasons: 0 });
+        r.seasons++;
+        if (m) { r.wins += m.wins; r.losses += m.losses; r.ties += m.ties; }
+        (picks || []).forEach((p) => {
+          if (skipPlayer(p.player)) return;       // D/ST: not a "superstar", and names rarely match rosters
+          const nn = normName(p.player);
+          (parc[p.player] = parc[p.player] || {})[y] = Math.max(parc[p.player][y] || 0, p.price);
+          r.spend += p.price;
+          if (set && set.has(nn)) { r.retained += p.price; return; }
+          if (!set) return;                                   // no roster to judge against
+          const inLeague = (leagueByYear[y] || new Set()).has(nn);
+          burns.push({
+            year: y, owner, player: p.player, price: p.price, keeper: !!p.keeper,
+            gone: !inLeague, traded: inLeague,
+            rec: m ? m.rec : "", win: m ? m.wins > m.losses : false,
+            champ: m ? m.champ : false, runner: m ? m.runner : false,
+          });
+        });
+      });
+    });
+    burns.sort((a, b) => b.price - a.price || a.year - b.year);
+
+    const retention = Object.entries(ret)
+      .filter(([, v]) => v.seasons >= 3 && v.spend > 0)
+      .map(([owner, v]) => {
+        const g = v.wins + v.losses + v.ties;
+        return { owner, retPct: v.retained / v.spend * 100, winPct: g ? (v.wins + 0.5 * v.ties) / g * 100 : 0, seasons: v.seasons, spend: v.spend, retained: v.retained };
+      });
+
+    return { years, burns, parc, posOf, retention };
+  }
+
   /* ---------------- scaffold ---------------- */
   function scaffold(host) {
+    const money = MONEY ? moneyScaffold() : "";
     host.innerHTML =
       `<div class="lh-wrap">
         <header class="lh-mast">
@@ -160,6 +255,7 @@
             <div id="lh-royalty"></div>
           </section>
         </div>
+        ${money}
       </div>`;
 
     if (!$("#lhDrawer")) {
@@ -315,6 +411,193 @@
     });
   }
 
+  /* ================= Part II · The Money ================= */
+  function moneyScaffold() {
+    const yrs = MONEY.years, span = yrs.length ? `${yrs[0]}–${yrs[yrs.length - 1]}` : "";
+    return (
+      `<div class="lh-act">
+         <span class="lh-actrule"></span>
+         <span class="lh-acttext">Part II &middot; The Money</span>
+         <span class="lh-actrule"></span>
+       </div>
+       <p class="lh-actsub">Auction salaries, ${span} &mdash; what the room paid, what survived the season, and who turned it into wins.</p>
+
+       <section class="lh-sec">
+         <div class="lh-sec-head"><span class="lh-num">06</span><h2>Sunk Costs</h2></div>
+         <p class="lh-sub">Big money at the block, gone by the final whistle &mdash; auction buys that weren't on the roster at season's end. <b>Charred bars left the league entirely; amber ones were traded away.</b> The glowing tags are the managers who <b>won anyway.</b></p>
+         <div class="lh-sunkcard"><div id="lh-sunk"></div></div>
+         <p class="lh-foot">Keepers count as committed dollars. A burn is any auction buy missing from that manager's end-of-season roster.</p>
+       </section>
+
+       <section class="lh-sec">
+         <div class="lh-sec-head"><span class="lh-num">07</span><h2>The Big Board</h2></div>
+         <p class="lh-sub">Nine auctions, one ticker. What the room was willing to pay for the names that moved the market &mdash; <b>lines are colored by position.</b> Tap a player to chart or drop their price line.</p>
+         <div class="lh-boardcard">
+           <div class="lh-movers" id="lh-movers"></div>
+           <div class="lh-board" id="lh-board"></div>
+           <div class="lh-chips" id="lh-chips"></div>
+         </div>
+       </section>
+
+       <section class="lh-sec">
+         <div class="lh-sec-head"><span class="lh-num">08</span><h2>Maestro &amp; Wizard</h2></div>
+         <p class="lh-sub">Two ways to win: <b>master the auction</b> (keep the players you paid for) or <b>master the waiver wire</b> (win with the ones you didn't). Career auction-dollar retention against regular-season win rate. <b>Bigger tokens mean more seasons played.</b></p>
+         <div class="lh-quad" id="lh-quad"></div>
+       </section>`
+    );
+  }
+
+  /* --- 06 · Sunk Costs ----------------------------------------------------- */
+  function renderSunkCosts() {
+    const el = $("#lh-sunk"); if (!el) return;
+    el.innerHTML = "";
+    const shown = MONEY.burns.slice(0, 14);
+    const maxP = Math.max(1, ...MONEY.burns.map((b) => b.price));
+    shown.forEach((b, i) => {
+      const tag = b.champ ? `<span class="lh-btag champ">★ Champion</span>`
+        : b.runner ? `<span class="lh-btag won">Runner-up</span>`
+          : b.win ? `<span class="lh-btag won">Won anyway</span>` : "";
+      const row = ce("div", "lh-burn" + (b.gone ? " gone" : " traded") + (b.win ? " winrec" : ""));
+      row.innerHTML =
+        `<div class="lh-bowner">${b.owner}</div>` +
+        `<div class="lh-bmid">` +
+          `<div class="lh-bplayer">${b.player}${b.keeper ? `<span class="lh-bkeep">keeper</span>` : ""}` +
+            `<span class="lh-bstat ${b.gone ? "gone" : "traded"}">${b.gone ? "Gone" : "Traded"}</span></div>` +
+          `<div class="lh-btrack"><span class="lh-bfill"></span></div>` +
+        `</div>` +
+        `<div class="lh-bend"><div class="lh-bprice">$${b.price}</div>` +
+          `<div class="lh-brec">${b.rec}${tag}</div></div>`;
+      el.appendChild(row);
+      setTimeout(() => { $(".lh-bfill", row).style.width = (b.price / maxP * 100) + "%"; }, 220 + i * 55);
+    });
+  }
+
+  /* --- 07 · The Big Board -------------------------------------------------- */
+  let bbChips = [];
+  function renderBigBoard() {
+    const years = MONEY.years, y0 = years[0], yN = years[years.length - 1];
+    const cand = Object.keys(MONEY.parc).map((pl) => {
+      const d = MONEY.parc[pl], ys = Object.keys(d).map(Number), vals = ys.map((y) => d[y]);
+      const first = d[Math.min(...ys)], last = d[Math.max(...ys)], peak = Math.max(...vals);
+      return { player: pl, peak, n: ys.length, first, last, drama: (peak - first) + (peak - last), full: d[y0] != null && d[yN] != null };
+    }).filter((c) => c.n >= 5);
+    cand.sort((a, b) => b.peak - a.peak);
+    bbChips = cand.slice(0, 16);
+    const full = cand.filter((c) => c.full);
+    // default to the most dramatic arcs that also have a toggle chip on screen,
+    // preferring full-decade players, then topping up to four by sheer drama
+    const byDrama = bbChips.slice().sort((a, b) => b.drama - a.drama);
+    const defaults = byDrama.filter((c) => c.full).slice(0, 4).map((c) => c.player);
+    for (const c of byDrama) { if (defaults.length >= 4) break; if (!defaults.includes(c.player)) defaults.push(c.player); }
+    mvSel = new Set(defaults);
+
+    // market-movers ticker — biggest run-ups and biggest collapses (each player's own span; no repeats)
+    const risers = cand.slice().sort((a, b) => (b.peak - b.first) - (a.peak - a.first)).slice(0, 2);
+    const riserSet = new Set(risers.map((c) => c.player));
+    const fallers = cand.filter((c) => !riserSet.has(c.player)).sort((a, b) => (b.peak - b.last) - (a.peak - a.last)).slice(0, 2);
+    const mv = (c, dir) => `<button class="lh-mv ${dir}" data-p="${esc(c.player)}">${dir === "up" ? "▲" : "▼"} <b>${c.player.split(" ").slice(-1)[0]}</b> $${dir === "up" ? c.first : c.peak}→$${dir === "up" ? c.peak : c.last}</button>`;
+    $("#lh-movers").innerHTML =
+      `<span class="lh-mvlbl">Movers</span>` +
+      risers.map((c) => mv(c, "up")).join("") + fallers.map((c) => mv(c, "down")).join("");
+
+    $("#lh-chips").innerHTML = bbChips.map((c) =>
+      `<button class="lh-chip" data-p="${esc(c.player)}"><span class="lh-chipdot" style="background:var(${posVar(MONEY.posOf[normName(c.player)] || "")})"></span>${c.player}<i>$${c.peak}</i></button>`).join("");
+
+    const toggle = (pl) => { if (mvSel.has(pl)) mvSel.delete(pl); else mvSel.add(pl); drawBoard(); };
+    $("#lh-chips").querySelectorAll(".lh-chip").forEach((b) => { b.onclick = () => toggle(b.dataset.p); });
+    $("#lh-movers").querySelectorAll(".lh-mv").forEach((b) => { b.onclick = () => toggle(b.dataset.p); });
+
+    const board = $("#lh-board");
+    board.addEventListener("mousemove", (e) => {
+      const dot = e.target.closest(".bb-dot");
+      if (!dot) { hideTip(); return; }
+      tipAt(`<div class="lh-tth">${dot.dataset.p}</div><div class="lh-ttrow">’${String(dot.dataset.y).slice(2)} auction · <b style="color:var(--lh-gold-hi)">$${dot.dataset.v}</b></div>`, e.clientX, e.clientY);
+    });
+    board.addEventListener("mouseleave", hideTip);
+    drawBoard();
+  }
+
+  function drawBoard() {
+    const sel = [...mvSel], years = MONEY.years, y0 = years[0], yN = years[years.length - 1];
+    const W = 920, H = 360, padL = 52, padR = 78, padT = 16, padB = 34, plotW = W - padL - padR, plotH = H - padT - padB;
+    const xFor = (y) => padL + (yN === y0 ? 0 : (y - y0) / (yN - y0)) * plotW;
+    let maxY = Math.max(10, ...sel.flatMap((pl) => Object.values(MONEY.parc[pl] || {})));
+    maxY = Math.ceil(maxY / 10) * 10;
+    const yFor = (v) => padT + (1 - v / maxY) * plotH;
+
+    let grid = "";
+    for (let v = 0; v <= maxY; v += 10) {
+      const yy = yFor(v);
+      grid += `<line class="bb-grid" x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}"/>` +
+        `<text class="bb-yl" x="${padL - 8}" y="${yy + 3.5}" text-anchor="end">$${v}</text>`;
+    }
+    years.forEach((y) => { grid += `<text class="bb-xl" x="${xFor(y)}" y="${H - 12}" text-anchor="middle">’${String(y).slice(2)}</text>`; });
+
+    let lines = "";
+    sel.forEach((pl) => {
+      const d = MONEY.parc[pl] || {}, pts = years.filter((y) => d[y] != null);
+      if (!pts.length) return;
+      const cv = posVar(MONEY.posOf[normName(pl)] || "");
+      const path = pts.map((y, i) => `${i ? "L" : "M"}${xFor(y).toFixed(1)} ${yFor(d[y]).toFixed(1)}`).join(" ");
+      lines += `<path class="bb-line" style="stroke:var(${cv})" d="${path}"/>`;
+      pts.forEach((y) => { lines += `<circle class="bb-dot" style="fill:var(${cv})" cx="${xFor(y).toFixed(1)}" cy="${yFor(d[y]).toFixed(1)}" r="3.6" data-p="${esc(pl)}" data-y="${y}" data-v="${d[y]}"/>`; });
+      const ly = pts[pts.length - 1];
+      lines += `<text class="bb-end" style="fill:var(${cv})" x="${(xFor(ly) + 8).toFixed(1)}" y="${(yFor(d[ly]) + 3.5).toFixed(1)}">${esc(pl.split(" ").slice(-1)[0])}</text>`;
+    });
+
+    $("#lh-board").innerHTML = sel.length
+      ? `<svg class="bb-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Auction price by year">${grid}${lines}</svg>`
+      : `<div class="lh-boardempty">Tap a player below to chart their auction price.</div>`;
+    $("#lh-chips").querySelectorAll(".lh-chip").forEach((c) => c.classList.toggle("on", mvSel.has(c.dataset.p)));
+  }
+
+  /* --- 08 · Maestro & Wizard ---------------------------------------------- */
+  function renderManagerMap() {
+    const el = $("#lh-quad"); if (!el) return;
+    const pts = MONEY.retention.slice();
+    if (!pts.length) { el.innerHTML = ""; return; }
+    const xs = pts.map((p) => p.retPct), ys = pts.map((p) => p.winPct);
+    const xmin = Math.floor(Math.min(...xs) - 2), xmax = 100;
+    const ymin = Math.floor(Math.min(...ys) - 4), ymax = Math.ceil(Math.max(...ys) + 4);
+    const med = (a) => { const s = a.slice().sort((p, q) => p - q), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+    const medX = med(xs), medY = med(ys);
+    const X = (v) => (v - xmin) / (xmax - xmin) * 100, Y = (v) => (1 - (v - ymin) / (ymax - ymin)) * 100;
+    const mxp = X(medX), myp = Y(medY), maxS = Math.max(...pts.map((p) => p.seasons));
+
+    let inner =
+      `<div class="lh-qzone maestro" style="left:${mxp}%;top:0;width:${100 - mxp}%;height:${myp}%"><span>The Maestro</span></div>` +
+      `<div class="lh-qzone wizard" style="left:0;top:0;width:${mxp}%;height:${myp}%"><span>The Wizard</span></div>` +
+      `<div class="lh-qzone forget" style="left:${mxp}%;top:${myp}%;width:${100 - mxp}%;height:${100 - myp}%"><span>Set &amp; Forget</span></div>` +
+      `<div class="lh-qzone adrift" style="left:0;top:${myp}%;width:${mxp}%;height:${100 - myp}%"><span>Adrift</span></div>` +
+      `<div class="lh-qx" style="left:${mxp}%"><span>med ${Math.round(medX)}%</span></div>` +
+      `<div class="lh-qy" style="top:${myp}%"><span>med ${Math.round(medY)}%</span></div>`;
+    pts.forEach((p) => {
+      const r = 9 + (p.seasons / maxS) * 9, c = OWNER_COLOR(p.owner);
+      inner += `<div class="lh-qpt" style="left:${X(p.retPct)}%;top:${Y(p.winPct)}%" data-o="${esc(p.owner)}">` +
+        `<span class="lh-qdot" style="width:${(r * 2).toFixed(0)}px;height:${(r * 2).toFixed(0)}px;background:${c};box-shadow:0 0 0 1.5px color-mix(in srgb,${c} 55%,transparent),0 0 16px -2px ${c}"></span>` +
+        `<span class="lh-qname">${p.owner}</span></div>`;
+    });
+
+    el.innerHTML =
+      `<div class="lh-qcorner tl">${Math.round(ymax)}%</div><div class="lh-qcorner bl">${Math.round(ymin)}%</div>` +
+      `<div class="lh-plot">${inner}</div>` +
+      `<div class="lh-qaxx">Auction-dollar retention &rarr; (${xmin}–100%)</div>` +
+      `<div class="lh-qaxy">Win rate &rarr;</div>`;
+
+    const plot = $(".lh-plot", el), byOwner = {}; pts.forEach((p) => byOwner[p.owner] = p);
+    plot.addEventListener("mousemove", (e) => {
+      const t = e.target.closest(".lh-qpt");
+      plot.querySelectorAll(".lh-qpt.hot").forEach((n) => { if (n !== t) n.classList.remove("hot"); });
+      if (!t) { hideTip(); return; }
+      t.classList.add("hot");
+      const p = byOwner[t.dataset.o];
+      tipAt(`<div class="lh-tth">${p.owner}</div>` +
+        `<div class="lh-ttrow"><b style="color:var(--lh-money-hi)">${Math.round(p.retPct)}%</b> of auction $ kept · <b style="color:var(--lh-gold-hi)">${Math.round(p.winPct)}%</b> win rate</div>` +
+        `<div class="lh-ttrow">$${p.retained} of $${p.spend} survived · ${p.seasons} seasons</div>`, e.clientX, e.clientY);
+    });
+    plot.addEventListener("mouseleave", () => { hideTip(); plot.querySelectorAll(".lh-qpt.hot").forEach((n) => n.classList.remove("hot")); });
+  }
+
   /* ---------------- interactions: grid tooltip + roster drawer ---------------- */
   function wireGrid(gridEl) {
     const tip = $("#lhTip");
@@ -414,12 +697,16 @@
     if (built) return;
     const host = $("#view-history");
     host.innerHTML = '<div class="lh-error">Loading the archive…</div>';
-    fetch(API).then((r) => r.json()).then((hist) => {
+    const grab = (url) => fetch(url).then((r) => r.json()).catch(() => null);
+    Promise.all([grab(API), grab(AUCTION_API), grab(OWNERS_API)]).then(([hist, auction, owners]) => {
       const seasons = (hist && hist.seasons) || [];
       if (!seasons.length) { host.innerHTML = '<div class="lh-error">No league history is available yet.</div>'; built = true; return; }
       DATA = derive(seasons);
+      MONEY = (auction && auction.seasons && Object.keys(auction.seasons).length) ? deriveMoney(seasons, auction.seasons) : null;
+      OWNER_COLOR = buildOwnerColor(owners);
       scaffold(host);
       renderBanners(); renderGrid(); renderRegime(); renderLoyalty(); renderLedger(); renderRoyalty();
+      if (MONEY) { renderSunkCosts(); renderBigBoard(); renderManagerMap(); }
       wireDrawerOnce();
       built = true;
     }).catch(() => { host.innerHTML = '<div class="lh-error">Couldn’t load the league history.</div>'; });

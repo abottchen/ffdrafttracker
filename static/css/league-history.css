@@ -22,6 +22,13 @@
   --lh-panel: var(--deep);
   --lh-panel2: var(--deep2);
   --lh-glow: rgba(244, 193, 82, .5);
+  /* Part II · The Money — ember (dollars to ash) + green (dollars that survived) */
+  --lh-ember: #f0673b;
+  --lh-ember-hi: #f7a23a;
+  --lh-char: #5a4a45;
+  --lh-char-deep: #2b2422;
+  --lh-money: var(--turf);           /* #34C06C */
+  --lh-money-hi: #5fe39a;
 }
 
 /* the pane itself becomes a vertical scrolling study board (overrides .view.active{display:grid}) */
@@ -216,16 +223,115 @@
 .lh-rnfl { font-family: "Saira Condensed"; font-weight: 600; font-size: 11px; color: var(--lh-ink3); letter-spacing: .05em; }
 .lh-dfoot { padding: 11px 16px; border-top: 1px solid var(--lh-line); font-family: "Saira Condensed"; font-weight: 600; letter-spacing: .05em; font-size: 11px; color: var(--lh-ink3); text-align: center; }
 
+/* ======================= Part II · The Money ======================= */
+/* act break */
+.lh-act { display: flex; align-items: center; gap: 18px; margin-top: 86px; }
+.lh-actrule { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--lh-line2)); }
+.lh-act .lh-actrule:last-child { background: linear-gradient(90deg, var(--lh-line2), transparent); }
+.lh-acttext { font-family: "Saira Condensed"; font-weight: 700; letter-spacing: .34em; text-transform: uppercase; font-size: 12px; color: var(--lh-gold); white-space: nowrap; }
+.lh-actsub { text-align: center; color: var(--lh-ink2); font-size: 13.5px; line-height: 1.5; max-width: 64ch; margin: 14px auto 0; }
+
+/* ---------- 06 · sunk costs ---------- */
+.lh-sunkcard { background: linear-gradient(180deg, var(--lh-panel), var(--lh-panel2)); border: 1px solid var(--lh-line); border-radius: 14px; padding: 8px 20px; box-shadow: 0 30px 60px -40px #000; }
+.lh-burn { display: grid; grid-template-columns: 88px minmax(0, 1fr) auto; align-items: center; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--lh-line); }
+.lh-burn:last-child { border-bottom: none; }
+.lh-bmid { min-width: 0; }
+.lh-bowner { font-family: "Saira Condensed"; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; font-size: 14px; color: var(--lh-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lh-bplayer { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 9px; min-width: 0; margin-bottom: 7px; font-family: "Saira Condensed"; font-weight: 600; font-size: 14.5px; color: var(--lh-ink2); }
+.lh-bkeep { font-family: "Saira Condensed"; font-weight: 700; font-size: 8.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--lh-ink3); border: 1px solid var(--lh-line2); border-radius: 4px; padding: 1px 5px; }
+.lh-bstat { font-family: "Saira Condensed"; font-weight: 700; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; }
+.lh-bstat.gone { background: color-mix(in srgb, var(--lh-ember) 18%, var(--deep)); color: var(--lh-ember-hi); }
+.lh-bstat.traded { background: color-mix(in srgb, var(--lh-gold) 16%, var(--deep)); color: var(--lh-gold-hi); }
+.lh-btrack { height: 12px; background: #14110f; border-radius: 6px; overflow: hidden; }
+.lh-bfill { display: block; height: 100%; width: 0; border-radius: 6px; transition: width 1.1s cubic-bezier(.2, .8, .2, 1); }
+.lh-burn.gone .lh-bfill { background: linear-gradient(90deg, var(--lh-ember-hi), var(--lh-ember) 46%, var(--lh-char) 100%); }
+.lh-burn.traded .lh-bfill { background: linear-gradient(90deg, var(--lh-gold), var(--lh-ember-hi)); }
+.lh-bend { display: flex; align-items: center; gap: 14px; justify-self: end; }
+.lh-bprice { font-family: Anton; font-size: 24px; line-height: 1; color: var(--lh-ember-hi); min-width: 52px; text-align: right; }
+.lh-brec { display: flex; align-items: center; gap: 9px; font-family: "Saira Condensed"; font-weight: 700; font-size: 13px; letter-spacing: .03em; color: var(--lh-ink3); min-width: 150px; }
+.lh-btag { font-family: "Saira Condensed"; font-weight: 700; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; padding: 2px 8px; border-radius: 5px; }
+.lh-btag.won { background: linear-gradient(180deg, #16331f, #0e2415); color: var(--lh-money-hi); border: 1px solid color-mix(in srgb, var(--lh-money) 55%, transparent); box-shadow: 0 0 14px -4px var(--lh-money); }
+.lh-btag.champ { background: linear-gradient(180deg, #3a2f12, #241c0a); color: var(--lh-gold-hi); border: 1px solid var(--lh-gold); box-shadow: 0 0 14px -4px var(--lh-glow); }
+
+/* ---------- 07 · the big board ---------- */
+.lh-boardcard { background: linear-gradient(180deg, var(--lh-panel), var(--lh-panel2)); border: 1px solid var(--lh-line); border-radius: 14px; padding: 16px 18px 18px; box-shadow: 0 30px 60px -40px #000; }
+.lh-movers { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-bottom: 14px; margin-bottom: 6px; border-bottom: 1px solid var(--lh-line); }
+.lh-mvlbl { font-family: "Saira Condensed"; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; font-size: 10px; color: var(--lh-ink3); margin-right: 4px; }
+.lh-mv { font-family: "Saira Condensed"; font-weight: 600; font-size: 12px; letter-spacing: .02em; background: var(--lh-panel2); border: 1px solid var(--lh-line); border-radius: 20px; padding: 4px 11px; cursor: pointer; transition: border-color .14s, transform .14s; }
+.lh-mv b { font-weight: 800; }
+.lh-mv.up { color: var(--lh-money-hi); }
+.lh-mv.down { color: var(--lh-ember-hi); }
+.lh-mv:hover { transform: translateY(-1px); border-color: var(--lh-line2); }
+.lh-board { width: 100%; }
+.bb-svg { width: 100%; height: auto; display: block; }
+.bb-grid { stroke: var(--lh-line); stroke-width: 1; }
+.bb-yl, .bb-xl { font-family: "Saira Condensed"; font-weight: 600; font-size: 12px; fill: var(--lh-ink3); }
+.bb-line { fill: none; stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
+.bb-dot { cursor: pointer; transition: r .12s ease; }
+.bb-dot:hover { r: 5.5; }
+.bb-end { font-family: "Saira Condensed"; font-weight: 800; font-size: 13px; letter-spacing: .02em; }
+.lh-boardempty { padding: 80px 20px; text-align: center; color: var(--lh-ink3); font-size: 14px; }
+.lh-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.lh-chip { display: inline-flex; align-items: center; gap: 7px; font-family: "Saira Condensed"; font-weight: 600; font-size: 12.5px; color: var(--lh-ink2); background: var(--lh-panel2); border: 1px solid var(--lh-line); border-radius: 8px; padding: 5px 10px; cursor: pointer; transition: border-color .14s, color .14s, background .14s; }
+.lh-chip i { font-style: normal; font-family: Anton; font-size: 12px; color: var(--lh-ink3); }
+.lh-chipdot { width: 9px; height: 9px; border-radius: 50%; }
+.lh-chip:hover { color: var(--lh-ink); border-color: var(--lh-line2); }
+.lh-chip.on { color: var(--lh-ink); background: color-mix(in srgb, var(--lh-gold) 12%, var(--lh-panel2)); border-color: color-mix(in srgb, var(--lh-gold) 55%, transparent); }
+.lh-chip.on i { color: var(--lh-gold-hi); }
+
+/* ---------- 08 · maestro & wizard (the manager map) ---------- */
+.lh-quad { position: relative; background: linear-gradient(180deg, var(--lh-panel), var(--lh-panel2)); border: 1px solid var(--lh-line); border-radius: 14px; padding: 18px 22px 14px 46px; box-shadow: 0 30px 60px -40px #000; }
+.lh-plot { position: relative; height: clamp(340px, 42vw, 470px); margin: 6px 8px 30px 6px; border-left: 1px solid var(--lh-line2); border-bottom: 1px solid var(--lh-line2); }
+.lh-qzone { position: absolute; overflow: hidden; }
+.lh-qzone span { position: absolute; font-family: "Saira Condensed"; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; font-size: 11px; padding: 7px 10px; opacity: .82; }
+.lh-qzone.maestro { background: linear-gradient(225deg, color-mix(in srgb, var(--lh-gold) 11%, transparent), transparent 65%); }
+.lh-qzone.maestro span { top: 0; right: 0; color: var(--lh-gold-hi); }
+.lh-qzone.wizard { background: linear-gradient(315deg, color-mix(in srgb, var(--turf) 9%, transparent), transparent 65%); }
+.lh-qzone.wizard span { top: 0; left: 0; color: var(--lh-money-hi); }
+.lh-qzone.forget { background: linear-gradient(135deg, color-mix(in srgb, var(--lh-pewter) 16%, transparent), transparent 65%); }
+.lh-qzone.forget span { bottom: 0; right: 0; color: var(--lh-silver); }
+.lh-qzone.adrift span { bottom: 0; left: 0; color: var(--lh-ink3); }
+.lh-qx, .lh-qy { position: absolute; pointer-events: none; }
+.lh-qx { top: 0; bottom: 0; width: 0; border-left: 1px dashed var(--lh-line2); }
+.lh-qy { left: 0; right: 0; height: 0; border-top: 1px dashed var(--lh-line2); }
+.lh-qx span, .lh-qy span { position: absolute; font-family: "Saira Condensed"; font-weight: 600; font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--lh-ink3); white-space: nowrap; }
+.lh-qx span { top: -16px; left: 4px; }
+.lh-qy span { left: 4px; top: -14px; }
+.lh-qpt { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; z-index: 2; }
+.lh-qpt.hot { z-index: 5; }
+.lh-qdot { display: block; border-radius: 50%; transition: transform .14s ease; }
+.lh-qpt.hot .lh-qdot { transform: scale(1.12); }
+.lh-qname { font-family: "Saira Condensed"; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 11px; color: var(--lh-ink2); text-shadow: 0 1px 3px #000; white-space: nowrap; }
+.lh-qpt.hot .lh-qname { color: var(--lh-ink); }
+.lh-qaxx { position: absolute; left: 46px; right: 22px; bottom: 12px; text-align: center; font-family: "Saira Condensed"; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-size: 10.5px; color: var(--lh-ink3); }
+.lh-qaxy { position: absolute; left: 4px; top: 50%; transform: rotate(-90deg) translateX(50%); transform-origin: left center; font-family: "Saira Condensed"; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-size: 10.5px; color: var(--lh-ink3); white-space: nowrap; }
+.lh-qcorner { position: absolute; left: 14px; font-family: "Saira Condensed"; font-weight: 600; font-size: 10px; color: var(--lh-ink3); }
+.lh-qcorner.tl { top: 16px; }
+.lh-qcorner.bl { bottom: 46px; }
+
 .lh-error { color: var(--lh-ink2); text-align: center; padding: 60px 20px; font-size: 15px; }
 
 @media (max-width: 880px) {
   .lh-cols { grid-template-columns: 1fr; }
   .lh-loyal { grid-template-columns: repeat(2, 1fr); }
+  .lh-burn { grid-template-columns: 64px minmax(0, 1fr); gap: 9px 12px; }
+  .lh-bend { grid-column: 1 / -1; justify-self: stretch; justify-content: space-between; }
+  .lh-brec { min-width: 0; }
+}
+@media (max-width: 600px) {
+  /* the scatter gets crowded on a phone: shrink the tokens, give the plot more height */
+  .lh-plot { height: 430px; }
+  .lh-qdot { transform: scale(.62); }
+  .lh-qpt.hot .lh-qdot { transform: scale(.7); }
+  .lh-qname { font-size: 9.5px; }
+  .lh-qzone span { font-size: 9px; padding: 5px 7px; }
+  .lh-mv { font-size: 11px; padding: 3px 8px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .lh-banner, .lh-plq { transition: none; transform: none; opacity: 1; }
-  .lh-fill, .lh-barl .b, .lh-barr .b, .lh-led-fill { transition: none; }
+  .lh-fill, .lh-barl .b, .lh-barr .b, .lh-led-fill, .lh-bfill { transition: none; }
   /* keep the static spotlight band + ring; drop only the lift and fades */
   .lh-grow, .lh-cell { transition: none; }
   .lh-grow.is-active, .lh-cell.clk:hover { transform: none; }
+  .lh-mv, .bb-dot, .lh-qdot { transition: none; }
 }
