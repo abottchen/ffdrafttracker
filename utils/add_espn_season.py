@@ -87,6 +87,11 @@ def main(argv: list[str] | None = None) -> int:
 
     tmp = OUT.with_suffix(".tmp")
     tmp.write_text(history.model_dump_json(indent=2))
+    try:  # validate the temp file by reloading it before the atomic swap
+        LeagueHistory.model_validate_json(tmp.read_text())
+    except Exception:
+        tmp.unlink(missing_ok=True)
+        raise
     tmp.replace(OUT)
 
     print(

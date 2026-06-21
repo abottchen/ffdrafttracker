@@ -194,11 +194,16 @@ def season_api_to_season(api_json: list | dict) -> SeasonResult:
             "member list, or has no first name on their profile."
         )
 
-    by_rank = {t.final_rank: t for t in teams if t.final_rank}
-    champ = by_rank.get(1) or teams[0]
-    runner = by_rank.get(2) or teams[0]
-    best = _best_record(teams)
     year = season.get("seasonId")
+    by_rank = {t.final_rank: t for t in teams if t.final_rank}
+    champ = by_rank.get(1)
+    runner = by_rank.get(2)
+    if champ is None or runner is None:
+        raise ValueError(
+            f"Season {year} is missing a final rank 1 and/or 2 "
+            "(rankCalculatedFinal not set). Is the season complete?"
+        )
+    best = _best_record(teams)
 
     result = SeasonResult(
         year=year,

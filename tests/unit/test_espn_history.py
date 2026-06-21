@@ -134,3 +134,13 @@ def test_unresolved_owner_raises():
     api[0]["teams"][0]["primaryOwner"] = "{GHOST}"  # no matching member
     with pytest.raises(ValueError, match="Could not resolve an owner"):
         season_api_to_season(api)
+
+
+def test_missing_final_rank_raises():
+    # An incomplete season (no rankCalculatedFinal) must fail rather than record
+    # the same team as both champion and runner-up.
+    api = _api()
+    for t in api[0]["teams"]:
+        t.pop("rankCalculatedFinal", None)
+    with pytest.raises(ValueError, match="final rank"):
+        season_api_to_season(api)
