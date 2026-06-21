@@ -17,8 +17,8 @@
   // normalize a player name for joining auction prices ↔ end-of-season rosters
   const normName = (n) => (n || "").toLowerCase().replace(/\b(jr|sr|ii|iii|iv|v)\b\.?/g, "").replace(/[^a-z ]/g, "").replace(/\s+/g, " ").trim();
   const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-  const POSVAR = { QB: "--qb", RB: "--rb", WR: "--wr", TE: "--te", K: "--k", "D/ST": "--dst" };
-  const posVar = (p) => POSVAR[p] || "--lh-silver";
+  // distinct, legible-on-dark palette so every charted line reads as its own color
+  const LINECOLORS = ["#4FC3F7", "#FF8A65", "#AED581", "#BA68C8", "#FFD54F", "#F06292", "#4DD0E1", "#9CCC65", "#7986CB", "#FFB74D", "#E57373", "#4DB6AC", "#DCE775", "#90A4AE", "#F48FB1", "#A1887F"];
 
   let DATA = null, MONEY = null, OWNER_COLOR = () => "var(--lh-silver)", built = false;
   let mvSel = new Set();   // currently-charted players on the price chart
@@ -59,18 +59,18 @@
       c.w += t.wins || 0; c.l += t.losses || 0; c.t += t.ties || 0;
     }));
 
-    const titles = {}, lastTitle = {};
+    const titles = {}, lastTitle = {}, titleYears = {};
     seasons.forEach((s) => {
       const winners = [s.champion.owner];
       if (s.shared_title) winners.push(s.runner_up.owner);
-      winners.forEach((o) => { titles[o] = (titles[o] || 0) + 1; lastTitle[o] = Math.max(lastTitle[o] || 0, s.year); });
+      winners.forEach((o) => { titles[o] = (titles[o] || 0) + 1; lastTitle[o] = Math.max(lastTitle[o] || 0, s.year); (titleYears[o] = titleYears[o] || []).push(s.year); });
     });
     const champions = Object.keys(titles)
       .map((o) => ({ owner: o, titles: titles[o], last: lastTitle[o], active: active.has(o) }))
       .sort((a, b) => b.titles - a.titles || b.last - a.last || a.owner.localeCompare(b.owner));
 
-    const best = {};
-    seasons.forEach((s) => { best[s.best_record.owner] = (best[s.best_record.owner] || 0) + 1; });
+    const best = {}, bestYears = {};
+    seasons.forEach((s) => { const o = s.best_record.owner; best[o] = (best[o] || 0) + 1; (bestYears[o] = bestYears[o] || []).push(s.year); });
     const regime = [...new Set([...Object.keys(titles), ...Object.keys(best)])]
       .map((o) => ({ owner: o, titles: titles[o] || 0, best: best[o] || 0, active: active.has(o) }))
       .sort((a, b) => b.best - a.best || b.titles - a.titles);
@@ -102,7 +102,7 @@
       .sort((a, b) => (b.active - a.active) || b.titles - a.titles || b.seasons - a.seasons || avg(a.owner) - avg(b.owner) || a.owner.localeCompare(b.owner));
 
     // loyalty: the player each manager kept rostering
-    const po = {}, posmap = {};
+    const po = {}, posmap = {}, poYears = {};
     seasons.forEach((s) => s.standings.forEach((t) => {
       const seen = new Set();
       (t.roster || []).forEach((e) => {
@@ -110,13 +110,14 @@
         if (seen.has(p) || skipPlayer(p)) return;
         seen.add(p);
         po[p] = po[p] || {}; po[p][t.owner] = (po[p][t.owner] || 0) + 1; posmap[p] = e.position || "";
+        (poYears[p] = poYears[p] || {}); (poYears[p][t.owner] = poYears[p][t.owner] || []).push(s.year);
       });
     }));
     const pairs = [];
     Object.keys(po).forEach((p) => {
       let bo = null, bc = 0;
       Object.entries(po[p]).forEach(([o, c]) => { if (c > bc) { bc = c; bo = o; } });
-      if (bc >= 5) pairs.push({ player: p, owner: bo, seasons: bc, pos: posmap[p] || "" });
+      if (bc >= 5) pairs.push({ player: p, owner: bo, seasons: bc, pos: posmap[p] || "", years: poYears[p][bo] });
     });
     pairs.sort((a, b) => b.seasons - a.seasons);
     const seenO = new Set(); const loy = [];
@@ -146,6 +147,7 @@
     return {
       meta: { years, nSeasons: seasons.length, nManagers: Object.keys(appear).length, latest, active },
       champions, regime, grid: { years, size, rows: gridRows }, loyalty, ledger, royalty, rosters,
+      titleYears, bestYears,
     };
   }
 
@@ -178,7 +180,7 @@
     });
 
     const years = Object.keys(auctionSeasons).map(Number).sort((a, b) => a - b);
-    const burns = [], parc = {}, ret = {};
+    const burns = [], parc = {}, parcOwner = {}, ret = {};
     years.forEach((y) => {
       const owners = (auctionSeasons[String(y)] || {}).owners || {};
       Object.entries(owners).forEach(([owner, picks]) => {
@@ -189,7 +191,8 @@
         (picks || []).forEach((p) => {
           if (skipPlayer(p.player)) return;       // D/ST: not a "superstar", and names rarely match rosters
           const nn = normName(p.player);
-          (parc[p.player] = parc[p.player] || {})[y] = Math.max(parc[p.player][y] || 0, p.price);
+          const arc = parc[p.player] || (parc[p.player] = {});
+          if (arc[y] == null || p.price > arc[y]) { arc[y] = p.price; (parcOwner[p.player] = parcOwner[p.player] || {})[y] = owner; }
           r.spend += p.price;
           if (set && set.has(nn)) { r.retained += p.price; return; }
           if (!set) return;                                   // no roster to judge against
@@ -222,7 +225,7 @@
         return { owner, retPct: v.retained / v.spend * 100, winPct: g ? (v.wins + 0.5 * v.ties) / g * 100 : 0, seasons: v.seasons, spend: v.spend, retained: v.retained };
       });
 
-    return { years, burns, parc, posOf, retention };
+    return { years, burns, parc, parcOwner, posOf, retention };
   }
 
   /* ---------------- scaffold ---------------- */
@@ -297,6 +300,7 @@
     const raf = $("#lh-rafters"), maxT = DATA.champions[0].titles;
     DATA.champions.forEach((c, i) => {
       const b = ce("div", "lh-banner" + (c.titles > 1 ? " champ" : ""));
+      b.dataset.o = c.owner;
       const drop = 20 + Math.round((c.titles / maxT) * 30);
       b.innerHTML =
         `<div class="lh-cord" style="height:${drop}px"></div>
@@ -310,6 +314,11 @@
       raf.appendChild(b);
       setTimeout(() => b.classList.add("in"), 300 + i * 170);
     });
+    raf.addEventListener("mousemove", (e) => {
+      const bn = e.target.closest(".lh-banner"); if (!bn || !bn.dataset.o) { hideTip(); return; }
+      tipAt(bannerTip(bn.dataset.o), e.clientX, e.clientY);
+    });
+    raf.addEventListener("mouseleave", hideTip);
   }
 
   function renderGrid() {
@@ -364,7 +373,8 @@
     const tale = $("#lh-tale"); tale.innerHTML = "";
     reg.forEach((r, i) => {
       const king = r.owner === kingBest || r.owner === kingCrown;
-      const row = ce("div", "lh-tr" + (king ? " king" : ""));
+      const row = ce("div", "lh-tr lh-hov" + (king ? " king" : ""));
+      row.dataset.o = r.owner;
       row.innerHTML =
         `<div class="lh-barl"><span class="bv">${r.best || ""}</span><span class="b"></span></div>` +
         `<div class="who">${r.owner}</div>` +
@@ -375,12 +385,18 @@
         $(".lh-barr .b", row).style.width = (r.titles / maxC * 46) + "%";
       }, 200 + i * 70);
     });
+    tale.addEventListener("mousemove", (e) => {
+      const row = e.target.closest(".lh-tr"); if (!row || !row.dataset.o) { hideTip(); return; }
+      tipAt(regimeTip(row.dataset.o), e.clientX, e.clientY);
+    });
+    tale.addEventListener("mouseleave", hideTip);
   }
 
   function renderLoyalty() {
     const loyal = $("#lh-loyal"); loyal.innerHTML = "";
     DATA.loyalty.forEach((l, i) => {
       const p = ce("div", "lh-plq" + (l.seasons >= 9 ? " top" : ""));
+      p.dataset.i = i;
       p.innerHTML =
         `<span class="lh-pos ${posClass(l.pos)}">${l.pos || "—"}</span>` +
         `<div class="lh-of">${l.owner}<b>'s</b> guy</div>` +
@@ -397,12 +413,18 @@
       }), { threshold: 0.4 });
       setTimeout(() => obs.observe(p), i * 40);
     });
+    loyal.addEventListener("mousemove", (e) => {
+      const card = e.target.closest(".lh-plq"); if (!card || card.dataset.i == null) { hideTip(); return; }
+      tipAt(loyaltyTip(DATA.loyalty[+card.dataset.i]), e.clientX, e.clientY);
+    });
+    loyal.addEventListener("mouseleave", hideTip);
   }
 
   function renderLedger() {
     const el = $("#lh-ledger"); el.innerHTML = "";
     DATA.ledger.forEach((m, i) => {
-      const row = ce("div", "lh-row lh-led" + (m.active ? "" : " gone") + (i === 0 ? " top" : ""));
+      const row = ce("div", "lh-row lh-led lh-hov" + (m.active ? "" : " gone") + (i === 0 ? " top" : ""));
+      row.dataset.o = m.owner;
       const rec = `${m.w}–${m.l}` + (m.t ? `–${m.t}` : "");
       const pct = m.pct.toFixed(3).replace(/^0/, ""); // ".597"
       row.innerHTML =
@@ -412,6 +434,11 @@
       el.appendChild(row);
       setTimeout(() => { $(".lh-led-fill", row).style.width = (m.pct * 100) + "%"; }, 250 + i * 55);
     });
+    el.addEventListener("mousemove", (e) => {
+      const row = e.target.closest(".lh-row"); if (!row || !row.dataset.o) { hideTip(); return; }
+      tipAt(ledgerTip(row.dataset.o), e.clientX, e.clientY);
+    });
+    el.addEventListener("mouseleave", hideTip);
   }
 
   function renderRoyalty() {
@@ -434,14 +461,44 @@
     ro.addEventListener("mouseleave", hideTip);
   }
 
-  // every season a player was rostered: year · team · owner · result
+  // a gold star for a championship season, a silver star for a runner-up
+  const starFor = (r) => r.champ ? ' <span class="lh-star ch">★</span>' : (r.runner ? ' <span class="lh-star ru">★</span>' : "");
+  // one detail line for a manager's season: ’YY · team · record ★   (owner added when the list spans managers)
+  function seasonLine(owner, year, withOwner) {
+    const r = (DATA.rosters[owner] || {})[year] || {};
+    const mid = withOwner ? `${r.team || "?"} · ${owner}` : (r.team || "?");
+    return `<div class="lh-ttline"><span class="lh-tty">’${String(year).slice(2)}</span>${mid} · ${r.rec || "—"}${starFor(r)}</div>`;
+  }
+  const sortYrs = (ys) => (ys || []).slice().sort((a, b) => a - b);
+
+  // §05 — every season a player was rostered, across managers
   function royaltyTip(p) {
-    const rows = (p.app || []).slice().sort((a, b) => a.year - b.year).map((a) => {
-      const r = (DATA.rosters[a.owner] || {})[a.year] || {};
-      const res = r.champ ? '<b class="ch">✦</b>' : (r.runner ? '<b class="ru">RU</b>' : (r.rec || ""));
-      return `<div class="lh-ttline"><span class="lh-tty">’${String(a.year).slice(2)}</span>${r.team || "?"} · ${a.owner} · ${res}</div>`;
-    }).join("");
+    const rows = (p.app || []).slice().sort((a, b) => a.year - b.year).map((a) => seasonLine(a.owner, a.year, true)).join("");
     return `<div class="lh-tth">${p.player}</div><div class="lh-ttteam">${p.seasons} seasons rostered</div>${rows}`;
+  }
+  // top champion banners — the championship seasons
+  function bannerTip(o) {
+    const ys = sortYrs(DATA.titleYears[o]);
+    return `<div class="lh-tth">${o}</div><div class="lh-ttteam">${ys.length} ${ys.length === 1 ? "title" : "titles"}</div>` + ys.map((y) => seasonLine(o, y)).join("");
+  }
+  // §02 — the best-record seasons and the title seasons behind the two bars
+  function regimeTip(o) {
+    const by = sortYrs(DATA.bestYears[o]), ty = sortYrs(DATA.titleYears[o]);
+    let h = `<div class="lh-tth">${o}</div>`;
+    if (by.length) h += `<div class="lh-ttteam">Best record · ${by.length}</div>` + by.map((y) => seasonLine(o, y)).join("");
+    if (ty.length) h += `<div class="lh-ttteam" style="margin-top:8px">Titles · ${ty.length}</div>` + ty.map((y) => seasonLine(o, y)).join("");
+    if (!by.length && !ty.length) h += `<div class="lh-ttline">No best records or titles yet</div>`;
+    return h;
+  }
+  // §03 — the seasons a manager rostered their go-to player
+  function loyaltyTip(l) {
+    const ys = sortYrs(l.years);
+    return `<div class="lh-tth">${l.player}</div><div class="lh-ttteam">${l.owner} · ${ys.length} seasons</div>` + ys.map((y) => seasonLine(l.owner, y)).join("");
+  }
+  // §04 — a manager's full season-by-season record
+  function ledgerTip(o) {
+    const ys = Object.keys(DATA.rosters[o] || {}).map(Number).sort((a, b) => a - b);
+    return `<div class="lh-tth">${o}</div><div class="lh-ttteam">${ys.length} seasons</div>` + ys.map((y) => seasonLine(o, y)).join("");
   }
 
   /* ================= Part II · The Money ================= */
@@ -464,7 +521,7 @@
 
        <section class="lh-sec">
          <div class="lh-sec-head"><span class="lh-num">07</span><h2>Player Prices Over Time</h2></div>
-         <p class="lh-sub">What each player cost at auction, season by season. <b>Lines are colored by position.</b> Four names are charted to start; tap any chip below to add or remove a line.</p>
+         <p class="lh-sub">What each player cost at auction, season by season. Four names are charted to start; tap any chip below to add or remove a line. <b>Hover a point</b> for the price, year, and team that paid it.</p>
          <div class="lh-boardcard">
            <div class="lh-movers" id="lh-movers"></div>
            <div class="lh-board" id="lh-board"></div>
@@ -533,7 +590,7 @@
   }
 
   /* --- 07 · Player Prices Over Time --------------------------------------- */
-  let bbChips = [];
+  let bbChips = [], bbCandIdx = {};
   function renderBigBoard() {
     const years = MONEY.years, y0 = years[0], yN = years[years.length - 1];
     const cand = Object.keys(MONEY.parc).map((pl) => {
@@ -542,6 +599,7 @@
       return { player: pl, peak, n: ys.length, first, last, drama: (peak - first) + (peak - last), full: d[y0] != null && d[yN] != null };
     }).filter((c) => c.n >= 5);
     cand.sort((a, b) => b.peak - a.peak);
+    bbCandIdx = {}; cand.forEach((c, i) => { bbCandIdx[c.player] = i; });   // stable order for color assignment
     bbChips = cand.slice(0, 16);
     bbMaxY = Math.ceil(Math.max(10, ...cand.map((c) => c.peak)) / 10) * 10;   // stable axis across all selections
     const full = cand.filter((c) => c.full);
@@ -562,7 +620,7 @@
       risers.map((c) => mv(c, "up")).join("") + fallers.map((c) => mv(c, "down")).join("");
 
     $("#lh-chips").innerHTML = bbChips.map((c) =>
-      `<button class="lh-chip" data-p="${esc(c.player)}"><span class="lh-chipdot" style="background:var(${posVar(MONEY.posOf[normName(c.player)] || "")})"></span>${c.player}<i>$${c.peak}</i></button>`).join("");
+      `<button class="lh-chip" data-p="${esc(c.player)}"><span class="lh-chipdot"></span>${c.player}<i>$${c.peak}</i></button>`).join("");
 
     const toggle = (pl) => { if (mvSel.has(pl)) mvSel.delete(pl); else mvSel.add(pl); drawBoard(); };
     $("#lh-chips").querySelectorAll(".lh-chip").forEach((b) => { b.onclick = () => toggle(b.dataset.p); });
@@ -572,7 +630,11 @@
     board.addEventListener("mousemove", (e) => {
       const dot = e.target.closest(".bb-dot");
       if (!dot) { hideTip(); return; }
-      tipAt(`<div class="lh-tth">${dot.dataset.p}</div><div class="lh-ttrow">’${String(dot.dataset.y).slice(2)} auction · <b style="color:var(--lh-gold-hi)">$${dot.dataset.v}</b></div>`, e.clientX, e.clientY);
+      const o = dot.dataset.o, y = dot.dataset.y;
+      const team = ((DATA.rosters[o] || {})[y] || {}).team || "";
+      tipAt(`<div class="lh-tth">${dot.dataset.p}</div>` +
+        `<div class="lh-ttteam">${o}${team ? ` · ${team}` : ""}</div>` +
+        `<div class="lh-ttline">’${String(y).slice(2)} auction · <b style="color:var(--lh-gold-hi)">$${dot.dataset.v}</b></div>`, e.clientX, e.clientY);
     });
     board.addEventListener("mouseleave", hideTip);
     drawBoard();
@@ -595,21 +657,30 @@
     }
     years.forEach((y) => { grid += `<text class="bb-xl" x="${xFor(y).toFixed(1)}" y="${H - 12}" text-anchor="middle">’${String(y).slice(2)}</text>`; });
 
+    // assign a distinct color to each charted line (stable order so colors don't churn on toggle)
+    const order = sel.slice().sort((a, b) => (bbCandIdx[a] ?? 999) - (bbCandIdx[b] ?? 999));
+    const colorOf = {}; order.forEach((pl, i) => { colorOf[pl] = LINECOLORS[i % LINECOLORS.length]; });
+
     let lines = "";
-    sel.forEach((pl) => {
+    order.forEach((pl) => {
       const d = MONEY.parc[pl] || {}, pts = years.filter((y) => d[y] != null);
       if (!pts.length) return;
-      const cv = posVar(MONEY.posOf[normName(pl)] || "");
+      const col = colorOf[pl], own = (MONEY.parcOwner[pl] || {});
       const path = pts.map((y, i) => `${i ? "L" : "M"}${xFor(y).toFixed(1)} ${yFor(d[y]).toFixed(1)}`).join(" ");
-      lines += `<path class="bb-line" style="stroke:var(${cv})" d="${path}"/>`;
-      pts.forEach((y) => { lines += `<circle class="bb-dot" style="fill:var(${cv})" cx="${xFor(y).toFixed(1)}" cy="${yFor(d[y]).toFixed(1)}" r="3.6" data-p="${esc(pl)}" data-y="${y}" data-v="${d[y]}"/>`; });
+      lines += `<path class="bb-line" style="stroke:${col}" d="${path}"/>`;
+      pts.forEach((y) => { lines += `<circle class="bb-dot" style="fill:${col}" cx="${xFor(y).toFixed(1)}" cy="${yFor(d[y]).toFixed(1)}" r="4.2" data-p="${esc(pl)}" data-y="${y}" data-v="${d[y]}" data-o="${esc(own[y] || "")}"/>`; });
       const ly = pts[pts.length - 1];
-      lines += `<text class="bb-end" style="fill:var(${cv})" x="${(xFor(ly) + 8).toFixed(1)}" y="${(yFor(d[ly]) + 3.5).toFixed(1)}">${esc(pl.split(" ").slice(-1)[0])}</text>`;
+      lines += `<text class="bb-end" style="fill:${col}" x="${(xFor(ly) + 8).toFixed(1)}" y="${(yFor(d[ly]) + 3.5).toFixed(1)}">${esc(pl.split(" ").slice(-1)[0])}</text>`;
     });
 
     const hint = sel.length ? "" : `<text class="bb-hint" x="${(padL + plotW / 2).toFixed(1)}" y="${(padT + plotH / 2).toFixed(1)}" text-anchor="middle">Tap a player below to chart their auction price</text>`;
     $("#lh-board").innerHTML = `<svg class="bb-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Auction price by year">${grid}${lines}${hint}</svg>`;
-    $("#lh-chips").querySelectorAll(".lh-chip").forEach((c) => c.classList.toggle("on", mvSel.has(c.dataset.p)));
+    $("#lh-chips").querySelectorAll(".lh-chip").forEach((c) => {
+      const on = mvSel.has(c.dataset.p);
+      c.classList.toggle("on", on);
+      const dot = c.querySelector(".lh-chipdot");
+      if (dot) dot.style.background = on ? colorOf[c.dataset.p] : "var(--lh-ink3)";
+    });
   }
 
   /* --- 08 · Auction Retention vs. Win Rate -------------------------------- */
