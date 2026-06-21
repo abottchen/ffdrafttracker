@@ -32,7 +32,7 @@ class TeamSeason(BaseModel):
 
     source_team_id: int | None = None  # ESPN teamId / Yahoo team number
     team_name: str
-    owner: str  # first name (or "UNKNOWN:<team>" pending confirmation)
+    owner: str  # league first name; "UNKNOWN" only if it could not be resolved
     wins: int = 0
     losses: int = 0
     ties: int = 0
