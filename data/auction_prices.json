@@ -8663,6 +8663,978 @@
           }
         ]
       }
+    },
+    "2025": {
+      "owners": {
+        "Adam": [
+          {
+            "player": "Patrick Mahomes",
+            "price": 31,
+            "keeper": false,
+            "espn_id": 3139477
+          },
+          {
+            "player": "Tyreek Hill",
+            "price": 30,
+            "keeper": false,
+            "espn_id": 3116406
+          },
+          {
+            "player": "Jaxon Smith-Njigba",
+            "price": 26,
+            "keeper": false,
+            "espn_id": 4430878
+          },
+          {
+            "player": "Travis Kelce",
+            "price": 19,
+            "keeper": false,
+            "espn_id": 15847
+          },
+          {
+            "player": "Breece Hall",
+            "price": 14,
+            "keeper": true,
+            "espn_id": 4427366
+          },
+          {
+            "player": "Puka Nacua",
+            "price": 13,
+            "keeper": true,
+            "espn_id": 4426515
+          },
+          {
+            "player": "Matthew Golden",
+            "price": 11,
+            "keeper": false,
+            "espn_id": 4701936
+          },
+          {
+            "player": "PHI D/ST",
+            "price": 9,
+            "keeper": false,
+            "espn_id": 26
+          },
+          {
+            "player": "Kyren Williams",
+            "price": 8,
+            "keeper": true,
+            "espn_id": 4430737
+          },
+          {
+            "player": "Tyrone Tracy Jr.",
+            "price": 7,
+            "keeper": false,
+            "espn_id": 4360516
+          },
+          {
+            "player": "Jerry Jeudy",
+            "price": 7,
+            "keeper": false,
+            "espn_id": 4241463
+          },
+          {
+            "player": "Kyle Pitts Sr.",
+            "price": 6,
+            "keeper": false,
+            "espn_id": 4360248
+          },
+          {
+            "player": "Kyler Murray",
+            "price": 5,
+            "keeper": false,
+            "espn_id": 3917315
+          },
+          {
+            "player": "Tyjae Spears",
+            "price": 5,
+            "keeper": false,
+            "espn_id": 4428557
+          },
+          {
+            "player": "Michael Pittman Jr.",
+            "price": 2,
+            "keeper": false,
+            "espn_id": 4035687
+          },
+          {
+            "player": "Ray Davis",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 4429501
+          },
+          {
+            "player": "Will Reichard",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 4567104
+          }
+        ],
+        "Jodi": [
+          {
+            "player": "Joe Burrow",
+            "price": 40,
+            "keeper": false,
+            "espn_id": 3915511
+          },
+          {
+            "player": "Mike Evans",
+            "price": 33,
+            "keeper": false,
+            "espn_id": 16737
+          },
+          {
+            "player": "TreVeyon Henderson",
+            "price": 20,
+            "keeper": false,
+            "espn_id": 4432710
+          },
+          {
+            "player": "James Conner",
+            "price": 20,
+            "keeper": false,
+            "espn_id": 3045147
+          },
+          {
+            "player": "Trey McBride",
+            "price": 14,
+            "keeper": true,
+            "espn_id": 4361307
+          },
+          {
+            "player": "Calvin Ridley",
+            "price": 14,
+            "keeper": false,
+            "espn_id": 3925357
+          },
+          {
+            "player": "DEN D/ST",
+            "price": 9,
+            "keeper": false,
+            "espn_id": 10
+          },
+          {
+            "player": "Caleb Williams",
+            "price": 8,
+            "keeper": false,
+            "espn_id": 4431611
+          },
+          {
+            "player": "RJ Harvey",
+            "price": 7,
+            "keeper": false,
+            "espn_id": 4568490
+          },
+          {
+            "player": "Javonte Williams",
+            "price": 7,
+            "keeper": false,
+            "espn_id": 4361579
+          },
+          {
+            "player": "Tee Higgins",
+            "price": 6,
+            "keeper": true,
+            "espn_id": 4239993
+          },
+          {
+            "player": "Colston Loveland",
+            "price": 6,
+            "keeper": false,
+            "espn_id": 4723086
+          },
+          {
+            "player": "Travis Hunter",
+            "price": 5,
+            "keeper": false,
+            "espn_id": 4685415
+          },
+          {
+            "player": "Emeka Egbuka",
+            "price": 5,
+            "keeper": false,
+            "espn_id": 4567750
+          },
+          {
+            "player": "Chase Brown",
+            "price": 3,
+            "keeper": true,
+            "espn_id": 4362238
+          },
+          {
+            "player": "Stefon Diggs",
+            "price": 2,
+            "keeper": false,
+            "espn_id": 2976212
+          },
+          {
+            "player": "Wil Lutz",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 2985659
+          }
+        ],
+        "Raman": [
+          {
+            "player": "Christian McCaffrey",
+            "price": 42,
+            "keeper": false,
+            "espn_id": 3117251
+          },
+          {
+            "player": "James Cook",
+            "price": 33,
+            "keeper": true,
+            "espn_id": 4379399
+          },
+          {
+            "player": "Davante Adams",
+            "price": 27,
+            "keeper": false,
+            "espn_id": 16800
+          },
+          {
+            "player": "Marvin Harrison Jr.",
+            "price": 26,
+            "keeper": false,
+            "espn_id": 4432708
+          },
+          {
+            "player": "George Kittle",
+            "price": 23,
+            "keeper": true,
+            "espn_id": 3040151
+          },
+          {
+            "player": "ATL D/ST",
+            "price": 15,
+            "keeper": false,
+            "espn_id": 2
+          },
+          {
+            "player": "Baker Mayfield",
+            "price": 13,
+            "keeper": false,
+            "espn_id": 3052587
+          },
+          {
+            "player": "Travis Etienne Jr.",
+            "price": 10,
+            "keeper": false,
+            "espn_id": 4239996
+          },
+          {
+            "player": "Luther Burden III",
+            "price": 4,
+            "keeper": false,
+            "espn_id": 4685278
+          },
+          {
+            "player": "Dak Prescott",
+            "price": 4,
+            "keeper": false,
+            "espn_id": 2577417
+          },
+          {
+            "player": "BUF D/ST",
+            "price": 3,
+            "keeper": false,
+            "espn_id": 4
+          },
+          {
+            "player": "Keon Coleman",
+            "price": 3,
+            "keeper": false,
+            "espn_id": 4635008
+          },
+          {
+            "player": "Ladd McConkey",
+            "price": 2,
+            "keeper": true,
+            "espn_id": 4612826
+          },
+          {
+            "player": "Matthew Stafford",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 12483
+          },
+          {
+            "player": "Dallas Goedert",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 3121023
+          },
+          {
+            "player": "Harrison Butker",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 3055899
+          },
+          {
+            "player": "Kareem Hunt",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 3059915
+          },
+          {
+            "player": "Brian Robinson Jr.",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 4241474
+          }
+        ],
+        "Greg": [
+          {
+            "player": "Jahmyr Gibbs",
+            "price": 43,
+            "keeper": true,
+            "espn_id": 4429795
+          },
+          {
+            "player": "Josh Allen",
+            "price": 40,
+            "keeper": false,
+            "espn_id": 3918298
+          },
+          {
+            "player": "De'Von Achane",
+            "price": 40,
+            "keeper": false,
+            "espn_id": 4429160
+          },
+          {
+            "player": "Malik Nabers",
+            "price": 25,
+            "keeper": true,
+            "espn_id": 4595348
+          },
+          {
+            "player": "Ja'Marr Chase",
+            "price": 11,
+            "keeper": true,
+            "espn_id": 4362628
+          },
+          {
+            "player": "Rome Odunze",
+            "price": 8,
+            "keeper": false,
+            "espn_id": 4431299
+          },
+          {
+            "player": "Quinshon Judkins",
+            "price": 7,
+            "keeper": false,
+            "espn_id": 4685702
+          },
+          {
+            "player": "Tank Bigsby",
+            "price": 4,
+            "keeper": false,
+            "espn_id": 4429013
+          },
+          {
+            "player": "Dalton Kincaid",
+            "price": 3,
+            "keeper": false,
+            "espn_id": 4385690
+          },
+          {
+            "player": "Rhamondre Stevenson",
+            "price": 3,
+            "keeper": false,
+            "espn_id": 4569173
+          },
+          {
+            "player": "Ricky Pearsall",
+            "price": 2,
+            "keeper": false,
+            "espn_id": 4428209
+          },
+          {
+            "player": "Tyler Loop",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 4697745
+          },
+          {
+            "player": "DET D/ST",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 11
+          },
+          {
+            "player": "Chris Godwin",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 3116165
+          },
+          {
+            "player": "Tucker Kraft",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 4572680
+          },
+          {
+            "player": "Jordan Love",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 4036378
+          },
+          {
+            "player": "Darnell Mooney",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 4040655
+          }
+        ],
+        "Elisa": [
+          {
+            "player": "Bijan Robinson",
+            "price": 61,
+            "keeper": true,
+            "espn_id": 4430807
+          },
+          {
+            "player": "Amon-Ra St. Brown",
+            "price": 61,
+            "keeper": true,
+            "espn_id": 4374302
+          },
+          {
+            "player": "Omarion Hampton",
+            "price": 19,
+            "keeper": false,
+            "espn_id": 4685382
+          },
+          {
+            "player": "Tony Pollard",
+            "price": 15,
+            "keeper": false,
+            "espn_id": 3916148
+          },
+          {
+            "player": "Xavier Worthy",
+            "price": 11,
+            "keeper": true,
+            "espn_id": 4683062
+          },
+          {
+            "player": "Bo Nix",
+            "price": 9,
+            "keeper": false,
+            "espn_id": 4426338
+          },
+          {
+            "player": "Chris Olave",
+            "price": 6,
+            "keeper": false,
+            "espn_id": 4361370
+          },
+          {
+            "player": "David Njoku",
+            "price": 4,
+            "keeper": false,
+            "espn_id": 3123076
+          },
+          {
+            "player": "HOU D/ST",
+            "price": 4,
+            "keeper": false,
+            "espn_id": 13
+          },
+          {
+            "player": "Cameron Dicker",
+            "price": 3,
+            "keeper": false,
+            "espn_id": 4362081
+          },
+          {
+            "player": "Justin Fields",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 4362887
+          },
+          {
+            "player": "Cam Skattebo",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 4696981
+          },
+          {
+            "player": "Isaiah Likely",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 4361050
+          },
+          {
+            "player": "Jaydon Blue",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 4685279
+          },
+          {
+            "player": "Woody Marks",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 4429059
+          },
+          {
+            "player": "Jacory Croskey-Merritt",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 4575131
+          },
+          {
+            "player": "Keenan Allen",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 15818
+          }
+        ],
+        "Lance": [
+          {
+            "player": "Derrick Henry",
+            "price": 46,
+            "keeper": false,
+            "espn_id": 3043078
+          },
+          {
+            "player": "Brian Thomas Jr.",
+            "price": 41,
+            "keeper": false,
+            "espn_id": 4432773
+          },
+          {
+            "player": "A.J. Brown",
+            "price": 32,
+            "keeper": false,
+            "espn_id": 4047646
+          },
+          {
+            "player": "Zay Flowers",
+            "price": 21,
+            "keeper": true,
+            "espn_id": 4429615
+          },
+          {
+            "player": "Sam LaPorta",
+            "price": 21,
+            "keeper": false,
+            "espn_id": 4430027
+          },
+          {
+            "player": "David Montgomery",
+            "price": 10,
+            "keeper": true,
+            "espn_id": 4035538
+          },
+          {
+            "player": "Jayden Daniels",
+            "price": 10,
+            "keeper": true,
+            "espn_id": 4426348
+          },
+          {
+            "player": "Brandon Aubrey",
+            "price": 6,
+            "keeper": false,
+            "espn_id": 3953687
+          },
+          {
+            "player": "PIT D/ST",
+            "price": 5,
+            "keeper": false,
+            "espn_id": 27
+          },
+          {
+            "player": "Jordan Mason",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 4360569
+          },
+          {
+            "player": "Cam Ward",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 4688380
+          },
+          {
+            "player": "George Pickens",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 4426354
+          },
+          {
+            "player": "Rashod Bateman",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 4360939
+          },
+          {
+            "player": "Josh Downs",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 4688813
+          },
+          {
+            "player": "Jerome Ford",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 4372019
+          },
+          {
+            "player": "Jayden Reed",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 4362249
+          },
+          {
+            "player": "Jake Ferguson",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 4242355
+          }
+        ],
+        "Steve": [
+          {
+            "player": "CeeDee Lamb",
+            "price": 45,
+            "keeper": false,
+            "espn_id": 4241389
+          },
+          {
+            "player": "Justin Jefferson",
+            "price": 44,
+            "keeper": true,
+            "espn_id": 4262921
+          },
+          {
+            "player": "Nico Collins",
+            "price": 41,
+            "keeper": false,
+            "espn_id": 4258173
+          },
+          {
+            "player": "Lamar Jackson",
+            "price": 28,
+            "keeper": false,
+            "espn_id": 3916387
+          },
+          {
+            "player": "Jonathan Taylor",
+            "price": 11,
+            "keeper": true,
+            "espn_id": 4242335
+          },
+          {
+            "player": "T.J. Hockenson",
+            "price": 10,
+            "keeper": false,
+            "espn_id": 4036133
+          },
+          {
+            "player": "BAL D/ST",
+            "price": 5,
+            "keeper": false,
+            "espn_id": 3
+          },
+          {
+            "player": "Bucky Irving",
+            "price": 2,
+            "keeper": true,
+            "espn_id": 4596448
+          }
+        ],
+        "Jackie": [
+          {
+            "player": "Saquon Barkley",
+            "price": 51,
+            "keeper": true,
+            "espn_id": 3929630
+          },
+          {
+            "player": "Ashton Jeanty",
+            "price": 50,
+            "keeper": false,
+            "espn_id": 4890973
+          },
+          {
+            "player": "Jalen Hurts",
+            "price": 25,
+            "keeper": false,
+            "espn_id": 4040715
+          },
+          {
+            "player": "Drake London",
+            "price": 20,
+            "keeper": true,
+            "espn_id": 4426502
+          },
+          {
+            "player": "DJ Moore",
+            "price": 17,
+            "keeper": false,
+            "espn_id": 3915416
+          },
+          {
+            "player": "Garrett Wilson",
+            "price": 6,
+            "keeper": true,
+            "espn_id": 4569618
+          },
+          {
+            "player": "MIN D/ST",
+            "price": 6,
+            "keeper": false,
+            "espn_id": 21
+          },
+          {
+            "player": "Zach Charbonnet",
+            "price": 5,
+            "keeper": false,
+            "espn_id": 4426385
+          },
+          {
+            "player": "Kaleb Johnson",
+            "price": 5,
+            "keeper": false,
+            "espn_id": 4819231
+          },
+          {
+            "player": "Khalil Shakir",
+            "price": 5,
+            "keeper": false,
+            "espn_id": 4373678
+          },
+          {
+            "player": "Evan Engram",
+            "price": 3,
+            "keeper": false,
+            "espn_id": 3051876
+          },
+          {
+            "player": "Jauan Jennings",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 3886598
+          },
+          {
+            "player": "Ka'imi Fairbairn",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 2971573
+          }
+        ],
+        "Mitch": [
+          {
+            "player": "JAX D/ST",
+            "price": 37,
+            "keeper": false,
+            "espn_id": 15
+          },
+          {
+            "player": "Kenneth Walker III",
+            "price": 28,
+            "keeper": false,
+            "espn_id": 4567048
+          },
+          {
+            "player": "Courtland Sutton",
+            "price": 25,
+            "keeper": false,
+            "espn_id": 3128429
+          },
+          {
+            "player": "Cooper Kupp",
+            "price": 15,
+            "keeper": false,
+            "espn_id": 2977187
+          },
+          {
+            "player": "DK Metcalf",
+            "price": 15,
+            "keeper": false,
+            "espn_id": 4047650
+          },
+          {
+            "player": "Aaron Jones Sr.",
+            "price": 12,
+            "keeper": false,
+            "espn_id": 3042519
+          },
+          {
+            "player": "Jameson Williams",
+            "price": 12,
+            "keeper": false,
+            "espn_id": 4426388
+          },
+          {
+            "player": "Jaylen Waddle",
+            "price": 12,
+            "keeper": false,
+            "espn_id": 4372016
+          },
+          {
+            "player": "J.K. Dobbins",
+            "price": 10,
+            "keeper": false,
+            "espn_id": 4241985
+          },
+          {
+            "player": "Brock Bowers",
+            "price": 9,
+            "keeper": true,
+            "espn_id": 4432665
+          },
+          {
+            "player": "Austin Ekeler",
+            "price": 8,
+            "keeper": false,
+            "espn_id": 3068267
+          },
+          {
+            "player": "Deebo Samuel",
+            "price": 8,
+            "keeper": false,
+            "espn_id": 3126486
+          },
+          {
+            "player": "C.J. Stroud",
+            "price": 3,
+            "keeper": true,
+            "espn_id": 4432577
+          },
+          {
+            "player": "Chuba Hubbard",
+            "price": 3,
+            "keeper": true,
+            "espn_id": 4241416
+          },
+          {
+            "player": "Chris Boswell",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 17372
+          },
+          {
+            "player": "Pat Freiermuth",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 4361411
+          },
+          {
+            "player": "Tua Tagovailoa",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 4241479
+          }
+        ],
+        "Sanjay": [
+          {
+            "player": "Josh Jacobs",
+            "price": 33,
+            "keeper": true,
+            "espn_id": 4047365
+          },
+          {
+            "player": "Terry McLaurin",
+            "price": 20,
+            "keeper": false,
+            "espn_id": 3121422
+          },
+          {
+            "player": "Alvin Kamara",
+            "price": 18,
+            "keeper": false,
+            "espn_id": 3054850
+          },
+          {
+            "player": "DeVonta Smith",
+            "price": 14,
+            "keeper": false,
+            "espn_id": 4241478
+          },
+          {
+            "player": "D'Andre Swift",
+            "price": 13,
+            "keeper": false,
+            "espn_id": 4259545
+          },
+          {
+            "player": "Tetairoa McMillan",
+            "price": 12,
+            "keeper": false,
+            "espn_id": 4685472
+          },
+          {
+            "player": "Mark Andrews",
+            "price": 10,
+            "keeper": false,
+            "espn_id": 3116365
+          },
+          {
+            "player": "Tyler Warren",
+            "price": 10,
+            "keeper": false,
+            "espn_id": 4431459
+          },
+          {
+            "player": "Isiah Pacheco",
+            "price": 9,
+            "keeper": true,
+            "espn_id": 4361529
+          },
+          {
+            "player": "Jaylen Warren",
+            "price": 9,
+            "keeper": false,
+            "espn_id": 4569987
+          },
+          {
+            "player": "Rashee Rice",
+            "price": 8,
+            "keeper": false,
+            "espn_id": 4428331
+          },
+          {
+            "player": "Jakobi Meyers",
+            "price": 5,
+            "keeper": false,
+            "espn_id": 3916433
+          },
+          {
+            "player": "Jordan Addison",
+            "price": 2,
+            "keeper": true,
+            "espn_id": 4429205
+          },
+          {
+            "player": "Jake Bates",
+            "price": 2,
+            "keeper": false,
+            "espn_id": 4689936
+          },
+          {
+            "player": "Justin Herbert",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 4038941
+          },
+          {
+            "player": "J.J. McCarthy",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 4433970
+          },
+          {
+            "player": "NE D/ST",
+            "price": 1,
+            "keeper": false,
+            "espn_id": 22
+          }
+        ]
+      }
     }
   }
 }
