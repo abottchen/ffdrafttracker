@@ -421,7 +421,7 @@ async def _get_player_stats_data():
 # request transparently reloads -- no stale data and no restart required. The
 # cache is shared by the admin and viewer apps (separate threads), so access is
 # guarded by a lock and the cached models are treated as read-only by callers.
-_archive_cache: dict[str, tuple[float, BaseModel]] = {}
+_archive_cache: dict[str, tuple[int, BaseModel]] = {}
 _archive_cache_lock = threading.Lock()
 
 
@@ -430,23 +430,25 @@ def _load_cached_archive(path: Path, parse):
 
     ``parse`` (e.g. ``LeagueHistory.model_validate_json``) is invoked only on a
     cold or stale cache; its result is reused until the file's mtime changes (an
-    out-of-band regen) or the process restarts. The returned model is shared
+    out-of-band regen) or the process restarts. The mtime is read in nanoseconds
+    (``st_mtime_ns``) so this key and the ETag validator share one source and
+    can't disagree about whether the file changed. The returned model is shared
     across requests and threads and MUST be treated as read-only. Raises if the
     file is unreadable or fails validation -- callers catch that and fall back
     to an empty archive, so a transient failure is never memoized.
     """
-    mtime = path.stat().st_mtime
+    mtime_ns = path.stat().st_mtime_ns
     key = str(path)
     with _archive_cache_lock:
         cached = _archive_cache.get(key)
-        if cached is not None and cached[0] == mtime:
+        if cached is not None and cached[0] == mtime_ns:
             return cached[1]
     # Parse outside the lock: a cold-cache race may parse twice, but that is
     # harmless (both produce an equivalent model) and avoids holding the lock
     # across a multi-megabyte parse.
     model = parse(path.read_text())
     with _archive_cache_lock:
-        _archive_cache[key] = (mtime, model)
+        _archive_cache[key] = (mtime_ns, model)
     return model
 
 
