@@ -30,7 +30,6 @@ class RosterEntry(BaseModel):
 class TeamSeason(BaseModel):
     """One team's season: record, final finish, and roster."""
 
-    source_team_id: int | None = None  # ESPN teamId / Yahoo team number
     team_name: str
     owner: str  # league first name
     wins: int = 0

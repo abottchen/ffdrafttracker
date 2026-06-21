@@ -171,7 +171,6 @@ def season_api_to_season(api_json: list | dict) -> SeasonResult:
         pf = rec.get("pointsFor")
         teams.append(
             TeamSeason(
-                source_team_id=t.get("id"),
                 team_name=name,
                 owner=owner,
                 wins=rec.get("wins", 0),

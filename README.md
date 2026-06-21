@@ -246,7 +246,6 @@ handles). This file is the source of truth — it is committed and edited in pla
       "draft_type": "auction",          // "auction" | "snake"
       "standings": [                    // every team that season
         {
-          "source_team_id": 8,
           "team_name": "THE NIGHTMARE",
           "owner": "Raman",
           "wins": 12, "losses": 2, "ties": 0,

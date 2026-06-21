@@ -77,7 +77,6 @@ def test_season_field_coverage():
 
 def test_team_season_roster_round_trip():
     ts = TeamSeason(
-        source_team_id=8,
         team_name="THE NIGHTMARE",
         owner="Raman",
         wins=12,

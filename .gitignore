@@ -229,8 +229,7 @@ data/*.tmp
 # Analyst booth runtime commentary log (regenerated each draft)
 data/analyst-comments.jsonl
 
-# League history: raw ESPN/Yahoo captures and the owner identity map.
-# These can carry account handles / GUIDs (PII) and must never be committed.
+# League history: raw ESPN/Yahoo captures kept locally for reference.
+# These carry account handles / GUIDs (PII) and must never be committed.
 # The scrubbed, first-names-only data/league_history.json IS committed.
 data/raw_history/
-data/history_owner_map.json
