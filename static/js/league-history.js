@@ -335,13 +335,15 @@
         const c = row.cells[y], edge = y === 2012 ? " edge" : "";
         if (!c) return `<div class="lh-cell empty${edge}"></div>`;
         if (c.champ) return `<div class="lh-cell champ clk${edge}" data-o="${row.owner}" data-y="${y}">★</div>`;
-        return `<div class="lh-cell clk${c.runner ? " runner" : ""}${edge}" data-o="${row.owner}" data-y="${y}" style="background:${heat(c.r, G.size[y])}"></div>`;
+        if (c.runner) return `<div class="lh-cell runner clk${edge}" data-o="${row.owner}" data-y="${y}">★</div>`;
+        return `<div class="lh-cell clk${edge}" data-o="${row.owner}" data-y="${y}" style="background:${heat(c.r, G.size[y])}"></div>`;
       }).join("");
       html += `<div class="lh-grow">${name}${cellsH}</div>`;
     });
     gridEl.innerHTML = html;
     $("#lh-legend").innerHTML =
       `<span><i class="lh-lg champ">★</i>won the title</span>` +
+      `<span><i class="lh-lg runner">★</i>runner-up</span>` +
       `<span><i class="lh-lg hi"></i>strong season</span>` +
       `<span><i class="lh-lg lo"></i>down year</span>` +
       `<span><i class="lh-lg empty"></i>not in the league</span>` +
