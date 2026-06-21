@@ -1,13 +1,13 @@
-"""Add (or refresh) one completed ESPN season in the league-history archive.
+"""Add (or update) one completed ESPN season in the league-history archive.
 
 Run at the end of each season:
 
     PYTHONPATH=. uv run python utils/add_espn_season.py 2026
 
-It fetches that season from ESPN's read API, writes the scrubbed raw capture to
-``data/raw_history/espn/<year>.json`` (first names only), and rebuilds
-``data/league_history.json``. Re-running a year overwrites it (also handy for
-back-filling points-for into older ESPN seasons).
+It fetches that season from ESPN's read API and splices it directly into
+``data/league_history.json`` (adding the year, or replacing it if already
+present). It does not rebuild the rest of the file. Members are stored by first
+name only.
 
 Private leagues require your ESPN auth cookies. Grab them from a logged-in
 browser (DevTools -> Application -> Cookies -> fantasy.espn.com) and export:
@@ -15,8 +15,9 @@ browser (DevTools -> Application -> Cookies -> fantasy.espn.com) and export:
     export ESPN_S2='AEB...long...'
     export ESPN_SWID='{XXXXXXXX-XXXX-...}'
 
-If a new manager joined, the script prints their ESPN member GUID -- add it to
-``data/history_owner_map.json`` under ``"espn"`` (GUID -> first name) and re-run.
+Owners come from each member's ESPN first name. If the league calls someone by a
+different name, add an override to ``ESPN_NAME_OVERRIDES`` in
+``src/espn_history.py``.
 """
 
 from __future__ import annotations
@@ -28,12 +29,10 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from src.espn_history import season_api_to_raw
-from src.league_history_build import build
+from src.espn_history import season_api_to_season
+from src.models.league_history import LeagueHistory
 
 BASE = Path(__file__).resolve().parent.parent
-RAW = BASE / "data" / "raw_history"
-OWNER_MAP = BASE / "data" / "history_owner_map.json"
 OUT = BASE / "data" / "league_history.json"
 DEFAULT_LEAGUE_ID = 577910
 
@@ -57,21 +56,9 @@ def fetch_season(year: int, league_id: int) -> list | dict:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("year", type=int, help="season year to add/refresh")
+    ap.add_argument("year", type=int, help="season year to add/update")
     ap.add_argument("--league-id", type=int, default=DEFAULT_LEAGUE_ID)
-    ap.add_argument(
-        "--no-rebuild",
-        action="store_true",
-        help="only write the raw capture; skip rebuilding league_history.json",
-    )
     args = ap.parse_args(argv)
-
-    if not OWNER_MAP.exists():
-        raise SystemExit(
-            f"Owner map not found: {OWNER_MAP}\n"
-            "It maps ESPN member GUIDs to first names (gitignored)."
-        )
-    owner_map = json.loads(OWNER_MAP.read_text()).get("espn", {})
 
     try:
         api = fetch_season(args.year, args.league_id)
@@ -83,38 +70,38 @@ def main(argv: list[str] | None = None) -> int:
     except urllib.error.URLError as e:
         raise SystemExit(f"Could not reach ESPN: {e.reason}")
 
-    raw, unknown = season_api_to_raw(api, owner_map)
-    if not raw["teams"]:
-        raise SystemExit(
-            f"No teams returned for {args.year}. Is the season complete and the "
-            f"league id ({args.league_id}) correct?"
-        )
+    try:
+        season, unknown = season_api_to_season(api)
+    except ValueError as e:
+        raise SystemExit(f"{e} Is the season complete and the league id correct?")
 
-    dest = RAW / "espn" / f"{args.year}.json"
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    dest.write_text(json.dumps(raw, indent=2))
-    print(f"Wrote {dest} ({len(raw['teams'])} teams)")
-    champ = next((t for t in raw["teams"] if t.get("final_rank") == 1), None)
-    if champ:
-        print(f"  champion: {champ['team_name']} ({champ['owner']})")
-    if unknown:
-        print(
-            "  NEW unmapped ESPN member GUID(s) — add to "
-            "data/history_owner_map.json['espn']:"
-        )
-        for g in unknown:
-            print(f"    {g}")
+    history = (
+        LeagueHistory.model_validate_json(OUT.read_text())
+        if OUT.exists()
+        else LeagueHistory()
+    )
+    existed = any(s.year == season.year for s in history.seasons)
+    seasons = [s for s in history.seasons if s.year != season.year]
+    seasons.append(season)
+    seasons.sort(key=lambda s: s.year, reverse=True)
+    history = LeagueHistory(seasons=seasons)
 
-    if args.no_rebuild:
-        return 0
-
-    history, unresolved = build(RAW)
     tmp = OUT.with_suffix(".tmp")
     tmp.write_text(history.model_dump_json(indent=2))
     tmp.replace(OUT)
-    print(f"Rebuilt {OUT} ({len(history.seasons)} seasons)")
-    if unresolved:
-        print(f"  note: {len(unresolved)} unresolved Yahoo owner(s) still present")
+
+    print(
+        f"{'Updated' if existed else 'Added'} {season.year} in {OUT} "
+        f"({len(history.seasons)} seasons total)"
+    )
+    print(f"  champion: {season.champion.team_name} ({season.champion.owner})")
+    if unknown:
+        print(
+            "  WARNING: team(s) with an unrecognized ESPN member id show owner "
+            "'UNKNOWN':"
+        )
+        for g in unknown:
+            print(f"    {g}")
     return 0
 
 

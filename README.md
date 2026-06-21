@@ -228,21 +228,64 @@ All draft data is stored in human-readable JSON files in the `data/` directory:
 (2003–2025): champion, runner-up, best regular-season record, full final
 standings, and every team's end-of-season roster with draft prices. League
 members are stored by **first name only** (no last names, emails, or account
-handles).
+handles). This file is the source of truth — it is committed and edited in place.
+
+### Shape
+
+```jsonc
+{
+  "seasons": [                          // newest first
+    {
+      "year": 2025,
+      "champion":    { "owner": "Raman", "team_name": "THE NIGHTMARE" },
+      "runner_up":   { "owner": "Adam",  "team_name": "Call Me The Breece" },
+      "best_record": { "owner": "Raman", "team_name": "THE NIGHTMARE", "record": "12-2" },
+      "shared_title": false,            // true only for the 2022 co-championship
+      "note": null,                     // e.g. "SPLIT TITLE"
+      "source": "espn",                 // "espn" (2012+) | "yahoo" (2003-2011)
+      "draft_type": "auction",          // "auction" | "snake"
+      "standings": [                    // every team that season
+        {
+          "source_team_id": 8,
+          "team_name": "THE NIGHTMARE",
+          "owner": "Raman",
+          "wins": 12, "losses": 2, "ties": 0,
+          "points_for": 1912.46,
+          "final_rank": 1,              // 1 = champion, 2 = runner-up, ...
+          "roster": [                   // end-of-season roster
+            {
+              "player_name": "Christian McCaffrey",
+              "position": "RB",         // QB|RB|WR|TE|K|D/ST
+              "nfl_team": "SF",
+              "slot": "RB",             // lineup slot, or "Bench" / "IR"
+              "acquisition": "DRAFTED", // DRAFTED | ADDED | TRADED
+              "draft_price": 54,        // auction salary (null if not drafted)
+              "draft_pick": null        // overall pick # for snake drafts
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+The "Most Championships" leaderboard is derived from this data (each season's
+champion, plus the runner-up when `shared_title` is true), not stored.
 
 ### Updating after a season
 
-At the end of each season, pull the just-completed year from ESPN and refresh the
-archive:
+At the end of each season, pull the just-completed year from ESPN and splice it
+into the archive:
 
 ```bash
 PYTHONPATH=. uv run python utils/add_espn_season.py 2026
 ```
 
-This fetches the season from ESPN's read API, writes a scrubbed capture under
-`data/raw_history/espn/` (gitignored), and rebuilds `data/league_history.json`.
-It prints the champion as a sanity check and is idempotent — re-running a year
-overwrites it.
+This fetches the season from ESPN's read API and adds it directly to
+`data/league_history.json` (replacing it if the year is already present). It
+prints the champion as a sanity check. Owners come from each ESPN member's first
+name.
 
 - **Private leagues** need your ESPN auth cookies. From a logged-in browser
   (DevTools → Application → Cookies → `fantasy.espn.com`), export them first:
@@ -250,15 +293,13 @@ overwrites it.
   export ESPN_S2='AEB...'
   export ESPN_SWID='{XXXXXXXX-XXXX-...}'
   ```
-- **New manager joined?** The script prints their unmapped ESPN member id; add it
-  to `data/history_owner_map.json` (gitignored) under `"espn"` as `id → first
-  name`, then re-run.
-- Options: `--league-id <id>` targets a different ESPN league (default is the
-  league's own id); `--no-rebuild` writes only the raw capture without rebuilding.
+- **Nickname not matching?** If the league calls someone by a name other than
+  their ESPN first name, add an override to `ESPN_NAME_OVERRIDES` in
+  `src/espn_history.py` and re-run.
+- `--league-id <id>` targets a different ESPN league (default is the league's own id).
 
-Pre-2012 seasons came from Yahoo Fantasy and are not refreshed by this script; to
-rebuild from all existing captures without fetching, run
-`PYTHONPATH=. uv run python utils/build_league_history.py`.
+Pre-2012 seasons came from Yahoo Fantasy (one-time import) and are not refreshed
+by this script.
 
 ## Network Setup
 

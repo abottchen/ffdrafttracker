@@ -1,5 +1,10 @@
 """Unit tests for the league history archive models."""
 
+import re
+from pathlib import Path
+
+import pytest
+
 from src.models.league_history import (
     BestRecord,
     Finisher,
@@ -8,6 +13,8 @@ from src.models.league_history import (
     SeasonResult,
     TeamSeason,
 )
+
+DATA_FILE = Path(__file__).resolve().parents[3] / "data" / "league_history.json"
 
 
 def _season(year, champ, ru, *, shared=False, source="manual"):
@@ -91,3 +98,18 @@ def test_team_season_roster_round_trip():
     again = TeamSeason.model_validate_json(ts.model_dump_json())
     assert again.roster[0].draft_price == 54
     assert again.owner == "Raman"
+
+
+@pytest.mark.skipif(not DATA_FILE.exists(), reason="archive not present")
+def test_committed_archive_leaderboard_and_pii_clean():
+    history = LeagueHistory.model_validate_json(DATA_FILE.read_text())
+    counts = {c.owner: c.titles for c in history.championship_counts()}
+    assert counts["Greg"] == 6
+    assert counts["Adam"] == 4
+    assert counts["Steve"] == 4
+    assert counts["Raman"] == 3
+    assert counts["Mitch"] == 1  # 2022 split-title credit
+    # Privacy: no emails or ESPN GUIDs leaked into the committed file.
+    blob = DATA_FILE.read_text()
+    assert "@" not in blob
+    assert not re.search(r"\{[0-9A-F]{8}-[0-9A-F]{4}-", blob)
