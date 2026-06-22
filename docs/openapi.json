@@ -370,7 +370,7 @@
     "/api/v1/league-history": {
       "get": {
         "summary": "Get League History",
-        "description": "Get the league history archive: season-by-season champions, standings,\nand end-of-season rosters (2003-present). Static archive; the viewer derives\nits leaderboards and the finish grid from this resource client-side.\n\nSupports conditional requests (see the `If-None-Match`/`If-Modified-Since`\nparameters and the `ETag`/`Last-Modified` response headers).",
+        "description": "Get the league history archive: season-by-season champions, standings,\nand end-of-season rosters (2003-present). Static archive; the viewer derives\nits leaderboards and the finish grid from this resource client-side.\n\nIt is large and changes only between seasons, so clients should use\nconditional requests to revalidate cheaply rather than re-download an\nunchanged copy.",
         "operationId": "get_league_history_api_v1_league_history_get",
         "parameters": [
           {
@@ -472,7 +472,7 @@
     "/api/v1/auction-prices": {
       "get": {
         "summary": "Get Auction Prices",
-        "description": "Get the auction-price archive: every player's auction salary by season\n(2016-present), with owner, keeper flag, and ESPN player id. Static archive;\njoins to league-history by player name.\n\nSupports conditional requests (see the `If-None-Match`/`If-Modified-Since`\nparameters and the `ETag`/`Last-Modified` response headers).",
+        "description": "Get the auction-price archive: every player's auction salary by season\n(2016-present), with owner, keeper flag, and ESPN player id. Static archive;\njoins to league-history by player name.\n\nIt is large and changes only between seasons, so clients should use\nconditional requests to revalidate cheaply rather than re-download an\nunchanged copy.",
         "operationId": "get_auction_prices_api_v1_auction_prices_get",
         "parameters": [
           {

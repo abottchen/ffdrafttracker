@@ -770,8 +770,9 @@ async def get_league_history(
     and end-of-season rosters (2003-present). Static archive; the viewer derives
     its leaderboards and the finish grid from this resource client-side.
 
-    Supports conditional requests (see the `If-None-Match`/`If-Modified-Since`
-    parameters and the `ETag`/`Last-Modified` response headers)."""
+    It is large and changes only between seasons, so clients should use
+    conditional requests to revalidate cheaply rather than re-download an
+    unchanged copy."""
     return await _conditional_archive(
         response,
         LEAGUE_HISTORY_FILE,
@@ -795,8 +796,9 @@ async def get_auction_prices(
     (2016-present), with owner, keeper flag, and ESPN player id. Static archive;
     joins to league-history by player name.
 
-    Supports conditional requests (see the `If-None-Match`/`If-Modified-Since`
-    parameters and the `ETag`/`Last-Modified` response headers)."""
+    It is large and changes only between seasons, so clients should use
+    conditional requests to revalidate cheaply rather than re-download an
+    unchanged copy."""
     return await _conditional_archive(
         response,
         AUCTION_PRICES_FILE,
@@ -1591,8 +1593,9 @@ async def viewer_get_league_history(
     and end-of-season rosters (2003-present). Static archive; the viewer derives
     its leaderboards and the finish grid from this resource client-side.
 
-    Supports conditional requests (see the `If-None-Match`/`If-Modified-Since`
-    parameters and the `ETag`/`Last-Modified` response headers)."""
+    It is large and changes only between seasons, so clients should use
+    conditional requests to revalidate cheaply rather than re-download an
+    unchanged copy."""
     return await _conditional_archive(
         response,
         LEAGUE_HISTORY_FILE,
@@ -1616,8 +1619,9 @@ async def viewer_get_auction_prices(
     (2016-present), with owner, keeper flag, and ESPN player id. Static archive;
     joins to league-history by player name.
 
-    Supports conditional requests (see the `If-None-Match`/`If-Modified-Since`
-    parameters and the `ETag`/`Last-Modified` response headers)."""
+    It is large and changes only between seasons, so clients should use
+    conditional requests to revalidate cheaply rather than re-download an
+    unchanged copy."""
     return await _conditional_archive(
         response,
         AUCTION_PRICES_FILE,
