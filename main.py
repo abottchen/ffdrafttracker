@@ -405,11 +405,10 @@ async def _get_player_stats_data():
 
 
 # --- Static-archive cache ----------------------------------------------------
-# CLAUDE.md mandates a deliberately stateless design: every request reloads its
-# data from JSON so the files stay the single source of truth and can be
-# hand-edited mid-draft. That rule is about data that MUTATES at runtime
-# (draft_state.json, config.json, owners/players) and those loaders stay
-# uncached on purpose.
+# This app loads its data fresh from JSON on every request so the files stay the
+# single source of truth and can be hand-edited mid-draft. That matters for data
+# that MUTATES at runtime (draft_state.json, config.json, owners/players), which
+# is why those loaders stay uncached.
 #
 # The two history archives below are the exception. They are large
 # (league_history.json ~1.2 MB, auction_prices.json ~234 KB), read on every
@@ -417,10 +416,10 @@ async def _get_player_stats_data():
 # during a draft -- they are only regenerated out-of-band by the raw_history/
 # pipeline. Rather than re-read and re-validate them through Pydantic on every
 # request, we memoize the parsed model keyed on the file's mtime: an
-# out-of-band regeneration bumps the mtime, so the next
-# request transparently reloads -- no stale data and no restart required. The
-# cache is shared by the admin and viewer apps (separate threads), so access is
-# guarded by a lock and the cached models are treated as read-only by callers.
+# out-of-band regeneration bumps the mtime, so the next request transparently
+# reloads -- no stale data and no restart required. The cache is shared by the
+# admin and viewer apps (separate threads), so access is guarded by a lock and
+# the cached models are treated as read-only by callers.
 _archive_cache: dict[str, tuple[int, BaseModel]] = {}
 _archive_cache_lock = threading.Lock()
 
@@ -498,10 +497,46 @@ async def _get_auction_prices_data():
 # client re-downloads, while an unchanged file yields a tiny 304 instead of a
 # multi-megabyte body. ``Cache-Control: no-cache`` tells the browser to cache
 # the body but always revalidate, so it never serves a stale archive -- the
-# revalidation is the cheap conditional GET. Documented for both apps so the
-# admin and viewer specs stay identical.
-_ARCHIVE_304_RESPONSE = {
-    304: {"description": "Archive unchanged since the client's cached copy."}
+# revalidation is the cheap conditional GET.
+#
+# The conditional-request contract is declared *structurally* in the OpenAPI
+# spec rather than buried in prose: the request validators are typed ``Header``
+# parameters on each route (so FastAPI emits them as ``in: header`` params), and
+# the response validators live under ``responses.<code>.headers`` below. Shared
+# so the admin and viewer specs stay identical.
+_ETAG_HEADER = {
+    "schema": {"type": "string"},
+    "description": (
+        "Entity-tag of the archive's current version; echo it back in "
+        "`If-None-Match` to revalidate."
+    ),
+}
+_LAST_MODIFIED_HEADER = {
+    "schema": {"type": "string", "format": "http-date"},
+    "description": (
+        "When the archive file was last regenerated; echo it back in "
+        "`If-Modified-Since` to revalidate."
+    ),
+}
+_CACHE_CONTROL_HEADER = {
+    "schema": {"type": "string"},
+    "description": "Always `no-cache`: clients may cache the body but must revalidate.",
+}
+_ARCHIVE_RESPONSES = {
+    200: {
+        "headers": {
+            "ETag": _ETAG_HEADER,
+            "Last-Modified": _LAST_MODIFIED_HEADER,
+            "Cache-Control": _CACHE_CONTROL_HEADER,
+        }
+    },
+    304: {
+        "description": "Archive unchanged since the client's cached copy.",
+        "headers": {
+            "ETag": _ETAG_HEADER,
+            "Last-Modified": _LAST_MODIFIED_HEADER,
+        },
+    },
 }
 
 
@@ -510,24 +545,24 @@ def _strip_weak(etag: str) -> str:
     return etag[2:] if etag.startswith("W/") else etag
 
 
-def _archive_not_modified(request: Request, etag: str, last_modified: str) -> bool:
-    """Decide a 304 from the request's conditional headers (RFC 9110 §13).
+def _archive_not_modified(
+    if_none_match: str | None, if_modified_since: str | None, etag: str, last_mod: str
+) -> bool:
+    """Decide a 304 from the client's conditional validators (RFC 9110 §13).
 
     ``If-None-Match`` takes precedence over ``If-Modified-Since``; both use the
     weak comparison appropriate for a cache revalidation.
     """
-    inm = request.headers.get("if-none-match")
-    if inm is not None:
-        if inm.strip() == "*":
+    if if_none_match is not None:
+        if if_none_match.strip() == "*":
             return True
         wanted = _strip_weak(etag)
-        return any(_strip_weak(t.strip()) == wanted for t in inm.split(","))
+        return any(_strip_weak(t.strip()) == wanted for t in if_none_match.split(","))
 
-    ims = request.headers.get("if-modified-since")
-    if ims is not None:
+    if if_modified_since is not None:
         try:
-            ims_dt = parsedate_to_datetime(ims)
-            lm_dt = parsedate_to_datetime(last_modified)
+            ims_dt = parsedate_to_datetime(if_modified_since)
+            lm_dt = parsedate_to_datetime(last_mod)
         except (TypeError, ValueError):
             return False
         # HTTP dates are second-granular; not-modified iff the file is no newer.
@@ -537,7 +572,11 @@ def _archive_not_modified(request: Request, etag: str, last_modified: str) -> bo
 
 
 async def _conditional_archive(
-    request: Request, response: Response, path: Path, get_data
+    response: Response,
+    path: Path,
+    get_data,
+    if_none_match: str | None,
+    if_modified_since: str | None,
 ):
     """Serve a static archive (``get_data``) with conditional-request support.
 
@@ -557,7 +596,9 @@ async def _conditional_archive(
                 "Last-Modified": last_modified,
                 "Cache-Control": "no-cache",
             }
-            if _archive_not_modified(request, etag, last_modified):
+            if _archive_not_modified(
+                if_none_match, if_modified_since, etag, last_modified
+            ):
                 return Response(status_code=304, headers=headers)
             response.headers.update(headers)
     except OSError:
@@ -718,34 +759,50 @@ async def get_comments(
 @app.get(
     "/api/v1/league-history",
     response_model=LeagueHistory,
-    responses=_ARCHIVE_304_RESPONSE,
+    responses=_ARCHIVE_RESPONSES,
 )
-async def get_league_history(request: Request, response: Response):
+async def get_league_history(
+    response: Response,
+    if_none_match: str | None = Header(default=None),
+    if_modified_since: str | None = Header(default=None),
+):
     """Get the league history archive: season-by-season champions, standings,
     and end-of-season rosters (2003-present). Static archive; the viewer derives
     its leaderboards and the finish grid from this resource client-side.
 
-    Supports conditional requests: send `If-None-Match`/`If-Modified-Since` to
-    get a `304 Not Modified` while the archive is unchanged."""
+    Supports conditional requests (see the `If-None-Match`/`If-Modified-Since`
+    parameters and the `ETag`/`Last-Modified` response headers)."""
     return await _conditional_archive(
-        request, response, LEAGUE_HISTORY_FILE, _get_league_history_data
+        response,
+        LEAGUE_HISTORY_FILE,
+        _get_league_history_data,
+        if_none_match,
+        if_modified_since,
     )
 
 
 @app.get(
     "/api/v1/auction-prices",
     response_model=AuctionPrices,
-    responses=_ARCHIVE_304_RESPONSE,
+    responses=_ARCHIVE_RESPONSES,
 )
-async def get_auction_prices(request: Request, response: Response):
+async def get_auction_prices(
+    response: Response,
+    if_none_match: str | None = Header(default=None),
+    if_modified_since: str | None = Header(default=None),
+):
     """Get the auction-price archive: every player's auction salary by season
     (2016-present), with owner, keeper flag, and ESPN player id. Static archive;
     joins to league-history by player name.
 
-    Supports conditional requests: send `If-None-Match`/`If-Modified-Since` to
-    get a `304 Not Modified` while the archive is unchanged."""
+    Supports conditional requests (see the `If-None-Match`/`If-Modified-Since`
+    parameters and the `ETag`/`Last-Modified` response headers)."""
     return await _conditional_archive(
-        request, response, AUCTION_PRICES_FILE, _get_auction_prices_data
+        response,
+        AUCTION_PRICES_FILE,
+        _get_auction_prices_data,
+        if_none_match,
+        if_modified_since,
     )
 
 
@@ -1523,34 +1580,50 @@ async def viewer_get_comments(
 @viewer_app.get(
     "/api/v1/league-history",
     response_model=LeagueHistory,
-    responses=_ARCHIVE_304_RESPONSE,
+    responses=_ARCHIVE_RESPONSES,
 )
-async def viewer_get_league_history(request: Request, response: Response):
+async def viewer_get_league_history(
+    response: Response,
+    if_none_match: str | None = Header(default=None),
+    if_modified_since: str | None = Header(default=None),
+):
     """Get the league history archive: season-by-season champions, standings,
     and end-of-season rosters (2003-present). Static archive; the viewer derives
     its leaderboards and the finish grid from this resource client-side.
 
-    Supports conditional requests: send `If-None-Match`/`If-Modified-Since` to
-    get a `304 Not Modified` while the archive is unchanged."""
+    Supports conditional requests (see the `If-None-Match`/`If-Modified-Since`
+    parameters and the `ETag`/`Last-Modified` response headers)."""
     return await _conditional_archive(
-        request, response, LEAGUE_HISTORY_FILE, _get_league_history_data
+        response,
+        LEAGUE_HISTORY_FILE,
+        _get_league_history_data,
+        if_none_match,
+        if_modified_since,
     )
 
 
 @viewer_app.get(
     "/api/v1/auction-prices",
     response_model=AuctionPrices,
-    responses=_ARCHIVE_304_RESPONSE,
+    responses=_ARCHIVE_RESPONSES,
 )
-async def viewer_get_auction_prices(request: Request, response: Response):
+async def viewer_get_auction_prices(
+    response: Response,
+    if_none_match: str | None = Header(default=None),
+    if_modified_since: str | None = Header(default=None),
+):
     """Get the auction-price archive: every player's auction salary by season
     (2016-present), with owner, keeper flag, and ESPN player id. Static archive;
     joins to league-history by player name.
 
-    Supports conditional requests: send `If-None-Match`/`If-Modified-Since` to
-    get a `304 Not Modified` while the archive is unchanged."""
+    Supports conditional requests (see the `If-None-Match`/`If-Modified-Since`
+    parameters and the `ETag`/`Last-Modified` response headers)."""
     return await _conditional_archive(
-        request, response, AUCTION_PRICES_FILE, _get_auction_prices_data
+        response,
+        AUCTION_PRICES_FILE,
+        _get_auction_prices_data,
+        if_none_match,
+        if_modified_since,
     )
 
 

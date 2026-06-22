@@ -444,8 +444,8 @@ class TestAuctionPricesEndpoint(TestMainApp):
 class TestArchiveCaching(TestMainApp):
     """The static history archives are memoized on the file's mtime so they
     aren't re-read + re-validated through Pydantic on every request, while
-    mutable state (draft_state/config) stays uncached and stateless per
-    CLAUDE.md."""
+    mutable state (draft_state/config) stays uncached so it is always read
+    fresh from disk."""
 
     LH_SAMPLE = {
         "seasons": [
@@ -531,8 +531,8 @@ class TestArchiveCaching(TestMainApp):
         assert str(f) not in main._archive_cache
 
     def test_draft_state_remains_uncached(self, tmp_path, monkeypatch):
-        """CLAUDE.md stateless design: mutable draft state is re-read every call
-        and never enters the archive cache."""
+        """Mutable draft state is re-read every call (stateless) and never
+        enters the archive cache."""
         ds = tmp_path / "draft_state.json"
         self.sample_draft_state.save_to_file(ds, increment_version=False)
         monkeypatch.setattr(main, "DRAFT_STATE_FILE", ds)
