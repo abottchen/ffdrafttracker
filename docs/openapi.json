@@ -370,8 +370,42 @@
     "/api/v1/league-history": {
       "get": {
         "summary": "Get League History",
-        "description": "Get the league history archive: season-by-season champions, standings,\nand end-of-season rosters (2003-present). Static archive; the viewer derives\nits leaderboards and the finish grid from this resource client-side.",
+        "description": "Get the league history archive: season-by-season champions, standings,\nand end-of-season rosters (2003-present). Static archive; the viewer derives\nits leaderboards and the finish grid from this resource client-side.\n\nIt is large and changes only between seasons, so clients should use\nconditional requests to revalidate cheaply rather than re-download an\nunchanged copy.",
         "operationId": "get_league_history_api_v1_league_history_get",
+        "parameters": [
+          {
+            "name": "if-none-match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-None-Match"
+            }
+          },
+          {
+            "name": "if-modified-since",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Modified-Since"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -379,6 +413,55 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/LeagueHistory"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Entity-tag of the archive's current version; echo it back in `If-None-Match` to revalidate."
+              },
+              "Last-Modified": {
+                "schema": {
+                  "type": "string",
+                  "format": "http-date"
+                },
+                "description": "When the archive file was last regenerated; echo it back in `If-Modified-Since` to revalidate."
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Always `no-cache`: clients may cache the body but must revalidate."
+              }
+            }
+          },
+          "304": {
+            "description": "Archive unchanged since the client's cached copy.",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Entity-tag of the archive's current version; echo it back in `If-None-Match` to revalidate."
+              },
+              "Last-Modified": {
+                "schema": {
+                  "type": "string",
+                  "format": "http-date"
+                },
+                "description": "When the archive file was last regenerated; echo it back in `If-Modified-Since` to revalidate."
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -389,8 +472,42 @@
     "/api/v1/auction-prices": {
       "get": {
         "summary": "Get Auction Prices",
-        "description": "Get the auction-price archive: every player's auction salary by season\n(2016-present), with owner, keeper flag, and ESPN player id. Static archive;\njoins to league-history by player name.",
+        "description": "Get the auction-price archive: every player's auction salary by season\n(2016-present), with owner, keeper flag, and ESPN player id. Static archive;\njoins to league-history by player name.\n\nIt is large and changes only between seasons, so clients should use\nconditional requests to revalidate cheaply rather than re-download an\nunchanged copy.",
         "operationId": "get_auction_prices_api_v1_auction_prices_get",
+        "parameters": [
+          {
+            "name": "if-none-match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-None-Match"
+            }
+          },
+          {
+            "name": "if-modified-since",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Modified-Since"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -398,6 +515,55 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AuctionPrices"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Entity-tag of the archive's current version; echo it back in `If-None-Match` to revalidate."
+              },
+              "Last-Modified": {
+                "schema": {
+                  "type": "string",
+                  "format": "http-date"
+                },
+                "description": "When the archive file was last regenerated; echo it back in `If-Modified-Since` to revalidate."
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Always `no-cache`: clients may cache the body but must revalidate."
+              }
+            }
+          },
+          "304": {
+            "description": "Archive unchanged since the client's cached copy.",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Entity-tag of the archive's current version; echo it back in `If-None-Match` to revalidate."
+              },
+              "Last-Modified": {
+                "schema": {
+                  "type": "string",
+                  "format": "http-date"
+                },
+                "description": "When the archive file was last regenerated; echo it back in `If-Modified-Since` to revalidate."
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
