@@ -5,6 +5,42 @@
    .tag/.insight all exist), and colors reuse the viewer's design tokens.
    ========================================================================== */
 
+/* Base design tokens + page chrome. In the viewer these came from
+   draft-set-viewer.css (its :root) and the page's web-fonts; inlined here so the
+   standalone GitHub Pages page is fully self-contained. */
+:root {
+  --midnight: #16141A;
+  --deep: #211E27;
+  --deep2: #1A1820;
+  --line: #332F3A;
+  --line2: #48434F;
+  --ice: #F2EEE7;
+  --slate: #A09AA6;
+  --gold: #F4C152;
+  --turf: #34C06C;
+  --qb: #A877DE;
+  --rb: #46B86C;
+  --wr: #5790CF;
+  --te: #E08A45;
+  --k: #E6B23E;
+  --dst: #D6564A;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(1300px 560px at 50% -14%, rgba(224, 162, 74, .06), transparent 62%),
+    radial-gradient(1000px 640px at 100% 120%, rgba(54, 192, 108, .035), transparent 60%),
+    var(--midnight);
+  background-attachment: fixed;
+  color: var(--ice);
+  font-family: "Inter", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
 #view-history,
 #lhDrawer,
 #lhTip {
