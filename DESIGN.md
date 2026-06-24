@@ -67,7 +67,7 @@ A local fantasy football auction draft tracking tool with a web-based interface 
 - Uses relative URLs for cross-network compatibility
 - Fetches all data from local read-only API endpoints (same port)
 - Analyst booth transcript in the Draft Analysis tab: scrollable chat-style history with persona headshots, live tail, and infinite scroll for older calls
-- **League History tab** ("The Rafters"): a read-only hall-of-records view of the multi-season archive — champion banners, a 23-season finish grid (regular-season heat + gold titles, click any cell for that team's full end-of-season roster), régime-vs-crown, player loyalty, title droughts, and most-rostered players. Fetched once from `GET /api/v1/league-history`; all leaderboards are derived client-side (styles/scripts are self-contained in `league-history.css` / `league-history.js`)
+- League history is **not** a viewer tab: it is published as a standalone GitHub Pages page (`docs/league_history.html`) — a self-contained client-side renderer (`docs/league-history.css` / `docs/league-history.js`) that derives every leaderboard (champion banners, the 23-season finish grid, régime-vs-crown, loyalty, droughts, royalty, and the auction-price charts) from the static `docs/data/league_history.json` and `docs/data/auction_prices.json` archives
 
 ### Backend
 **Framework:** FastAPI with Pydantic models  
