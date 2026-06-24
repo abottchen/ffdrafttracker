@@ -88,7 +88,7 @@ A local fantasy football auction draft tracking tool with a web-based interface 
 - `action_log.json` - History of all draft actions for undo capability
 - `config.json` - Application configuration (budgets, min bids, etc.)
 - `player_stats.json` - Player statistics and bye weeks (optional, generated separately)
-- `league_history.json` - Multi-season archive (champions, standings, end-of-season rosters); served read-only and consumed by the viewer's League History tab
+- The multi-season `league_history.json` / `auction_prices.json` archives are **not** app data files: they live under `docs/data/` and are published to GitHub Pages (see the standalone League History page above)
 
 ## API Architecture
 
@@ -200,8 +200,9 @@ ffdrafttracker/
 │   ├── owners.json        # Owner information
 │   ├── action_log.json    # Complete action history
 │   ├── config.json        # Application configuration
-│   ├── player_stats.json  # Player statistics and bye weeks (optional)
-│   └── league_history.json # Multi-season archive for the League History tab
+│   └── player_stats.json  # Player statistics and bye weeks (optional)
+├── docs/                  # GitHub Pages site (draft recap + League History page)
+│   └── data/              # Published multi-season archives (league_history, auction_prices)
 ├── tests/                 # Test suite
 │   ├── unit/              # Unit tests for models
 │   └── integration/       # Integration tests for file persistence
