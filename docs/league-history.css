@@ -1,0 +1,358 @@
+/* ==========================================================================
+   League History — "The Rafters"
+   A read-only hall-of-records tab in the team viewer. All selectors are
+   lh- prefixed (the viewer's class namespace is crowded: .track/.fill/.nm/
+   .tag/.insight all exist), and colors reuse the viewer's design tokens.
+   ========================================================================== */
+
+#view-history,
+#lhDrawer,
+#lhTip {
+  --lh-gold: var(--gold);            /* #F4C152 */
+  --lh-gold-hi: #fbd97a;
+  --lh-gold-deep: #9a6e1e;
+  --lh-silver: #b3bcc6;
+  --lh-pewter: #58525f;
+  --lh-pewter-hi: #6d6675;
+  --lh-ink: var(--ice);              /* #F2EEE7 */
+  --lh-ink2: var(--slate);           /* #A09AA6 */
+  --lh-ink3: #757080;
+  --lh-line: var(--line);
+  --lh-line2: var(--line2);
+  --lh-panel: var(--deep);
+  --lh-panel2: var(--deep2);
+  --lh-glow: rgba(244, 193, 82, .5);
+  /* Part II · The Money — ember (dollars to ash) + green (dollars that survived) */
+  --lh-ember: #f0673b;
+  --lh-ember-hi: #f7a23a;
+  --lh-char: #5a4a45;
+  --lh-char-deep: #2b2422;
+  --lh-money: var(--turf);           /* #34C06C */
+  --lh-money-hi: #5fe39a;
+}
+
+/* the pane itself becomes a vertical scrolling study board (overrides .view.active{display:grid}) */
+#view-history.active { display: block; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--lh-line2) transparent; }
+.lh-wrap { max-width: 1180px; margin: 0 auto; padding: 4px 22px 120px; font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+.lh-sec { margin-top: 58px; }
+.lh-sec-head { display: flex; align-items: baseline; gap: 16px; }
+.lh-sec-head h2 { font-family: Anton, sans-serif; font-weight: 400; letter-spacing: .012em; text-transform: uppercase; font-size: clamp(24px, 3vw, 38px); margin: 0; line-height: 1; color: var(--lh-ink); }
+.lh-num { font-family: "Saira Condensed"; font-weight: 700; color: var(--lh-ink3); font-size: 13px; letter-spacing: .2em; }
+.lh-sub { color: var(--lh-ink2); font-size: 14px; max-width: 66ch; line-height: 1.55; margin: 10px 0 24px; }
+.lh-sub b { color: var(--lh-ink); font-weight: 600; }
+.lh-gold-t { color: var(--lh-gold); }
+.lh-silv-t { color: var(--lh-silver); }
+
+/* ---------- masthead ---------- */
+.lh-mast { padding-top: 26px; text-align: center; }
+.lh-eyebrow { font-family: "Saira Condensed"; font-weight: 600; letter-spacing: .34em; text-transform: uppercase; font-size: 12px; color: var(--lh-gold); }
+.lh-title { font-family: Anton, sans-serif; font-weight: 400; text-transform: uppercase; font-size: clamp(40px, 7vw, 84px); line-height: .92; margin: 12px 0 0; letter-spacing: .01em; background: linear-gradient(180deg, #fdfaf3 0%, #d7cdb8 60%, #a89a7d 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.lh-span { font-family: "Saira Condensed"; font-weight: 600; letter-spacing: .36em; color: var(--lh-ink2); text-transform: uppercase; font-size: 13px; margin-top: 16px; }
+.lh-span b { color: var(--lh-gold); }
+
+/* ---------- rafters / champion banners ---------- */
+.lh-rail { position: relative; margin-top: 44px; border-top: 2px solid var(--lh-line2); box-shadow: 0 1px 0 rgba(0, 0, 0, .6); }
+.lh-rafters { display: flex; justify-content: center; align-items: flex-start; gap: 14px; flex-wrap: wrap; }
+.lh-banner { position: relative; width: 104px; transform-origin: top center; display: flex; flex-direction: column; align-items: center; transform: translateY(-128%); opacity: 0; transition: transform 1.25s cubic-bezier(.16, .72, .29, 1), opacity .7s ease; }
+.lh-banner.in { transform: translateY(0); opacity: 1; }
+.lh-cord { width: 2px; background: linear-gradient(var(--lh-line2), transparent); }
+.lh-cloth { width: 100%; border-radius: 3px 3px 0 0; position: relative; overflow: hidden; background: linear-gradient(160deg, var(--lh-panel), var(--lh-panel2)); border: 1px solid var(--lh-line2); border-top: none; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 18px 30px -18px rgba(0, 0, 0, .9); padding: 14px 8px 0; transition: transform .16s ease, box-shadow .16s ease; }
+.lh-banner { cursor: default; }
+.lh-banner:hover .lh-cloth { transform: scale(1.05); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 0 34px -8px var(--lh-glow); }
+.lh-banner.champ .lh-cloth { background: linear-gradient(160deg, #2a2210, #1a1407); border-color: rgba(244, 193, 82, .4); box-shadow: inset 0 1px 0 rgba(251, 217, 122, .25), 0 0 34px -10px var(--lh-glow); }
+.lh-cloth::after { content: ""; position: absolute; left: 0; right: 0; bottom: -13px; height: 14px; background: inherit; clip-path: polygon(0 0, 100% 0, 100% 40%, 50% 100%, 0 40%); }
+.lh-bname { font-family: Anton; text-transform: uppercase; font-size: 18px; letter-spacing: .02em; line-height: .95; color: var(--lh-ink); }
+.lh-banner.champ .lh-bname { color: var(--lh-gold-hi); }
+.lh-bttl { font-family: Anton; font-size: 40px; line-height: .9; margin-top: 7px; color: var(--lh-silver); }
+.lh-banner.champ .lh-bttl { color: var(--lh-gold); text-shadow: 0 0 18px var(--lh-glow); }
+.lh-blbl { font-family: "Saira Condensed"; font-weight: 600; letter-spacing: .18em; font-size: 9.5px; text-transform: uppercase; color: var(--lh-ink3); margin-top: 1px; }
+.lh-pips { display: flex; gap: 3px; flex-wrap: wrap; justify-content: center; margin-top: 9px; padding-bottom: 11px; }
+.lh-pip { width: 6px; height: 6px; border-radius: 50%; background: var(--lh-gold); box-shadow: 0 0 6px var(--lh-glow); }
+.lh-byr { font-family: "Saira Condensed"; font-weight: 600; font-size: 10px; color: var(--lh-ink3); letter-spacing: .1em; padding-bottom: 10px; }
+
+/* ---------- finish grid ---------- */
+.lh-gridcard { background: linear-gradient(180deg, var(--lh-panel), var(--lh-panel2)); border: 1px solid var(--lh-line); border-radius: 14px; padding: 22px 22px 18px; box-shadow: 0 30px 60px -40px #000; }
+.lh-eras, .lh-grow { display: grid; grid-template-columns: 104px repeat(23, minmax(0, 1fr)); gap: 3px; align-items: center; }
+.lh-eras { grid-template-columns: 104px 9fr 14fr; margin-bottom: 9px; }
+.lh-eseg { font-family: "Saira Condensed"; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; font-size: 10.5px; color: var(--lh-ink3); border-bottom: 1px solid var(--lh-line); padding-bottom: 7px; }
+.lh-eseg.es { color: var(--lh-gold-deep); margin-left: 6px; }
+.lh-grow { margin-bottom: 3px; transition: transform .16s ease; }
+
+/* trace one manager — JS sets .is-active on the row the cursor is actually over
+   (never on dead space). Nothing dims; the active row is simply promoted with a
+   warm spotlight band + a hairline gold rule bracketing it across all 23 years. */
+.lh-grow.is-active { position: relative; z-index: 2; transform: translateY(-1px); }
+.lh-grow.is-active::before {
+  content: ""; position: absolute; inset: -3px -10px; z-index: -1; pointer-events: none;
+  border-radius: 7px;
+  background: linear-gradient(90deg, rgba(244, 193, 82, .11), rgba(244, 193, 82, .035) 72%, transparent);
+  border-top: 1px solid rgba(244, 193, 82, .38);
+  border-bottom: 1px solid rgba(244, 193, 82, .38);
+  box-shadow: 0 10px 26px -14px rgba(0, 0, 0, .85);
+}
+.lh-grow.ghead { margin-bottom: 7px; }
+.lh-yhd { text-align: center; font-family: "Saira Condensed"; font-weight: 600; font-size: 10px; color: var(--lh-ink3); letter-spacing: .02em; }
+.lh-yhd.edge, .lh-cell.edge { margin-left: 6px; }
+.lh-gname { text-align: right; padding-right: 10px; font-family: "Saira Condensed"; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; font-size: 13px; color: var(--lh-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.lh-gname.gone { color: var(--lh-ink3); font-weight: 600; }
+.lh-gname:hover { color: var(--lh-gold-hi); }
+.lh-gname b { color: var(--lh-gold); font-size: 9.5px; margin-left: 5px; letter-spacing: 0; }
+.lh-cell { height: 25px; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-family: "Saira Condensed"; font-weight: 800; font-size: 12px; background: #1a1820; transition: transform .12s ease, box-shadow .12s ease; }
+.lh-cell.clk { cursor: pointer; }
+/* the exact square under the cursor lifts and takes a gold ring — confirms what
+   the tooltip describes and what a click will open. (no looping pulse) */
+.lh-cell.clk:hover { transform: translateY(-2px); z-index: 3; box-shadow: 0 0 0 1px #241a06, 0 0 0 2.5px var(--lh-gold-hi), 0 8px 15px -5px rgba(0, 0, 0, .9); }
+.lh-cell.empty { background: repeating-linear-gradient(45deg, transparent 0 3px, rgba(255, 255, 255, .028) 3px 4px); }
+.lh-cell.champ { background: linear-gradient(155deg, var(--lh-gold-hi), var(--lh-gold-deep)); color: #241a06; box-shadow: 0 0 11px -1px var(--lh-glow); position: relative; z-index: 1; }
+.lh-cell.runner { background: linear-gradient(155deg, #e4e9ef, #8b94a0); color: #16181c; box-shadow: 0 0 9px -2px rgba(179, 188, 198, .5); position: relative; z-index: 1; }
+.lh-legend { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin-top: 16px; font-family: "Saira Condensed"; font-weight: 600; letter-spacing: .04em; font-size: 12px; color: var(--lh-ink3); }
+.lh-lg { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 3px; vertical-align: -3px; margin-right: 6px; font-size: 9px; color: #241a06; }
+.lh-lg.champ { background: linear-gradient(155deg, var(--lh-gold-hi), var(--lh-gold-deep)); }
+.lh-lg.runner { background: linear-gradient(155deg, #e4e9ef, #8b94a0); color: #16181c; }
+.lh-lg.hi { background: hsl(270 7% 54%); }
+.lh-lg.lo { background: hsl(270 7% 17%); }
+.lh-lg.empty { background: repeating-linear-gradient(45deg, transparent 0 3px, rgba(255, 255, 255, .07) 3px 4px); border: 1px solid var(--lh-line); }
+.lh-ghint { margin-left: auto; color: var(--lh-ink3); }
+
+/* ---------- régime vs crown ---------- */
+.lh-talehead { display: grid; grid-template-columns: 1fr 96px 1fr; gap: 14px; margin-bottom: 12px; }
+.lh-talehead div { font-family: "Saira Condensed"; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; font-size: 12px; }
+.lh-talehead .l { text-align: right; color: var(--lh-silver); }
+.lh-talehead .c { text-align: center; color: var(--lh-ink3); }
+.lh-talehead .r { text-align: left; color: var(--lh-gold); }
+.lh-tale { display: grid; gap: 9px; }
+.lh-tr { display: grid; grid-template-columns: 1fr 96px 1fr; align-items: center; gap: 14px; }
+.lh-tr .who { text-align: center; font-family: "Saira Condensed"; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: 15px; color: var(--lh-ink); }
+.lh-tr.king .who { color: var(--lh-gold-hi); }
+.lh-barl, .lh-barr { height: 22px; display: flex; align-items: center; }
+.lh-barl { justify-content: flex-end; }
+.lh-barl .b { height: 100%; background: linear-gradient(90deg, #3a4451, var(--lh-silver)); border-radius: 3px 0 0 3px; width: 0; transition: width 1s cubic-bezier(.2, .8, .2, 1); }
+.lh-barr .b { height: 100%; background: linear-gradient(90deg, var(--lh-gold-deep), var(--lh-gold)); border-radius: 0 3px 3px 0; width: 0; transition: width 1s cubic-bezier(.2, .8, .2, 1); }
+.lh-barl .bv, .lh-barr .bv { font-family: Anton; font-size: 16px; color: var(--lh-ink2); padding: 0 8px; }
+.lh-barr .bv { color: var(--lh-gold); }
+
+/* ---------- their guy (loyalty) ---------- */
+.lh-loyal { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.lh-plq { background: linear-gradient(170deg, var(--lh-panel), var(--lh-panel2)); border: 1px solid var(--lh-line); border-radius: 12px; padding: 18px 16px 16px; position: relative; overflow: hidden; cursor: default; opacity: 0; transform: translateY(14px); transition: opacity .55s ease, transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+.lh-plq.in { opacity: 1; transform: none; }
+.lh-plq.in:hover { transform: translateY(-4px) scale(1.02); border-color: rgba(244, 193, 82, .45); box-shadow: 0 0 30px -10px var(--lh-glow); }
+.lh-plq.top { border-color: rgba(244, 193, 82, .45); box-shadow: 0 0 30px -14px var(--lh-glow); }
+.lh-of { font-family: "Saira Condensed"; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; font-size: 11px; color: var(--lh-ink3); }
+.lh-of b { color: var(--lh-ink); }
+.lh-pl { font-family: Anton; text-transform: uppercase; font-size: 22px; line-height: 1.02; margin-top: 9px; color: var(--lh-ink); }
+.lh-plq.top .lh-pl { color: var(--lh-gold-hi); }
+.lh-lmeta { display: flex; align-items: baseline; gap: 8px; margin-top: 11px; }
+.lh-x { font-family: Anton; font-size: 30px; color: var(--lh-gold); }
+.lh-seas { font-family: "Saira Condensed"; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; font-size: 11px; color: var(--lh-ink3); }
+.lh-pos { font-family: "Saira Condensed"; font-weight: 700; font-size: 10px; letter-spacing: .1em; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; position: absolute; top: 16px; right: 14px; }
+.lh-pos.QB { background: color-mix(in srgb, var(--qb) 20%, var(--deep)); color: var(--qb); }
+.lh-pos.RB { background: color-mix(in srgb, var(--rb) 20%, var(--deep)); color: var(--rb); }
+.lh-pos.WR { background: color-mix(in srgb, var(--wr) 20%, var(--deep)); color: var(--wr); }
+.lh-pos.TE { background: color-mix(in srgb, var(--te) 20%, var(--deep)); color: var(--te); }
+.lh-pos.K { background: color-mix(in srgb, var(--k) 20%, var(--deep)); color: var(--k); }
+.lh-pos.DST { background: color-mix(in srgb, var(--dst) 20%, var(--deep)); color: var(--dst); }
+.lh-pos.NA { background: #26232c; color: var(--lh-ink3); }
+
+/* ---------- the ledger + royalty ---------- */
+.lh-cols { display: grid; grid-template-columns: 1.05fr .95fr; gap: 30px; margin-top: 58px; }
+.lh-row { display: grid; grid-template-columns: 74px 1fr auto; align-items: center; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--lh-line); }
+.lh-row .lh-nm { font-family: "Saira Condensed"; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: 14.5px; color: var(--lh-ink); }
+.lh-track { height: 14px; background: #14121a; border-radius: 7px; overflow: hidden; }
+.lh-fill { display: block; height: 100%; width: 0; border-radius: 7px; transition: width 1.1s cubic-bezier(.2, .8, .2, 1); }
+.lh-fill.pew { background: linear-gradient(90deg, #3a3646, #8c89a0); }
+.lh-fill.gold { background: linear-gradient(90deg, var(--lh-gold-deep), var(--lh-gold)); }
+.lh-val { font-family: Anton; font-size: 17px; min-width: 46px; text-align: right; color: var(--lh-ink2); }
+.lh-foot { margin-top: 14px; font-size: 12.5px; color: var(--lh-ink3); line-height: 1.5; }
+.lh-foot b { color: var(--lh-ink2); }
+.lh-roy .lh-row { grid-template-columns: 150px 1fr 44px; }
+.lh-roy .lh-nm { font-family: "Saira Condensed"; font-weight: 700; font-size: 14px; color: var(--lh-ink); }
+
+/* the ledger — career win rate rendered in the page's win/loss colours:
+   the gold fill is win%, the pewter track showing through is the losses. */
+.lh-led { grid-template-columns: 96px 1fr auto; }
+.lh-led.gone .lh-nm { color: var(--lh-ink3); font-weight: 600; }   /* departed managers, muted like the grid */
+.lh-led-track { height: 16px; border-radius: 8px; overflow: hidden; background: linear-gradient(180deg, #423c4b, var(--lh-pewter)); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .45); }
+.lh-led-fill { display: block; height: 100%; width: 0; border-radius: 8px 0 0 8px; background: linear-gradient(90deg, var(--lh-gold-deep), var(--lh-gold)); box-shadow: 0 0 10px -3px var(--lh-glow); transition: width 1.1s cubic-bezier(.2, .8, .2, 1); }
+.lh-led.top .lh-led-fill { background: linear-gradient(90deg, var(--lh-gold-deep), var(--lh-gold-hi)); }
+.lh-led-val { display: flex; flex-direction: column; align-items: flex-end; line-height: 1; min-width: 62px; }
+.lh-led-pct { font-family: Anton; font-size: 18px; color: var(--lh-ink); }
+.lh-led.gone .lh-led-pct { color: var(--lh-ink2); }
+.lh-led.top .lh-led-pct { color: var(--lh-gold-hi); }
+.lh-led-rec { font-family: "Saira Condensed"; font-weight: 600; font-size: 11px; color: var(--lh-ink3); letter-spacing: .04em; margin-top: 3px; }
+
+/* ---------- hover tooltip ---------- */
+.lh-tip { position: fixed; z-index: 1000; pointer-events: none; max-width: 320px; background: color-mix(in srgb, var(--deep2) 96%, #000); border: 1px solid var(--lh-line2); border-radius: 9px; padding: 11px 13px; box-shadow: 0 18px 40px -18px #000; opacity: 0; transform: translateY(4px); transition: opacity .12s, transform .12s; }
+.lh-tip.on { opacity: 1; transform: none; }
+.lh-tth { font-family: Anton; text-transform: uppercase; font-size: 16px; letter-spacing: .02em; color: var(--lh-ink); }
+.lh-ttteam { font-family: "Saira Condensed"; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; font-size: 12px; color: var(--lh-gold-hi); margin: 2px 0 6px; }
+.lh-ttrow { font-size: 12.5px; color: var(--lh-ink2); line-height: 1.5; }
+.lh-ttrow .ch { color: var(--lh-gold-hi); } .lh-ttrow .ru { color: var(--lh-silver); }
+.lh-ttcta { margin-top: 7px; font-family: "Saira Condensed"; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; font-size: 10px; color: var(--lh-ink3); }
+/* per-season detail lines (royalty + dropped-player hovers) */
+.lh-ttline { font-size: 12px; color: var(--lh-ink2); line-height: 1.55; }
+.lh-ttteam + .lh-ttline { margin-top: 5px; }
+.lh-ttline b { color: var(--lh-ink); font-weight: 700; }
+.lh-ttline .ch { color: var(--lh-gold-hi); }
+.lh-ttline .ru { color: var(--lh-silver); }
+.lh-tty { display: inline-block; min-width: 26px; color: var(--lh-ink3); font-family: "Saira Condensed"; font-weight: 700; letter-spacing: .02em; }
+.lh-star { font-size: 11px; }
+.lh-star.ch { color: var(--lh-gold-hi); }
+.lh-star.ru { color: var(--lh-silver); }
+/* interactive rows reveal a tooltip and lift with a slight animated zoom on hover */
+.lh-hov { cursor: default; transition: transform .14s ease, background-color .14s ease, box-shadow .14s ease; }
+.lh-row.lh-hov:hover { background: rgba(255, 255, 255, .03); transform: scale(1.015); position: relative; z-index: 2; }
+.lh-burn.lh-hov:hover { background: rgba(255, 255, 255, .03); transform: scale(1.01); position: relative; z-index: 2; }
+.lh-tr.lh-hov:hover { transform: scale(1.015); }
+.lh-tr.lh-hov:hover .who { color: var(--lh-gold-hi); }
+
+/* ---------- roster drawer ---------- */
+.lh-scrim { position: fixed; inset: 0; background: rgba(6, 5, 9, .66); backdrop-filter: blur(2px); z-index: 1001; opacity: 0; visibility: hidden; transition: opacity .3s, visibility .3s; }
+.lh-scrim.on { opacity: 1; visibility: visible; }
+.lh-drawer { position: fixed; top: 0; right: 0; height: 100%; width: min(430px, 92vw); z-index: 1002; background: linear-gradient(180deg, var(--lh-panel), var(--lh-panel2)); border-left: 1px solid var(--lh-line2); box-shadow: -30px 0 60px -30px #000; transform: translateX(100%); transition: transform .4s cubic-bezier(.22, .68, .3, 1); display: flex; flex-direction: column; overflow: hidden; }
+.lh-drawer.open { transform: none; }
+.lh-drawer-x { position: absolute; top: 14px; right: 14px; z-index: 2; width: 32px; height: 32px; border-radius: 8px; background: var(--lh-panel2); border: 1px solid var(--lh-line); color: var(--lh-ink2); font-size: 20px; line-height: 1; cursor: pointer; }
+.lh-drawer-x:hover { color: var(--lh-ink); border-color: var(--lh-line2); }
+.lh-dhead { padding: 24px 22px 18px; border-bottom: 1px solid var(--lh-line); background: radial-gradient(120% 80% at 100% 0, rgba(244, 193, 82, .08), transparent 60%); }
+/* reserve room on the right so the prev/next nav clears the absolute close (×) button */
+.lh-dtop { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-right: 34px; }
+.lh-dyear { font-family: Anton; font-size: 44px; line-height: .9; color: var(--lh-gold-hi); }
+.lh-dnav { display: flex; gap: 6px; }
+.lh-dnavbtn { font-family: "Saira Condensed"; font-weight: 700; font-size: 12px; letter-spacing: .04em; color: var(--lh-ink2); background: var(--lh-panel2); border: 1px solid var(--lh-line); border-radius: 7px; padding: 6px 9px; cursor: pointer; min-width: 30px; }
+.lh-dnavbtn:hover:not(:disabled) { color: var(--lh-gold-hi); border-color: var(--lh-gold); }
+.lh-dnavbtn:disabled { opacity: .3; cursor: default; }
+.lh-dteam { font-family: Anton; text-transform: uppercase; font-size: 23px; letter-spacing: .01em; margin-top: 8px; color: var(--lh-ink); }
+.lh-dsub { font-family: "Saira Condensed"; font-weight: 600; font-size: 13.5px; color: var(--lh-ink2); margin-top: 6px; letter-spacing: .02em; }
+.lh-dmgr { color: var(--lh-ink); font-weight: 700; text-transform: uppercase; }
+.lh-dera { font-family: "Saira Condensed"; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; font-size: 10px; color: var(--lh-ink3); margin-top: 7px; }
+.lh-dbadge { font-family: "Saira Condensed"; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: 10.5px; padding: 2px 8px; border-radius: 5px; margin-left: 6px; white-space: nowrap; }
+.lh-dbadge.ch { background: linear-gradient(180deg, #3a2f12, #241c0a); color: var(--lh-gold-hi); border: 1px solid var(--lh-gold); }
+.lh-dbadge.ru { background: var(--lh-panel2); color: var(--lh-silver); border: 1px solid var(--lh-line2); }
+.lh-dbody { flex: 1; overflow-y: auto; padding: 8px 14px 18px; scrollbar-width: thin; scrollbar-color: var(--lh-line2) transparent; }
+.lh-rgrph { font-family: "Saira Condensed"; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; font-size: 10.5px; color: var(--lh-ink3); margin: 18px 8px 8px; padding-bottom: 6px; border-bottom: 1px solid var(--lh-line); }
+.lh-rrow { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 7px; }
+.lh-rrow:hover { background: rgba(255, 255, 255, .03); }
+.lh-rpos { font-family: "Saira Condensed"; font-weight: 700; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; width: 34px; text-align: center; padding: 3px 0; border-radius: 4px; flex: none; }
+.lh-rpos.QB { background: color-mix(in srgb, var(--qb) 20%, var(--deep)); color: var(--qb); }
+.lh-rpos.RB { background: color-mix(in srgb, var(--rb) 20%, var(--deep)); color: var(--rb); }
+.lh-rpos.WR { background: color-mix(in srgb, var(--wr) 20%, var(--deep)); color: var(--wr); }
+.lh-rpos.TE { background: color-mix(in srgb, var(--te) 20%, var(--deep)); color: var(--te); }
+.lh-rpos.K { background: color-mix(in srgb, var(--k) 20%, var(--deep)); color: var(--k); }
+.lh-rpos.DST { background: color-mix(in srgb, var(--dst) 20%, var(--deep)); color: var(--dst); }
+.lh-rpos.NA { background: #26232c; color: var(--lh-ink3); }
+.lh-rname { font-weight: 600; font-size: 14px; color: var(--lh-ink); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lh-rnfl { font-family: "Saira Condensed"; font-weight: 600; font-size: 11px; color: var(--lh-ink3); letter-spacing: .05em; }
+.lh-dfoot { padding: 11px 16px; border-top: 1px solid var(--lh-line); font-family: "Saira Condensed"; font-weight: 600; letter-spacing: .05em; font-size: 11px; color: var(--lh-ink3); text-align: center; }
+
+/* ======================= Part II · The Money ======================= */
+/* act break */
+.lh-act { display: flex; align-items: center; gap: 18px; margin-top: 86px; }
+.lh-actrule { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--lh-line2)); }
+.lh-act .lh-actrule:last-child { background: linear-gradient(90deg, var(--lh-line2), transparent); }
+.lh-acttext { font-family: "Saira Condensed"; font-weight: 700; letter-spacing: .34em; text-transform: uppercase; font-size: 12px; color: var(--lh-gold); white-space: nowrap; }
+.lh-actsub { text-align: center; color: var(--lh-ink2); font-size: 13.5px; line-height: 1.5; max-width: 64ch; margin: 14px auto 0; }
+
+/* ---------- 06 · sunk costs ---------- */
+.lh-sunkcard { background: linear-gradient(180deg, var(--lh-panel), var(--lh-panel2)); border: 1px solid var(--lh-line); border-radius: 14px; padding: 8px 20px; box-shadow: 0 30px 60px -40px #000; }
+.lh-burn { display: grid; grid-template-columns: 88px minmax(0, 1fr) auto; align-items: center; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--lh-line); }
+.lh-burn:last-child { border-bottom: none; }
+.lh-bmid { min-width: 0; }
+.lh-bowner { font-family: "Saira Condensed"; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; font-size: 14px; color: var(--lh-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lh-bplayer { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 9px; min-width: 0; margin-bottom: 7px; font-family: "Saira Condensed"; font-weight: 600; font-size: 14.5px; color: var(--lh-ink2); }
+.lh-bkeep { font-family: "Saira Condensed"; font-weight: 700; font-size: 8.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--lh-ink3); border: 1px solid var(--lh-line2); border-radius: 4px; padding: 1px 5px; }
+.lh-bstat { font-family: "Saira Condensed"; font-weight: 700; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; }
+.lh-bstat.gone { background: color-mix(in srgb, var(--lh-ember) 18%, var(--deep)); color: var(--lh-ember-hi); }
+.lh-bstat.claimed { background: color-mix(in srgb, var(--lh-gold) 16%, var(--deep)); color: var(--lh-gold-hi); }
+.lh-btrack { height: 12px; background: #14110f; border-radius: 6px; overflow: hidden; }
+.lh-bfill { display: block; height: 100%; width: 0; border-radius: 6px; transition: width 1.1s cubic-bezier(.2, .8, .2, 1); }
+.lh-burn.gone .lh-bfill { background: linear-gradient(90deg, var(--lh-ember-hi), var(--lh-ember) 46%, var(--lh-char) 100%); }
+.lh-burn.claimed .lh-bfill { background: linear-gradient(90deg, var(--lh-gold), var(--lh-ember-hi)); }
+.lh-bend { display: flex; align-items: center; gap: 14px; justify-self: end; }
+.lh-bprice { font-family: Anton; font-size: 24px; line-height: 1; color: var(--lh-ember-hi); min-width: 52px; text-align: right; }
+.lh-brec { display: flex; align-items: center; gap: 9px; font-family: "Saira Condensed"; font-weight: 700; font-size: 13px; letter-spacing: .03em; color: var(--lh-ink3); min-width: 150px; }
+.lh-btag { font-family: "Saira Condensed"; font-weight: 700; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; padding: 2px 8px; border-radius: 5px; }
+.lh-btag.won { background: linear-gradient(180deg, #16331f, #0e2415); color: var(--lh-money-hi); border: 1px solid color-mix(in srgb, var(--lh-money) 55%, transparent); box-shadow: 0 0 14px -4px var(--lh-money); }
+.lh-btag.champ { background: linear-gradient(180deg, #3a2f12, #241c0a); color: var(--lh-gold-hi); border: 1px solid var(--lh-gold); box-shadow: 0 0 14px -4px var(--lh-glow); }
+
+/* ---------- 07 · the big board ---------- */
+.lh-boardcard { background: linear-gradient(180deg, var(--lh-panel), var(--lh-panel2)); border: 1px solid var(--lh-line); border-radius: 14px; padding: 16px 18px 18px; box-shadow: 0 30px 60px -40px #000; }
+.lh-movers { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-bottom: 14px; margin-bottom: 6px; border-bottom: 1px solid var(--lh-line); }
+.lh-mvlbl { font-family: "Saira Condensed"; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; font-size: 10px; color: var(--lh-ink3); margin-right: 4px; }
+.lh-mv { font-family: "Saira Condensed"; font-weight: 600; font-size: 12px; letter-spacing: .02em; background: var(--lh-panel2); border: 1px solid var(--lh-line); border-radius: 20px; padding: 4px 11px; cursor: pointer; transition: border-color .14s, transform .14s; }
+.lh-mv b { font-weight: 800; }
+.lh-mv.up { color: var(--lh-money-hi); }
+.lh-mv.down { color: var(--lh-ember-hi); }
+.lh-mv:hover { transform: translateY(-1px); border-color: var(--lh-line2); }
+.lh-board { width: 100%; }
+.bb-svg { width: 100%; height: auto; display: block; }
+.bb-grid { stroke: var(--lh-line); stroke-width: 1; }
+.bb-yl, .bb-xl { font-family: "Saira Condensed"; font-weight: 600; font-size: 12px; fill: var(--lh-ink3); }
+.bb-line { fill: none; stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
+.bb-dot { cursor: pointer; transition: r .12s ease, stroke-width .12s ease; }
+.bb-dot:hover { r: 7.5; stroke: var(--lh-ink); stroke-width: 2.5; }
+.bb-end { font-family: "Saira Condensed"; font-weight: 800; font-size: 13px; letter-spacing: .02em; }
+.bb-hint { fill: var(--lh-ink3); font-family: "Saira Condensed"; font-weight: 600; font-size: 15px; }
+.lh-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.lh-chip { display: inline-flex; align-items: center; gap: 7px; font-family: "Saira Condensed"; font-weight: 600; font-size: 12.5px; color: var(--lh-ink2); background: var(--lh-panel2); border: 1px solid var(--lh-line); border-radius: 8px; padding: 5px 10px; cursor: pointer; transition: border-color .14s, color .14s, background .14s; }
+.lh-chip i { font-style: normal; font-family: Anton; font-size: 12px; color: var(--lh-ink3); }
+.lh-chipdot { width: 9px; height: 9px; border-radius: 50%; }
+.lh-chip:hover { color: var(--lh-ink); border-color: var(--lh-line2); }
+.lh-chip.on { color: var(--lh-ink); background: color-mix(in srgb, var(--lh-gold) 12%, var(--lh-panel2)); border-color: color-mix(in srgb, var(--lh-gold) 55%, transparent); }
+.lh-chip.on i { color: var(--lh-gold-hi); }
+
+/* ---------- 08 · maestro & wizard (the manager map) ---------- */
+.lh-quad { position: relative; background: linear-gradient(180deg, var(--lh-panel), var(--lh-panel2)); border: 1px solid var(--lh-line); border-radius: 14px; padding: 18px 22px 14px 46px; box-shadow: 0 30px 60px -40px #000; }
+.lh-plot { position: relative; height: clamp(340px, 42vw, 470px); margin: 6px 8px 30px 6px; border-left: 1px solid var(--lh-line2); border-bottom: 1px solid var(--lh-line2); }
+.lh-qzone { position: absolute; overflow: hidden; }
+.lh-qzone span { position: absolute; font-family: "Saira Condensed"; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; font-size: 11px; padding: 7px 10px; opacity: .82; }
+.lh-qzone.maestro { background: linear-gradient(225deg, color-mix(in srgb, var(--lh-gold) 11%, transparent), transparent 65%); }
+.lh-qzone.maestro span { top: 0; right: 0; color: var(--lh-gold-hi); }
+.lh-qzone.wizard { background: linear-gradient(315deg, color-mix(in srgb, var(--turf) 9%, transparent), transparent 65%); }
+.lh-qzone.wizard span { top: 0; left: 0; color: var(--lh-money-hi); }
+.lh-qzone.forget { background: linear-gradient(135deg, color-mix(in srgb, var(--lh-pewter) 16%, transparent), transparent 65%); }
+.lh-qzone.forget span { bottom: 0; right: 0; color: var(--lh-silver); }
+.lh-qzone.adrift span { bottom: 0; left: 0; color: var(--lh-ink3); }
+.lh-qx, .lh-qy { position: absolute; pointer-events: none; }
+.lh-qx { top: 0; bottom: 0; width: 0; border-left: 1px dashed var(--lh-line2); }
+.lh-qy { left: 0; right: 0; height: 0; border-top: 1px dashed var(--lh-line2); }
+.lh-qx span, .lh-qy span { position: absolute; font-family: "Saira Condensed"; font-weight: 600; font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--lh-ink3); white-space: nowrap; }
+.lh-qx span { top: -16px; left: 4px; }
+.lh-qy span { left: 4px; top: -14px; }
+.lh-qpt { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; z-index: 2; }
+.lh-qpt.hot { z-index: 5; }
+.lh-qdot { display: block; border-radius: 50%; transition: transform .14s ease; }
+.lh-qpt.hot .lh-qdot { transform: scale(1.12); }
+.lh-qname { font-family: "Saira Condensed"; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 11px; color: var(--lh-ink2); text-shadow: 0 1px 3px #000; white-space: nowrap; }
+.lh-qpt.hot .lh-qname { color: var(--lh-ink); }
+.lh-qaxx { position: absolute; left: 46px; right: 22px; bottom: 12px; text-align: center; font-family: "Saira Condensed"; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-size: 10.5px; color: var(--lh-ink3); }
+.lh-qaxy { position: absolute; left: 4px; top: 50%; transform: rotate(-90deg) translateX(50%); transform-origin: left center; font-family: "Saira Condensed"; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-size: 10.5px; color: var(--lh-ink3); white-space: nowrap; }
+.lh-qcorner { position: absolute; left: 14px; font-family: "Saira Condensed"; font-weight: 600; font-size: 10px; color: var(--lh-ink3); }
+.lh-qcorner.tl { top: 16px; }
+.lh-qcorner.bl { bottom: 46px; }
+
+.lh-error { color: var(--lh-ink2); text-align: center; padding: 60px 20px; font-size: 15px; }
+
+@media (max-width: 880px) {
+  .lh-cols { grid-template-columns: 1fr; }
+  .lh-loyal { grid-template-columns: repeat(2, 1fr); }
+  .lh-burn { grid-template-columns: 64px minmax(0, 1fr); gap: 9px 12px; }
+  .lh-bend { grid-column: 1 / -1; justify-self: stretch; justify-content: space-between; }
+  .lh-brec { min-width: 0; }
+}
+@media (max-width: 600px) {
+  /* the scatter gets crowded on a phone: shrink the tokens, give the plot more height */
+  .lh-plot { height: 430px; }
+  .lh-qdot { transform: scale(.62); }
+  .lh-qpt.hot .lh-qdot { transform: scale(.7); }
+  .lh-qname { font-size: 9.5px; }
+  .lh-qzone span { font-size: 9px; padding: 5px 7px; }
+  .lh-mv { font-size: 11px; padding: 3px 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lh-banner, .lh-plq { transition: none; transform: none; opacity: 1; }
+  .lh-fill, .lh-barl .b, .lh-barr .b, .lh-led-fill, .lh-bfill { transition: none; }
+  /* keep the static spotlight band + ring; drop only the lift and fades */
+  .lh-grow, .lh-cell { transition: none; }
+  .lh-grow.is-active, .lh-cell.clk:hover { transform: none; }
+  .lh-mv, .bb-dot, .lh-qdot, .lh-hov, .lh-cloth { transition: none; }
+  .lh-row.lh-hov:hover, .lh-burn.lh-hov:hover, .lh-tr.lh-hov:hover, .lh-plq.in:hover, .lh-banner:hover .lh-cloth { transform: none; }
+}
