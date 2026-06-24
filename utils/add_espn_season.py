@@ -5,8 +5,9 @@ Run at the end of each season:
     PYTHONPATH=. uv run python utils/add_espn_season.py 2026
 
 It fetches that season from ESPN's read API and splices it directly into
-``data/league_history.json`` (adding the year, or replacing it if already
-present). Members are stored by first name only.
+``docs/data/league_history.json`` (adding the year, or replacing it if already
+present), the copy published to GitHub Pages. Members are stored by first name
+only.
 
 Private leagues require your ESPN auth cookies. Grab them from a logged-in
 browser (DevTools -> Application -> Cookies -> fantasy.espn.com) and export:
@@ -32,7 +33,7 @@ from src.espn_history import season_api_to_season
 from src.models.league_history import LeagueHistory
 
 BASE = Path(__file__).resolve().parent.parent
-OUT = BASE / "data" / "league_history.json"
+OUT = BASE / "docs" / "data" / "league_history.json"
 DEFAULT_LEAGUE_ID = 577910
 
 

@@ -67,7 +67,7 @@ A local fantasy football auction draft tracking tool with a web-based interface 
 - Uses relative URLs for cross-network compatibility
 - Fetches all data from local read-only API endpoints (same port)
 - Analyst booth transcript in the Draft Analysis tab: scrollable chat-style history with persona headshots, live tail, and infinite scroll for older calls
-- **League History tab** ("The Rafters"): a read-only hall-of-records view of the multi-season archive — champion banners, a 23-season finish grid (regular-season heat + gold titles, click any cell for that team's full end-of-season roster), régime-vs-crown, player loyalty, title droughts, and most-rostered players. Fetched once from `GET /api/v1/league-history`; all leaderboards are derived client-side (styles/scripts are self-contained in `league-history.css` / `league-history.js`)
+- League history is **not** a viewer tab: it is published as a standalone GitHub Pages page (`docs/league_history.html`) — a self-contained client-side renderer (`docs/league-history.css` / `docs/league-history.js`) that derives every leaderboard (champion banners, the 23-season finish grid, régime-vs-crown, loyalty, droughts, royalty, and the auction-price charts) from the static `docs/data/league_history.json` and `docs/data/auction_prices.json` archives
 
 ### Backend
 **Framework:** FastAPI with Pydantic models  
@@ -88,7 +88,7 @@ A local fantasy football auction draft tracking tool with a web-based interface 
 - `action_log.json` - History of all draft actions for undo capability
 - `config.json` - Application configuration (budgets, min bids, etc.)
 - `player_stats.json` - Player statistics and bye weeks (optional, generated separately)
-- `league_history.json` - Multi-season archive (champions, standings, end-of-season rosters); served read-only and consumed by the viewer's League History tab
+- The multi-season `league_history.json` / `auction_prices.json` archives are **not** app data files: they live under `docs/data/` and are published to GitHub Pages (see the standalone League History page above)
 
 ## API Architecture
 
@@ -167,17 +167,6 @@ This allows frontend to handle errors appropriately:
 - Each comment carries a 1-based `seq` (its committed position in the log), which is the cursor clients page against. `seq` is stable because the log is append-only, and is preferred over the second-granular `ts`, which can collide. A torn (un-terminated) trailing line is dropped and never consumes a `seq`.
 - Response is a bare array ordered oldest-first (ascending `seq`); the file is re-read per request, consistent with the stateless design.
 
-**League History Archive:**
-- `GET /api/v1/league-history` returns the league archive resource: a `seasons` array where each season carries its `champion`, `runner_up`, `best_record`, full `standings`, and per-team end-of-season `roster`. Mirrored on both ports (read-only on the viewer).
-- It returns RESTful primitives only — the viewer derives every leaderboard (championship counts, the regular-season finish grid, régime-vs-crown, loyalty, droughts, royalty) on the client.
-
-**Auction Price Archive:**
-- `GET /api/v1/auction-prices` returns the auction-price archive: a `seasons` object keyed by year, each season holding an `owners` object that maps owner → an array of `{player, price, keeper, espn_id}` picks — every player bought at auction (2016-present), what was paid, whether they were a keeper, and the ESPN player id. Grouping by owner avoids repeating the owner on every pick. Mirrored on both ports (read-only on the viewer).
-- `GET /api/v1/auction-prices/{year}` returns just that season (its `owners` map), or `404` if the season is not in the archive.
-- A standalone dataset from league-history (prices come from the league's draft sheets; identity, keeper flag, and `espn_id` from ESPN draft data). `player` joins to league-history by name; `espn_id` keys ESPN headshots and is populated for every pick (picks ESPN never recorded — one team's 2022 non-keeper picks — were resolved by player-name lookup).
-
-**Static-archive performance (both archives):** these two resources are large and static — regenerated only out-of-band by the `raw_history/` pipeline, never during a draft. Unlike the mutable draft state (which is re-read per request by the stateless design), the parsed archives are **server-side cached** keyed on the file's mtime: an out-of-band regeneration bumps the mtime and the next request transparently reloads, so the data is never stale and no restart is needed. The GETs also support **conditional requests**: each `200` carries `ETag` + `Last-Modified` (derived from the file's mtime/size) and `Cache-Control: no-cache`; a client that sends `If-None-Match`/`If-Modified-Since` gets an empty `304 Not Modified` while the archive is unchanged, so repeat tab loads avoid re-downloading the multi-megabyte body. Both behaviors apply identically on the admin and viewer ports.
-
 ## File Structure
 ```
 ffdrafttracker/
@@ -211,8 +200,9 @@ ffdrafttracker/
 │   ├── owners.json        # Owner information
 │   ├── action_log.json    # Complete action history
 │   ├── config.json        # Application configuration
-│   ├── player_stats.json  # Player statistics and bye weeks (optional)
-│   └── league_history.json # Multi-season archive for the League History tab
+│   └── player_stats.json  # Player statistics and bye weeks (optional)
+├── docs/                  # GitHub Pages site (draft recap + League History page)
+│   └── data/              # Published multi-season archives (league_history, auction_prices)
 ├── tests/                 # Test suite
 │   ├── unit/              # Unit tests for models
 │   └── integration/       # Integration tests for file persistence

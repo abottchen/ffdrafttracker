@@ -1,14 +1,13 @@
 /* ==========================================================================
-   League History — "The Rafters"  (viewer tab)
-   Fetches the raw season archive from GET /api/v1/league-history and derives
-   every leaderboard + the finish grid client-side, then renders into
+   League History — "The Rafters"  (standalone GitHub Pages page)
+   Fetches the raw season archive from the static data/league_history.json and
+   derives every leaderboard + the finish grid client-side, then renders into
    #view-history. Self-contained: exposes window.LeagueHistory.render().
    ========================================================================== */
 (function () {
   "use strict";
-  const API = "/api/v1/league-history";
-  const AUCTION_API = "/api/v1/auction-prices";
-  const OWNERS_API = "/api/v1/owners";
+  const API = "data/league_history.json";
+  const AUCTION_API = "data/auction_prices.json";
   const $ = (s, el) => (el || document).querySelector(s);
   const ce = (t, c) => { const e = document.createElement(t); if (c) e.className = c; return e; };
   const ord = (n) => n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" }[n % 10] || "th"));
@@ -832,12 +831,12 @@
     const host = $("#view-history");
     host.innerHTML = '<div class="lh-error">Loading the archive…</div>';
     const grab = (url) => fetch(url).then((r) => r.json()).catch(() => null);
-    Promise.all([grab(API), grab(AUCTION_API), grab(OWNERS_API)]).then(([hist, auction, owners]) => {
+    Promise.all([grab(API), grab(AUCTION_API)]).then(([hist, auction]) => {
       const seasons = (hist && hist.seasons) || [];
       if (!seasons.length) { host.innerHTML = '<div class="lh-error">No league history is available yet.</div>'; built = true; return; }
       DATA = derive(seasons);
       MONEY = (auction && auction.seasons && Object.keys(auction.seasons).length) ? deriveMoney(seasons, auction.seasons) : null;
-      OWNER_COLOR = buildOwnerColor(owners);
+      OWNER_COLOR = buildOwnerColor(null);
       scaffold(host);
       renderBanners(); renderGrid(); renderRegime(); renderLoyalty(); renderLedger(); renderRoyalty();
       if (MONEY) { renderSunkCosts(); renderBigBoard(); renderManagerMap(); }

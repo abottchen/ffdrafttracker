@@ -14,7 +14,9 @@ from src.models.league_history import (
     TeamSeason,
 )
 
-DATA_FILE = Path(__file__).resolve().parents[3] / "data" / "league_history.json"
+DATA_FILE = (
+    Path(__file__).resolve().parents[3] / "docs" / "data" / "league_history.json"
+)
 
 
 def _season(year, champ, ru, *, shared=False, source="manual"):
