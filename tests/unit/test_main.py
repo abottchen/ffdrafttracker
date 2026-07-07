@@ -1199,3 +1199,396 @@ class TestErrorHandling(TestMainApp):
             headers={"Content-Type": "application/json"},
         )
         assert response.status_code == 422
+
+
+class TestD1NominationMaxBid(TestMainApp):
+    """D1: Nomination initial bid must respect the max-bid reserve rule."""
+
+    @patch("main.load_draft_state")
+    @patch("main.load_owners")
+    @patch("main.load_configuration")
+    def test_nominate_422_initial_bid_exceeds_max_bid(
+        self, mock_config, mock_owners, mock_draft_state
+    ):
+        """Nominating with initial_bid above max_bid is rejected."""
+        mock_config.return_value = Configuration(
+            initial_budget=200, min_bid=1, position_maximums={}, total_rounds=19
+        )
+        mock_owners.return_value = self.sample_owners
+
+        # Team with $5 remaining and 5 open slots → max_bid = 5 - 4 = $1
+        existing_picks = [
+            DraftPick(pick_id=i, player_id=i + 10, owner_id=1, price=10)
+            for i in range(14)
+        ]
+        tight_team = Team(owner_id=1, budget_remaining=5, picks=existing_picks)
+        mock_draft_state.return_value = self.create_mock_draft_state(
+            teams=[tight_team, self.sample_teams[1]]
+        )
+
+        response = self.client.post(
+            "/api/v1/nominate",
+            json={
+                "owner_id": 1,
+                "player_id": 1,
+                "initial_bid": 5,
+                "expected_version": 5,
+            },
+        )
+
+        assert response.status_code == 422
+        assert "Insufficient budget" in response.json()["detail"]
+
+    @patch("main.load_draft_state")
+    @patch("main.load_owners")
+    @patch("main.load_configuration")
+    def test_nominate_at_exact_max_bid_succeeds(
+        self, mock_config, mock_owners, mock_draft_state
+    ):
+        """Nominating at exactly max_bid succeeds."""
+        mock_config.return_value = Configuration(
+            initial_budget=200, min_bid=1, position_maximums={}, total_rounds=19
+        )
+        mock_owners.return_value = self.sample_owners
+
+        # Team with $5 remaining and 5 open slots → max_bid = $1
+        existing_picks = [
+            DraftPick(pick_id=i, player_id=i + 10, owner_id=1, price=10)
+            for i in range(14)
+        ]
+        tight_team = Team(owner_id=1, budget_remaining=5, picks=existing_picks)
+        mock_draft_state.return_value = self.create_mock_draft_state(
+            teams=[tight_team, self.sample_teams[1]]
+        )
+
+        response = self.client.post(
+            "/api/v1/nominate",
+            json={
+                "owner_id": 1,
+                "player_id": 1,
+                "initial_bid": 1,
+                "expected_version": 5,
+            },
+        )
+
+        assert response.status_code == 200
+
+    @patch("main.load_draft_state")
+    @patch("main.load_owners")
+    @patch("main.load_configuration")
+    def test_nominate_422_roster_full(self, mock_config, mock_owners, mock_draft_state):
+        """Nominating when roster is full is rejected."""
+        mock_config.return_value = Configuration(
+            initial_budget=200, min_bid=1, position_maximums={}, total_rounds=19
+        )
+        mock_owners.return_value = self.sample_owners
+
+        # Team with full roster (19 picks = total_rounds)
+        existing_picks = [
+            DraftPick(pick_id=i, player_id=i + 10, owner_id=1, price=10)
+            for i in range(19)
+        ]
+        full_team = Team(owner_id=1, budget_remaining=10, picks=existing_picks)
+        mock_draft_state.return_value = self.create_mock_draft_state(
+            teams=[full_team, self.sample_teams[1]]
+        )
+
+        response = self.client.post(
+            "/api/v1/nominate",
+            json={
+                "owner_id": 1,
+                "player_id": 1,
+                "initial_bid": 1,
+                "expected_version": 5,
+            },
+        )
+
+        assert response.status_code == 422
+        assert "Roster is full" in response.json()["detail"]
+
+
+class TestD2AdminDraftNominatedPlayer(TestMainApp):
+    """D2: admin_draft must reject the currently nominated player."""
+
+    @patch("main.load_draft_state")
+    @patch("main.load_players")
+    def test_admin_draft_422_player_currently_nominated(
+        self, mock_players, mock_draft_state
+    ):
+        """Admin-drafting the currently nominated player is rejected."""
+        mock_players.return_value = self.sample_players
+        nomination = Nominated(
+            player_id=1, current_bidder_id=1, nominating_owner_id=1, current_bid=10
+        )
+        mock_draft_state.return_value = self.create_mock_draft_state(
+            nominated=nomination
+        )
+
+        response = self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 2,
+                "player_id": 1,
+                "price": 25,
+                "expected_version": 5,
+            },
+        )
+
+        assert response.status_code == 422
+        assert "Cancel the nomination first" in response.json()["detail"]
+        # State should not be saved
+        mock_draft_state.return_value.save_to_file.assert_not_called()
+
+    @patch("main.load_draft_state")
+    @patch("main.load_configuration")
+    @patch("main.load_players")
+    @patch("main.load_owners")
+    def test_admin_draft_different_player_during_nomination_succeeds(
+        self, mock_owners, mock_players, mock_config, mock_draft_state
+    ):
+        """Admin-drafting a different player while a nomination is active succeeds."""
+        mock_config.return_value = Configuration(
+            initial_budget=200, min_bid=1, position_maximums={}, total_rounds=17
+        )
+        mock_owners.return_value = self.sample_owners
+        mock_players.return_value = self.sample_players
+        nomination = Nominated(
+            player_id=1, current_bidder_id=1, nominating_owner_id=1, current_bid=10
+        )
+        mock_draft_state.return_value = self.create_mock_draft_state(
+            nominated=nomination
+        )
+
+        response = self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 2,
+                "player_id": 3,
+                "price": 25,
+                "expected_version": 5,
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.json()["success"] is True
+
+    @patch("main.load_draft_state")
+    @patch("main.load_configuration")
+    @patch("main.load_players")
+    @patch("main.load_owners")
+    def test_complete_draft_422_player_missing_from_available(
+        self, mock_owners, mock_players, mock_config, mock_draft_state
+    ):
+        """complete_draft returns 422 (not 500) when player missing from pool."""
+        mock_config.return_value = Configuration(
+            initial_budget=200, min_bid=1, position_maximums={}, total_rounds=19
+        )
+        mock_owners.return_value = self.sample_owners
+        mock_players.return_value = self.sample_players
+        nomination = Nominated(
+            player_id=1, current_bidder_id=2, nominating_owner_id=1, current_bid=20
+        )
+        # Player 1 is nominated but NOT in available_player_ids (data integrity issue)
+        mock_draft_state.return_value = self.create_mock_draft_state(
+            nominated=nomination,
+            available_player_ids=[3],
+        )
+
+        response = self.client.post(
+            "/api/v1/draft",
+            json={
+                "owner_id": 2,
+                "player_id": 1,
+                "final_price": 20,
+                "expected_version": 5,
+            },
+        )
+
+        assert response.status_code == 422
+        assert "not in the available player pool" in response.json()["detail"]
+
+
+class TestD3ResetVersionGuard(TestMainApp):
+    """D3: reset_draft must require expected_version unless force=True."""
+
+    @patch("main.load_draft_state")
+    def test_reset_422_no_version_no_force(self, mock_draft_state):
+        """Reset with empty body (no version, no force) returns 422."""
+        mock_draft_state.return_value = self.sample_draft_state
+
+        response = self.client.post("/api/v1/reset", json={})
+
+        assert response.status_code == 422
+        assert "expected_version is required" in response.json()["detail"]
+
+    @patch("main.load_draft_state")
+    def test_reset_force_true_no_version_succeeds(self, mock_draft_state):
+        """Reset with force=true and no version succeeds."""
+        mock_draft_state.return_value = self.sample_draft_state
+
+        with (
+            patch("main.load_configuration") as mock_config,
+            patch("main.load_players") as mock_players,
+            patch("main.load_owners") as mock_owners,
+            patch("main.DraftState") as mock_draft_class,
+        ):
+            mock_config.return_value = MagicMock(initial_budget=200)
+            mock_players.return_value = self.sample_players
+            mock_owners.return_value = self.sample_owners
+
+            mock_initial_state = MagicMock()
+            mock_draft_class.return_value = mock_initial_state
+
+            response = self.client.post("/api/v1/reset", json={"force": True})
+
+            assert response.status_code == 200
+            assert response.json()["success"] is True
+
+    @patch("main.load_draft_state")
+    def test_reset_correct_version_succeeds(self, mock_draft_state):
+        """Reset with correct expected_version succeeds."""
+        mock_draft_state.return_value = self.sample_draft_state
+
+        with (
+            patch("main.load_configuration") as mock_config,
+            patch("main.load_players") as mock_players,
+            patch("main.load_owners") as mock_owners,
+            patch("main.DraftState") as mock_draft_class,
+        ):
+            mock_config.return_value = MagicMock(initial_budget=200)
+            mock_players.return_value = self.sample_players
+            mock_owners.return_value = self.sample_owners
+
+            mock_initial_state = MagicMock()
+            mock_draft_class.return_value = mock_initial_state
+
+            response = self.client.post("/api/v1/reset", json={"expected_version": 5})
+
+            assert response.status_code == 200
+            assert response.json()["success"] is True
+
+    @patch("main.load_draft_state")
+    def test_reset_stale_version_409(self, mock_draft_state):
+        """Reset with stale expected_version returns 409."""
+        mock_draft_state.return_value = self.sample_draft_state
+
+        with (
+            patch("main.load_configuration") as mock_config,
+            patch("main.load_players") as mock_players,
+            patch("main.load_owners") as mock_owners,
+        ):
+            mock_config.return_value = MagicMock(initial_budget=200)
+            mock_players.return_value = self.sample_players
+            mock_owners.return_value = self.sample_owners
+
+            response = self.client.post("/api/v1/reset", json={"expected_version": 3})
+
+            assert response.status_code == 409
+            assert "Draft state has changed" in response.json()["detail"]
+
+
+class TestD4CsvExport(TestMainApp):
+    """D4: CSV export must handle special characters safely."""
+
+    @patch("main.load_players")
+    @patch("main.load_owners")
+    @patch("main.load_draft_state")
+    def test_csv_handles_quotes_and_commas_in_names(
+        self, mock_draft_state, mock_owners, mock_players
+    ):
+        """CSV export round-trips names with embedded quotes and commas."""
+        import csv
+
+        tricky_players = [
+            Player(
+                id=1,
+                first_name='O\'Brien "OB"',
+                last_name="Jr, III",
+                team="BUF",
+                position="QB",
+            ),
+        ]
+        tricky_owners = {
+            1: {
+                "owner_name": 'Rick "C-137" Sanchez',
+                "team_name": "Portal, Gunners",
+            },
+        }
+
+        teams_with_picks = [
+            Team(
+                owner_id=1,
+                budget_remaining=175,
+                picks=[DraftPick(pick_id=1, player_id=1, owner_id=1, price=25)],
+            ),
+        ]
+
+        mock_players.return_value = tricky_players
+        mock_owners.return_value = tricky_owners
+        mock_draft_state.return_value = self.create_mock_draft_state(
+            nominated=None, available_player_ids=[], teams=teams_with_picks
+        )
+
+        response = self.client.get("/api/v1/export/csv")
+        assert response.status_code == 200
+
+        csv_content = response.content.decode("utf-8")
+        reader = csv.reader(csv_content.strip().splitlines())
+        rows = list(reader)
+
+        # Header row should have the owner name intact
+        assert rows[0][0] == 'Rick "C-137" Sanchez'
+        # Data row should have the player name intact
+        assert rows[2][0] == 'Jr, III, O\'Brien "OB"'
+        assert rows[2][1] == "25"
+
+    @patch("main.load_players")
+    @patch("main.load_owners")
+    @patch("main.load_draft_state")
+    def test_csv_normal_output_structure_preserved(
+        self, mock_draft_state, mock_owners, mock_players
+    ):
+        """CSV export preserves the expected column layout."""
+        import csv
+
+        mock_players.return_value = self.sample_players
+        mock_owners.return_value = self.sample_owners
+
+        teams_with_picks = [
+            Team(
+                owner_id=1,
+                budget_remaining=185,
+                picks=[DraftPick(pick_id=1, player_id=1, owner_id=1, price=15)],
+            ),
+            Team(
+                owner_id=2,
+                budget_remaining=180,
+                picks=[DraftPick(pick_id=2, player_id=2, owner_id=2, price=20)],
+            ),
+        ]
+
+        mock_draft_state.return_value = self.create_mock_draft_state(
+            nominated=None, available_player_ids=[3], teams=teams_with_picks
+        )
+
+        response = self.client.get("/api/v1/export/csv")
+        assert response.status_code == 200
+
+        csv_content = response.content.decode("utf-8")
+        reader = csv.reader(csv_content.strip().splitlines())
+        rows = list(reader)
+
+        # Row 0: owner names with empty second column each
+        assert rows[0][0] == "Rick Sanchez"
+        assert rows[0][1] == ""
+        assert rows[0][2] == "Morty Smith"
+        assert rows[0][3] == ""
+
+        # Row 1: Player/$ headers
+        assert rows[1] == ["Player", "$", "Player", "$"]
+
+        # Row 2: pick data
+        assert rows[2][0] == "Allen, Josh"
+        assert rows[2][1] == "15"
+        assert rows[2][2] == "McCaffrey, Christian"
+        assert rows[2][3] == "20"
