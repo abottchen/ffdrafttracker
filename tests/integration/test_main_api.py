@@ -289,15 +289,27 @@ class TestMainApiIntegration:
         state = self.client.get("/api/v1/draft-state").json()
         version_after_draft = state["version"]
 
-        # Try to nominate another player - this should succeed even with
-        # insufficient budget
-        # because budget validation happens during bidding, not nomination
+        # Owner 1 now has $20 left, 1 pick, 18 open slots → max_bid = 20 - 17 = $3.
+        # Nominating above max_bid is now rejected (D1 fix).
+        over_max_nominate = self.client.post(
+            "/api/v1/nominate",
+            json={
+                "owner_id": 1,
+                "player_id": 2,
+                "initial_bid": 15,
+                "expected_version": version_after_draft,
+            },
+        )
+        assert over_max_nominate.status_code == 422
+        assert "Insufficient budget" in over_max_nominate.json()["detail"]
+
+        # Nominating at the max bid ($3) succeeds.
         nominate_response = self.client.post(
             "/api/v1/nominate",
             json={
-                "owner_id": 1,  # This owner now has only $20 left
+                "owner_id": 1,
                 "player_id": 2,
-                "initial_bid": 15,  # Less than remaining budget
+                "initial_bid": 3,
                 "expected_version": version_after_draft,
             },
         )
@@ -306,23 +318,6 @@ class TestMainApiIntegration:
         # Get version after nomination
         state = self.client.get("/api/v1/draft-state").json()
         version_after_second_nominate = state["version"]
-
-        # Try to bid amount that would prevent roster completion - this should fail
-        # Owner 1 has $20 left and 1 player drafted, needs 18 more players
-        # If they bid $19, they'd have $1 left but need $17 more for remaining spots
-        bid_response = self.client.post(
-            "/api/v1/bid",
-            json={
-                "owner_id": 1,  # This owner has only $20 left, 1 player drafted
-                "bid_amount": 19,  # Would leave $1, need $17 for remaining spots
-                "expected_version": version_after_second_nominate,
-            },
-        )
-
-        # Should fail due to insufficient budget for roster completion
-        assert bid_response.status_code == 422
-        assert "Insufficient budget" in bid_response.json()["detail"]
-        assert "roster spots" in bid_response.json()["detail"]
 
         # Try a valid bid from owner 2 who has sufficient budget
         valid_bid_response = self.client.post(

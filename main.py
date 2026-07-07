@@ -245,42 +245,38 @@ def check_version(current_version: int, expected_version: int) -> None:
 
 def generate_draft_csv() -> str:
     """Generate CSV content based on current draft state."""
+    import csv
+
     draft_state = load_draft_state()
     owners = load_owners()
     players = load_players()
 
-    # Create player lookup dictionary
     player_dict = {p.id: p for p in players}
-
-    # Sort owners by ID for consistent column ordering
     sorted_owner_ids = sorted(owners.keys())
 
-    # Create CSV content
     csv_output = io.StringIO()
+    writer = csv.writer(csv_output, quoting=csv.QUOTE_ALL)
 
-    # First row: Owner names followed by empty cells
-    first_row = []
+    # Row 1: owner names paired with empty cells
+    header_row = []
     for owner_id in sorted_owner_ids:
-        owner_name = owners[owner_id]["owner_name"]
-        first_row.extend([f'"{owner_name}"', '""'])
-    csv_output.write(",".join(first_row) + "\n")
+        header_row.extend([owners[owner_id]["owner_name"], ""])
+    writer.writerow(header_row)
 
-    # Second row: Alternating "Player" and "$"
-    second_row = []
+    # Row 2: alternating Player / $ sub-headers
+    sub_header = []
     for _ in sorted_owner_ids:
-        second_row.extend(['"Player"', '"$"'])
-    csv_output.write(",".join(second_row) + "\n")
+        sub_header.extend(["Player", "$"])
+    writer.writerow(sub_header)
 
-    # Find teams for each owner and get their picks
+    # Collect picks per owner
     owner_picks = {}
     for team in draft_state.teams:
         if team.owner_id in sorted_owner_ids:
             owner_picks[team.owner_id] = team.picks
 
-    # Determine maximum number of picks by any owner
     max_picks = max(len(picks) for picks in owner_picks.values()) if owner_picks else 0
 
-    # Generate data rows
     for pick_index in range(max_picks):
         row = []
         for owner_id in sorted_owner_ids:
@@ -289,16 +285,14 @@ def generate_draft_csv() -> str:
                 pick = picks[pick_index]
                 player = player_dict.get(pick.player_id)
                 if player:
-                    player_name = f"{player.last_name}, {player.first_name}"
-                    row.extend([f'"{player_name}"', str(pick.price)])
+                    name = f"{player.last_name}, {player.first_name}"
+                    row.extend([name, str(pick.price)])
                 else:
-                    row.extend(
-                        [f'"Unknown Player (ID: {pick.player_id})"', str(pick.price)]
-                    )
+                    name = f"Unknown Player (ID: {pick.player_id})"
+                    row.extend([name, str(pick.price)])
             else:
-                # Empty cells for owners with fewer picks
-                row.extend(['""', '""'])
-        csv_output.write(",".join(row) + "\n")
+                row.extend(["", ""])
+        writer.writerow(row)
 
     csv_content = csv_output.getvalue()
     csv_output.close()
@@ -605,6 +599,28 @@ async def nominate_player(request: NominateRequest):
             detail=f"Owner {request.owner_id} does not exist",
         )
 
+    # Find the nominating team and enforce the max-bid reserve rule.
+    team = next((t for t in draft_state.teams if t.owner_id == request.owner_id), None)
+    if team is not None:
+        mb = max_bid(team, config)
+        if mb is None:
+            raise HTTPException(
+                status_code=422,
+                detail="Roster is full; this team cannot nominate.",
+            )
+        if request.initial_bid > mb:
+            spots = remaining_roster_spots(team, config)
+            remaining_after = team.budget_remaining - request.initial_bid
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Insufficient budget. After ${request.initial_bid} bid, "
+                    f"you would have ${remaining_after} left but need "
+                    f"at least ${spots - 1} to fill remaining "
+                    f"{spots - 1} roster spots"
+                ),
+            )
+
     # Enforce position maximum for the nominating team (nomination opens a bid).
     players = load_players()
     player = next((p for p in players if p.id == request.player_id), None)
@@ -612,9 +628,6 @@ async def nominate_player(request: NominateRequest):
         max_at_pos = config.position_maximums.get(player.position)
         player_positions = {p.id: p.position for p in players}
         if max_at_pos is not None:
-            team = next(
-                (t for t in draft_state.teams if t.owner_id == request.owner_id), None
-            )
             if team is not None and (
                 position_count(team, player.position, player_positions) >= max_at_pos
             ):
@@ -828,8 +841,6 @@ async def complete_draft(request: DraftRequest):
         )
 
     # Create draft pick
-    from src.models import DraftPick
-
     # Generate pick ID (simplified - in production use UUID or database ID)
     max_pick_id = max(
         [p.pick_id for t in draft_state.teams for p in t.picks], default=0
@@ -845,7 +856,15 @@ async def complete_draft(request: DraftRequest):
     team.picks.append(pick)
     team.budget_remaining -= request.final_price
 
-    # Remove player from available
+    # Remove player from available (guard against data-integrity edge case)
+    if request.player_id not in draft_state.available_player_ids:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Data integrity error: player {request.player_id} is "
+                "not in the available player pool"
+            ),
+        )
     draft_state.available_player_ids.remove(request.player_id)
 
     # Clear nomination
@@ -889,7 +908,11 @@ async def complete_draft(request: DraftRequest):
 
 @app.post("/api/v1/admin/draft")
 async def admin_draft_player(request: AdminDraftRequest):
-    """Admin-only endpoint to draft a player directly without auction."""
+    """Admin-only endpoint to draft a player directly without auction.
+
+    Intentionally skips budget and position-max validation — this is the
+    admin escape hatch for keepers and mid-draft corrections.
+    """
     # Load current state
     draft_state = load_draft_state()
 
@@ -903,6 +926,19 @@ async def admin_draft_player(request: AdminDraftRequest):
         raise HTTPException(
             status_code=400,
             detail=f"Player {request.player_id} not found in players database",
+        )
+
+    # Reject if the player is currently nominated — cancel the nomination first.
+    if (
+        draft_state.nominated is not None
+        and draft_state.nominated.player_id == request.player_id
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Player {request.player_id} is currently nominated. "
+                "Cancel the nomination first."
+            ),
         )
 
     # Validate player is available for draft
@@ -1166,8 +1202,13 @@ async def reset_draft(request: ResetRequest):
     players = load_players()
     owners = load_owners()
 
-    # If not forcing, check version
-    if not request.force and request.expected_version is not None:
+    # If not forcing, require and check version
+    if not request.force:
+        if request.expected_version is None:
+            raise HTTPException(
+                status_code=422,
+                detail="expected_version is required unless force=true",
+            )
         current_state = load_draft_state()
         check_version(current_state.version, request.expected_version)
 

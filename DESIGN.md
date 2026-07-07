@@ -141,13 +141,15 @@ This allows frontend to handle errors appropriately:
 **State Management Flow:**
 1. **Nominate** → **Bid** (optional, multiple) → **Draft** → Repeat
 2. Each operation validates the current state before modification
-3. All state changes are atomic and logged for audit trails
+3. All state changes are atomic
+
+**Budget Reserve Rule:** Both nominations and bids enforce the max-bid reserve — a team must be able to afford $1 per remaining open roster slot after the bid. Nominations by a team with a full roster are rejected.
 
 **Admin Operations:**
-- Reset entire draft state
+- Reset entire draft state (requires `expected_version` unless `force: true`)
 - Undo individual picks
 - Cancel nominations  
-- Direct player assignment (bypassing auction for keepers)
+- Direct player assignment (bypassing auction for keepers) — intentionally skips budget and position-max validation as the admin escape hatch
 
 **Data Export:**
 - CSV export for external analysis and record keeping
