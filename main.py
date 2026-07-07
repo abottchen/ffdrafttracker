@@ -5,7 +5,7 @@ import io
 import logging
 from pathlib import Path
 
-from fastapi import FastAPI, Header, HTTPException, Query, Request
+from fastapi import APIRouter, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -302,41 +302,15 @@ def generate_draft_csv() -> str:
     return csv_content
 
 
-# Routes
-@app.get("/", response_class=HTMLResponse)
-async def root(request: Request):
-    """Serve the main application interface."""
-    # Check if template exists
-    template_path = TEMPLATES_DIR / "index.html"
-    if not template_path.exists():
-        return HTMLResponse(
-            content="""
-            <html>
-                <head><title>Fantasy Football Draft Tracker</title></head>
-                <body>
-                    <h1>Fantasy Football Draft Tracker</h1>
-                    <p>API is running. Template not yet created.</p>
-                    <p>Visit <a href="/docs">/docs</a> for API documentation.</p>
-                </body>
-            </html>
-            """,
-            status_code=200,
-        )
-
-    # Load initial data for template
-    draft_state = load_draft_state()
-    config = load_configuration()
-    return templates.TemplateResponse(
-        request,
-        "index.html",
-        {"draft_state": draft_state.model_dump(), "config": config.model_dump()},
-    )
+# ---------------------------------------------------------------------------
+# Read-only API router, shared between the admin and viewer apps.
+# ---------------------------------------------------------------------------
+read_router = APIRouter()
 
 
-# Shared business logic functions
-async def _get_draft_state_data():
-    """Shared logic for getting draft state, enriched with computed read-only
-    fields (per-team max_bid, draft-level up_next)."""
+@read_router.get("/api/v1/draft-state", response_model=DraftStateResponse)
+def get_draft_state():
+    """Get complete current draft state."""
     state = load_draft_state()
     config = load_configuration()
 
@@ -357,13 +331,15 @@ async def _get_draft_state_data():
     )
 
 
-async def _get_players_data():
-    """Shared logic for getting all players."""
+@read_router.get("/api/v1/players", response_model=list[Player])
+def get_all_players():
+    """Get all player information."""
     return load_players()
 
 
-async def _get_available_players_data():
-    """Shared logic for getting available players."""
+@read_router.get("/api/v1/players/available", response_model=list[Player])
+def get_available_players():
+    """Get available players with details."""
     draft_state = load_draft_state()
     all_players = load_players()
 
@@ -371,16 +347,16 @@ async def _get_available_players_data():
     player_dict = {p.id: p for p in all_players}
 
     # Return available players
-    available = [
+    return [
         player_dict[pid]
         for pid in draft_state.available_player_ids
         if pid in player_dict
     ]
-    return available
 
 
-async def _get_player_stats_data():
-    """Shared logic for getting player stats."""
+@read_router.get("/api/v1/player/stats", response_model=PlayerStatsCollection)
+def get_player_stats():
+    """Get player statistics and bye weeks. Returns empty collection if not found."""
     if not PLAYER_STATS_FILE.exists():
         logger.info("Player stats file not found, returning empty collection")
         return PlayerStatsCollection({})
@@ -394,8 +370,9 @@ async def _get_player_stats_data():
         return PlayerStatsCollection({})
 
 
-async def _get_owners_data():
-    """Shared logic for getting all owners."""
+@read_router.get("/api/v1/owners", response_model=list[Owner])
+def get_all_owners():
+    """Get all owner information."""
     owners_dict = load_owners()
     # Convert dict back to list format for API compatibility
     return [
@@ -403,22 +380,24 @@ async def _get_owners_data():
     ]
 
 
-async def _get_config_data():
-    """Shared logic for getting configuration."""
-    config = load_configuration()
-    return config
+@read_router.get("/api/v1/config", response_model=Configuration)
+def get_config():
+    """Get draft configuration."""
+    return load_configuration()
 
 
-async def _get_owner_data(owner_id: int):
-    """Shared logic for getting specific owner."""
+@read_router.get("/api/v1/owners/{owner_id}", response_model=Owner)
+def get_owner(owner_id: int):
+    """Get specific owner information."""
     owners = load_owners()
     if owner_id not in owners:
         raise HTTPException(status_code=404, detail=f"Owner {owner_id} not found")
     return {"id": owner_id, **owners[owner_id]}
 
 
-async def _get_team_data(owner_id: int):
-    """Shared logic for getting team roster."""
+@read_router.get("/api/v1/teams/{owner_id}")
+def get_team(owner_id: int):
+    """Get specific team roster with player details."""
     draft_state = load_draft_state()
 
     # Find team for owner
@@ -451,19 +430,13 @@ async def _get_team_data(owner_id: int):
     }
 
 
-async def _get_comments_data(
-    since: int | None = None,
-    before: int | None = None,
-    limit: int | None = None,
-) -> list[CommentResponse]:
-    """Shared logic for the analyst-booth commentary feed.
-
-    Reads the append-only JSONL log (``read_comments`` already drops a torn tail
-    and skips invalid lines), assigns each committed record a 1-based ``seq``,
-    then applies the query-param window. ``seq`` is stable because the log is
-    only ever appended to, so it is a safe cursor (unlike the second-granular
-    ``ts``, which can collide). Returns newest-last (ascending ``seq``).
-    """
+@read_router.get("/api/v1/comments", response_model=list[CommentResponse])
+def get_comments(
+    since: int | None = Query(default=None, ge=0, description=_COMMENTS_SINCE_DESC),
+    before: int | None = Query(default=None, ge=0, description=_COMMENTS_BEFORE_DESC),
+    limit: int | None = Query(default=None, ge=1, description=_COMMENTS_LIMIT_DESC),
+):
+    """Analyst-booth commentary, ordered oldest-first (ascending `seq`)."""
     comments = [
         CommentResponse(
             seq=i,
@@ -483,63 +456,39 @@ async def _get_comments_data(
     return comments
 
 
-# Read-only API endpoints for main app (admin interface)
-@app.get("/api/v1/draft-state", response_model=DraftStateResponse)
-async def get_draft_state():
-    """Get complete current draft state."""
-    return await _get_draft_state_data()
+# Routes
+@app.get("/", response_class=HTMLResponse)
+async def root(request: Request):
+    """Serve the main application interface."""
+    # Check if template exists
+    template_path = TEMPLATES_DIR / "index.html"
+    if not template_path.exists():
+        return HTMLResponse(
+            content="""
+            <html>
+                <head><title>Fantasy Football Draft Tracker</title></head>
+                <body>
+                    <h1>Fantasy Football Draft Tracker</h1>
+                    <p>API is running. Template not yet created.</p>
+                    <p>Visit <a href="/docs">/docs</a> for API documentation.</p>
+                </body>
+            </html>
+            """,
+            status_code=200,
+        )
+
+    # Load initial data for template
+    draft_state = load_draft_state()
+    config = load_configuration()
+    return templates.TemplateResponse(
+        request,
+        "index.html",
+        {"draft_state": draft_state.model_dump(), "config": config.model_dump()},
+    )
 
 
-@app.get("/api/v1/players", response_model=list[Player])
-async def get_all_players():
-    """Get all player information."""
-    return await _get_players_data()
-
-
-@app.get("/api/v1/players/available", response_model=list[Player])
-async def get_available_players():
-    """Get available players with details."""
-    return await _get_available_players_data()
-
-
-@app.get("/api/v1/player/stats", response_model=PlayerStatsCollection)
-async def get_player_stats():
-    """Get player statistics and bye weeks. Returns empty collection if not found."""
-    return await _get_player_stats_data()
-
-
-@app.get("/api/v1/owners", response_model=list[Owner])
-async def get_all_owners():
-    """Get all owner information."""
-    return await _get_owners_data()
-
-
-@app.get("/api/v1/config", response_model=Configuration)
-async def get_config():
-    """Get draft configuration."""
-    return await _get_config_data()
-
-
-@app.get("/api/v1/owners/{owner_id}", response_model=Owner)
-async def get_owner(owner_id: int):
-    """Get specific owner information."""
-    return await _get_owner_data(owner_id)
-
-
-@app.get("/api/v1/teams/{owner_id}")
-async def get_team(owner_id: int):
-    """Get specific team roster with player details."""
-    return await _get_team_data(owner_id)
-
-
-@app.get("/api/v1/comments", response_model=list[CommentResponse])
-async def get_comments(
-    since: int | None = Query(default=None, ge=0, description=_COMMENTS_SINCE_DESC),
-    before: int | None = Query(default=None, ge=0, description=_COMMENTS_BEFORE_DESC),
-    limit: int | None = Query(default=None, ge=1, description=_COMMENTS_LIMIT_DESC),
-):
-    """Analyst-booth commentary, ordered oldest-first (ascending `seq`)."""
-    return await _get_comments_data(since=since, before=before, limit=limit)
+# Include the shared read router on the admin app.
+app.include_router(read_router)
 
 
 @app.get("/api/v1/export/csv")
@@ -1315,6 +1264,9 @@ viewer_app.add_middleware(
 if STATIC_DIR.exists() and any(STATIC_DIR.iterdir()):
     viewer_app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
+# Include the shared read router on the viewer app.
+viewer_app.include_router(read_router)
+
 
 # Team Viewer Routes
 @viewer_app.get("/", response_class=HTMLResponse)
@@ -1344,65 +1296,6 @@ font-family: Arial, sans-serif; padding: 20px;">
         "team_viewer.html",
         {"selected_team_id": team_id, "config": config.model_dump()},
     )
-
-
-# Read-only API endpoints for viewer app
-@viewer_app.get("/api/v1/draft-state", response_model=DraftStateResponse)
-async def viewer_get_draft_state():
-    """Get complete current draft state."""
-    return await _get_draft_state_data()
-
-
-@viewer_app.get("/api/v1/players", response_model=list[Player])
-async def viewer_get_all_players():
-    """Get all player information."""
-    return await _get_players_data()
-
-
-@viewer_app.get("/api/v1/players/available", response_model=list[Player])
-async def viewer_get_available_players():
-    """Get available players with details."""
-    return await _get_available_players_data()
-
-
-@viewer_app.get("/api/v1/player/stats", response_model=PlayerStatsCollection)
-async def viewer_get_player_stats():
-    """Get player statistics and bye weeks. Returns empty collection if not found."""
-    return await _get_player_stats_data()
-
-
-@viewer_app.get("/api/v1/owners", response_model=list[Owner])
-async def viewer_get_all_owners():
-    """Get all owner information."""
-    return await _get_owners_data()
-
-
-@viewer_app.get("/api/v1/config", response_model=Configuration)
-async def viewer_get_config():
-    """Get draft configuration."""
-    return await _get_config_data()
-
-
-@viewer_app.get("/api/v1/owners/{owner_id}", response_model=Owner)
-async def viewer_get_owner(owner_id: int):
-    """Get specific owner information."""
-    return await _get_owner_data(owner_id)
-
-
-@viewer_app.get("/api/v1/teams/{owner_id}")
-async def viewer_get_team(owner_id: int):
-    """Get specific team roster with player details."""
-    return await _get_team_data(owner_id)
-
-
-@viewer_app.get("/api/v1/comments", response_model=list[CommentResponse])
-async def viewer_get_comments(
-    since: int | None = Query(default=None, ge=0, description=_COMMENTS_SINCE_DESC),
-    before: int | None = Query(default=None, ge=0, description=_COMMENTS_BEFORE_DESC),
-    limit: int | None = Query(default=None, ge=1, description=_COMMENTS_LIMIT_DESC),
-):
-    """Read-only mirror of the admin commentary feed (see `get_comments`)."""
-    return await _get_comments_data(since=since, before=before, limit=limit)
 
 
 # Run the application
