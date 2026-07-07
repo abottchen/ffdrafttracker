@@ -47,14 +47,12 @@ def test_complete_draft_workflow():
         original_players_file = main.PLAYERS_FILE
         original_owners_file = main.OWNERS_FILE
         original_config_file = main.CONFIG_FILE
-        original_action_log_file = main.ACTION_LOG_FILE
 
         main.DATA_DIR = test_data_dir
         main.DRAFT_STATE_FILE = test_data_dir / "draft_state.json"
         main.PLAYERS_FILE = test_data_dir / "players.json"
         main.OWNERS_FILE = test_data_dir / "owners.json"
         main.CONFIG_FILE = test_data_dir / "config.json"
-        main.ACTION_LOG_FILE = test_data_dir / "action_log.json"
 
         try:
             # Use TestClient for making requests
@@ -108,7 +106,6 @@ def test_complete_draft_workflow():
             main.PLAYERS_FILE = original_players_file
             main.OWNERS_FILE = original_owners_file
             main.CONFIG_FILE = original_config_file
-            main.ACTION_LOG_FILE = original_action_log_file
 
 
 def _setup_test_data(data_dir: Path) -> None:

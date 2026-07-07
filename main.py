@@ -1,5 +1,6 @@
 """Fantasy Football Draft Tracker - FastAPI Application"""
 
+import asyncio
 import io
 import logging
 from pathlib import Path
@@ -32,6 +33,9 @@ from src.models.player_stats import PlayerStatsCollection
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Serialise all state mutations so the load-check-save cycle is atomic.
+_state_lock = asyncio.Lock()
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -72,7 +76,6 @@ DRAFT_STATE_FILE = DATA_DIR / "draft_state.json"
 PLAYERS_FILE = DATA_DIR / "players.json"
 OWNERS_FILE = DATA_DIR / "owners.json"
 CONFIG_FILE = DATA_DIR / "config.json"
-ACTION_LOG_FILE = DATA_DIR / "action_log.json"
 PLAYER_STATS_FILE = DATA_DIR / "player_stats.json"
 COMMENTS_FILE = DATA_DIR / "analyst-comments.jsonl"
 
@@ -560,500 +563,544 @@ async def export_draft_csv():
 @app.post("/api/v1/nominate")
 async def nominate_player(request: NominateRequest):
     """Nominate a player for auction."""
-    # Load current state
-    draft_state = load_draft_state()
-    config = load_configuration()
+    async with _state_lock:
+        # Load current state
+        draft_state = load_draft_state()
+        config = load_configuration()
 
-    # Check version
-    check_version(draft_state.version, request.expected_version)
+        # Check version
+        check_version(draft_state.version, request.expected_version)
 
-    # Validate no current nomination
-    if draft_state.nominated is not None:
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                "A player is already nominated. Complete or cancel the current "
-                "nomination first."
-            ),
-        )
-
-    # Validate bid amount
-    if request.initial_bid < config.min_bid:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Initial bid must be at least ${config.min_bid}",
-        )
-
-    # Validate player is available
-    if request.player_id not in draft_state.available_player_ids:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Player {request.player_id} is not available",
-        )
-
-    # Validate owner exists
-    owners = load_owners()
-    if request.owner_id not in owners:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Owner {request.owner_id} does not exist",
-        )
-
-    # Find the nominating team and enforce the max-bid reserve rule.
-    team = next((t for t in draft_state.teams if t.owner_id == request.owner_id), None)
-    if team is not None:
-        mb = max_bid(team, config)
-        if mb is None:
-            raise HTTPException(
-                status_code=422,
-                detail="Roster is full; this team cannot nominate.",
-            )
-        if request.initial_bid > mb:
-            spots = remaining_roster_spots(team, config)
-            remaining_after = team.budget_remaining - request.initial_bid
+        # Validate no current nomination
+        if draft_state.nominated is not None:
             raise HTTPException(
                 status_code=422,
                 detail=(
-                    f"Insufficient budget. After ${request.initial_bid} bid, "
-                    f"you would have ${remaining_after} left but need "
-                    f"at least ${spots - 1} to fill remaining "
-                    f"{spots - 1} roster spots"
+                    "A player is already nominated. Complete or cancel the "
+                    "current nomination first."
                 ),
             )
 
-    # Enforce position maximum for the nominating team (nomination opens a bid).
-    players = load_players()
-    player = next((p for p in players if p.id == request.player_id), None)
-    if player is not None:
-        max_at_pos = config.position_maximums.get(player.position)
-        player_positions = {p.id: p.position for p in players}
-        if max_at_pos is not None:
-            if team is not None and (
-                position_count(team, player.position, player_positions) >= max_at_pos
-            ):
+        # Validate bid amount
+        if request.initial_bid < config.min_bid:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Initial bid must be at least ${config.min_bid}",
+            )
+
+        # Validate player is available
+        if request.player_id not in draft_state.available_player_ids:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Player {request.player_id} is not available",
+            )
+
+        # Validate owner exists
+        owners = load_owners()
+        if request.owner_id not in owners:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Owner {request.owner_id} does not exist",
+            )
+
+        # Find the nominating team and enforce the max-bid reserve rule.
+        team = next(
+            (t for t in draft_state.teams if t.owner_id == request.owner_id),
+            None,
+        )
+        if team is not None:
+            mb = max_bid(team, config)
+            if mb is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Roster is full; this team cannot nominate.",
+                )
+            if request.initial_bid > mb:
+                spots = remaining_roster_spots(team, config)
+                remaining_after = team.budget_remaining - request.initial_bid
                 raise HTTPException(
                     status_code=422,
                     detail=(
-                        f"Team is already at the maximum of {max_at_pos} "
-                        f"players at the {player.position} position"
+                        f"Insufficient budget. After "
+                        f"${request.initial_bid} bid, "
+                        f"you would have ${remaining_after} left but "
+                        f"need at least ${spots - 1} to fill remaining "
+                        f"{spots - 1} roster spots"
                     ),
                 )
 
-    # Create nomination
-    draft_state.nominated = Nominated(
-        player_id=request.player_id,
-        current_bid=request.initial_bid,
-        current_bidder_id=request.owner_id,
-        nominating_owner_id=request.owner_id,
-    )
+        # Enforce position maximum for the nominating team.
+        players = load_players()
+        player = next((p for p in players if p.id == request.player_id), None)
+        if player is not None:
+            max_at_pos = config.position_maximums.get(player.position)
+            player_positions = {p.id: p.position for p in players}
+            if max_at_pos is not None:
+                if team is not None and (
+                    position_count(team, player.position, player_positions)
+                    >= max_at_pos
+                ):
+                    raise HTTPException(
+                        status_code=422,
+                        detail=(
+                            f"Team is already at the maximum of "
+                            f"{max_at_pos} players at the "
+                            f"{player.position} position"
+                        ),
+                    )
 
-    # Save state with version increment
-    draft_state.save_to_file(DRAFT_STATE_FILE)
+        # Create nomination
+        draft_state.nominated = Nominated(
+            player_id=request.player_id,
+            current_bid=request.initial_bid,
+            current_bidder_id=request.owner_id,
+            nominating_owner_id=request.owner_id,
+        )
 
-    # Return success with player details
-    owner = owners.get(request.owner_id, {})
+        # Save state with version increment
+        draft_state.save_to_file(DRAFT_STATE_FILE)
 
-    # Log action with names
-    player_name = (
-        f"{player.first_name} {player.last_name}"
-        if player
-        else f"ID:{request.player_id}"
-    )
-    owner_name = owner.get("owner_name", f"ID:{request.owner_id}")
-    logger.info(
-        f"Player {player_name} nominated by {owner_name} for ${request.initial_bid}"
-    )
+        # Return success with player details
+        owner = owners.get(request.owner_id, {})
 
-    return {
-        "success": True,
-        "nomination": draft_state.nominated.model_dump(),
-        "player": player.model_dump() if player else None,
-        "new_version": draft_state.version,
-    }
+        # Log action with names
+        player_name = (
+            f"{player.first_name} {player.last_name}"
+            if player
+            else f"ID:{request.player_id}"
+        )
+        owner_name = owner.get("owner_name", f"ID:{request.owner_id}")
+        logger.info(
+            f"Player {player_name} nominated by {owner_name} for ${request.initial_bid}"
+        )
+
+        return {
+            "success": True,
+            "nomination": draft_state.nominated.model_dump(),
+            "player": player.model_dump() if player else None,
+            "new_version": draft_state.version,
+        }
 
 
 @app.post("/api/v1/bid")
 async def place_bid(request: BidRequest):
     """Place a bid on the currently nominated player."""
-    # Load current state
-    draft_state = load_draft_state()
-    config = load_configuration()
+    async with _state_lock:
+        # Load current state
+        draft_state = load_draft_state()
+        config = load_configuration()
 
-    # Check version
-    check_version(draft_state.version, request.expected_version)
+        # Check version
+        check_version(draft_state.version, request.expected_version)
 
-    # Validate nomination exists
-    if draft_state.nominated is None:
-        raise HTTPException(
-            status_code=422,
-            detail="No player is currently nominated",
+        # Validate nomination exists
+        if draft_state.nominated is None:
+            raise HTTPException(
+                status_code=422,
+                detail="No player is currently nominated",
+            )
+
+        # Validate bid amount exceeds current
+        if request.bid_amount <= draft_state.nominated.current_bid:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Bid must exceed current bid of "
+                    f"${draft_state.nominated.current_bid}"
+                ),
+            )
+
+        # Validate bid meets minimum
+        if request.bid_amount < config.min_bid:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Bid must be at least ${config.min_bid}",
+            )
+
+        # Find bidding team and validate budget
+        team = next(
+            (t for t in draft_state.teams if t.owner_id == request.owner_id),
+            None,
         )
+        if not team:
+            raise HTTPException(
+                status_code=422,
+                detail=(f"Team not found for owner {request.owner_id} in draft state"),
+            )
 
-    # Validate bid amount exceeds current
-    if request.bid_amount <= draft_state.nominated.current_bid:
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                f"Bid must exceed current bid of ${draft_state.nominated.current_bid}"
-            ),
+        # Reject if the bid would break roster completion.
+        mb = max_bid(team, config)
+        if mb is None:
+            raise HTTPException(
+                status_code=422,
+                detail="Roster is full; this team cannot bid.",
+            )
+        if request.bid_amount > mb:
+            spots = remaining_roster_spots(team, config)
+            remaining_budget_after_bid = team.budget_remaining - request.bid_amount
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Insufficient budget. After "
+                    f"${request.bid_amount} bid, "
+                    f"you would have "
+                    f"${remaining_budget_after_bid} left but need "
+                    f"at least ${spots - 1} to fill remaining "
+                    f"{spots - 1} roster spots"
+                ),
+            )
+
+        # Enforce position maximum for the bidding team.
+        players = load_players()
+        player = next(
+            (p for p in players if p.id == draft_state.nominated.player_id),
+            None,
         )
+        if player is not None:
+            max_at_pos = config.position_maximums.get(player.position)
+            if max_at_pos is not None:
+                player_positions = {p.id: p.position for p in players}
+                if (
+                    position_count(team, player.position, player_positions)
+                    >= max_at_pos
+                ):
+                    raise HTTPException(
+                        status_code=422,
+                        detail=(
+                            f"Team is already at the maximum of "
+                            f"{max_at_pos} players at the "
+                            f"{player.position} position"
+                        ),
+                    )
 
-    # Validate bid meets minimum
-    if request.bid_amount < config.min_bid:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Bid must be at least ${config.min_bid}",
+        # Update bid
+        previous_bid = draft_state.nominated.current_bid
+        draft_state.nominated.current_bid = request.bid_amount
+        draft_state.nominated.current_bidder_id = request.owner_id
+
+        # Save state with version increment
+        draft_state.save_to_file(DRAFT_STATE_FILE)
+
+        # Get names for logging
+        owners = load_owners()
+        owner = owners.get(request.owner_id, {})
+
+        player_name = (
+            f"{player.first_name} {player.last_name}"
+            if player
+            else f"ID:{draft_state.nominated.player_id}"
         )
+        owner_name = owner.get("owner_name", f"ID:{request.owner_id}")
 
-    # Find bidding team and validate budget
-    team = next((t for t in draft_state.teams if t.owner_id == request.owner_id), None)
-    if not team:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Team not found for owner {request.owner_id} in draft state",
-        )
+        # Log action
+        logger.info(f"{owner_name} bid ${request.bid_amount} on {player_name}")
 
-    # Reject if the bid would break roster completion (reserve $1 per open slot).
-    mb = max_bid(team, config)
-    if mb is None:
-        raise HTTPException(
-            status_code=422,
-            detail="Roster is full; this team cannot bid.",
-        )
-    if request.bid_amount > mb:
-        spots = remaining_roster_spots(team, config)
-        remaining_budget_after_bid = team.budget_remaining - request.bid_amount
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                f"Insufficient budget. After ${request.bid_amount} bid, "
-                f"you would have ${remaining_budget_after_bid} left but need "
-                f"at least ${spots - 1} to fill remaining "
-                f"{spots - 1} roster spots"
-            ),
-        )
-
-    # Enforce position maximum for the bidding team.
-    players = load_players()
-    player = next((p for p in players if p.id == draft_state.nominated.player_id), None)
-    if player is not None:
-        max_at_pos = config.position_maximums.get(player.position)
-        if max_at_pos is not None:
-            player_positions = {p.id: p.position for p in players}
-            if position_count(team, player.position, player_positions) >= max_at_pos:
-                raise HTTPException(
-                    status_code=422,
-                    detail=(
-                        f"Team is already at the maximum of {max_at_pos} "
-                        f"players at the {player.position} position"
-                    ),
-                )
-
-    # Update bid
-    previous_bid = draft_state.nominated.current_bid
-    draft_state.nominated.current_bid = request.bid_amount
-    draft_state.nominated.current_bidder_id = request.owner_id
-
-    # Save state with version increment
-    draft_state.save_to_file(DRAFT_STATE_FILE)
-
-    # Get names for logging
-    owners = load_owners()
-    owner = owners.get(request.owner_id, {})
-
-    player_name = (
-        f"{player.first_name} {player.last_name}"
-        if player
-        else f"ID:{draft_state.nominated.player_id}"
-    )
-    owner_name = owner.get("owner_name", f"ID:{request.owner_id}")
-
-    # Log action
-    logger.info(f"{owner_name} bid ${request.bid_amount} on {player_name}")
-
-    return {
-        "success": True,
-        "nomination": draft_state.nominated.model_dump(),
-        "previous_bid": previous_bid,
-        "new_version": draft_state.version,
-    }
+        return {
+            "success": True,
+            "nomination": draft_state.nominated.model_dump(),
+            "previous_bid": previous_bid,
+            "new_version": draft_state.version,
+        }
 
 
 @app.post("/api/v1/draft")
 async def complete_draft(request: DraftRequest):
     """Complete the auction and draft the player."""
-    # Load current state
-    draft_state = load_draft_state()
+    async with _state_lock:
+        # Load current state
+        draft_state = load_draft_state()
 
-    # Check version
-    check_version(draft_state.version, request.expected_version)
+        # Check version
+        check_version(draft_state.version, request.expected_version)
 
-    # Validate nomination exists
-    if draft_state.nominated is None:
-        raise HTTPException(
-            status_code=422,
-            detail="No player is currently nominated",
+        # Validate nomination exists
+        if draft_state.nominated is None:
+            raise HTTPException(
+                status_code=422,
+                detail="No player is currently nominated",
+            )
+
+        # Validate player matches
+        if draft_state.nominated.player_id != request.player_id:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Nominated player "
+                    f"{draft_state.nominated.player_id} doesn't "
+                    f"match request {request.player_id}"
+                ),
+            )
+
+        # Validate price matches current bid
+        if draft_state.nominated.current_bid != request.final_price:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Final price ${request.final_price} doesn't "
+                    f"match current bid "
+                    f"${draft_state.nominated.current_bid}"
+                ),
+            )
+
+        # Validate owner matches current bidder
+        if draft_state.nominated.current_bidder_id != request.owner_id:
+            raise HTTPException(
+                status_code=422,
+                detail=(f"Owner {request.owner_id} is not the current high bidder"),
+            )
+
+        # Find team (must exist - teams are immutable from owners.json)
+        team = next(
+            (t for t in draft_state.teams if t.owner_id == request.owner_id),
+            None,
+        )
+        if not team:
+            raise HTTPException(
+                status_code=422,
+                detail=(f"Team not found for owner {request.owner_id} in draft state"),
+            )
+
+        # Validate budget
+        if request.final_price > team.budget_remaining:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Insufficient budget. Need "
+                    f"${request.final_price} but only have "
+                    f"${team.budget_remaining}"
+                ),
+            )
+
+        # Create draft pick
+        max_pick_id = max(
+            [p.pick_id for t in draft_state.teams for p in t.picks],
+            default=0,
+        )
+        pick = DraftPick(
+            pick_id=max_pick_id + 1,
+            player_id=request.player_id,
+            owner_id=request.owner_id,
+            price=request.final_price,
         )
 
-    # Validate player matches
-    if draft_state.nominated.player_id != request.player_id:
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                f"Nominated player {draft_state.nominated.player_id} doesn't match "
-                f"request {request.player_id}"
-            ),
+        # Update team
+        team.picks.append(pick)
+        team.budget_remaining -= request.final_price
+
+        # Remove player from available
+        if request.player_id not in draft_state.available_player_ids:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Data integrity error: player "
+                    f"{request.player_id} is "
+                    "not in the available player pool"
+                ),
+            )
+        draft_state.available_player_ids.remove(request.player_id)
+
+        # Clear nomination
+        draft_state.nominated = None
+
+        # Advance to next eligible nominator.
+        config = load_configuration()
+        nxt = next_eligible_nominator(
+            draft_state,
+            config,
+            from_id=draft_state.next_to_nominate,
+            inclusive=False,
         )
+        if nxt is not None:
+            draft_state.next_to_nominate = nxt
 
-    # Validate price matches current bid
-    if draft_state.nominated.current_bid != request.final_price:
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                f"Final price ${request.final_price} doesn't match current bid "
-                f"${draft_state.nominated.current_bid}"
-            ),
+        # Save state with version increment
+        draft_state.save_to_file(DRAFT_STATE_FILE)
+
+        # Get names for logging
+        players = load_players()
+        owners = load_owners()
+        player = next((p for p in players if p.id == request.player_id), None)
+        owner = owners.get(request.owner_id, {})
+
+        player_name = (
+            f"{player.first_name} {player.last_name}"
+            if player
+            else f"ID:{request.player_id}"
         )
+        owner_name = owner.get("owner_name", f"ID:{request.owner_id}")
 
-    # Validate owner matches current bidder
-    if draft_state.nominated.current_bidder_id != request.owner_id:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Owner {request.owner_id} is not the current high bidder",
-        )
+        # Log action
+        logger.info(f"{player_name} drafted by {owner_name} for ${request.final_price}")
 
-    # Find team (must exist - teams are immutable from owners.json)
-    team = next((t for t in draft_state.teams if t.owner_id == request.owner_id), None)
-    if not team:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Team not found for owner {request.owner_id} in draft state",
-        )
-
-    # Validate budget
-    if request.final_price > team.budget_remaining:
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                f"Insufficient budget. Need ${request.final_price} but only have "
-                f"${team.budget_remaining}"
-            ),
-        )
-
-    # Create draft pick
-    # Generate pick ID (simplified - in production use UUID or database ID)
-    max_pick_id = max(
-        [p.pick_id for t in draft_state.teams for p in t.picks], default=0
-    )
-    pick = DraftPick(
-        pick_id=max_pick_id + 1,
-        player_id=request.player_id,
-        owner_id=request.owner_id,
-        price=request.final_price,
-    )
-
-    # Update team
-    team.picks.append(pick)
-    team.budget_remaining -= request.final_price
-
-    # Remove player from available (guard against data-integrity edge case)
-    if request.player_id not in draft_state.available_player_ids:
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                f"Data integrity error: player {request.player_id} is "
-                "not in the available player pool"
-            ),
-        )
-    draft_state.available_player_ids.remove(request.player_id)
-
-    # Clear nomination
-    draft_state.nominated = None
-
-    # Advance to the next eligible nominator (skips full rosters and done teams).
-    config = load_configuration()
-    nxt = next_eligible_nominator(
-        draft_state, config, from_id=draft_state.next_to_nominate, inclusive=False
-    )
-    if nxt is not None:
-        draft_state.next_to_nominate = nxt
-
-    # Save state with version increment
-    draft_state.save_to_file(DRAFT_STATE_FILE)
-
-    # Get names for logging
-    players = load_players()
-    owners = load_owners()
-    player = next((p for p in players if p.id == request.player_id), None)
-    owner = owners.get(request.owner_id, {})
-
-    player_name = (
-        f"{player.first_name} {player.last_name}"
-        if player
-        else f"ID:{request.player_id}"
-    )
-    owner_name = owner.get("owner_name", f"ID:{request.owner_id}")
-
-    # Log action
-    logger.info(f"{player_name} drafted by {owner_name} for ${request.final_price}")
-
-    return {
-        "success": True,
-        "pick": pick.model_dump(),
-        "team": team.model_dump(),
-        "next_to_nominate": draft_state.next_to_nominate,
-        "new_version": draft_state.version,
-    }
+        return {
+            "success": True,
+            "pick": pick.model_dump(),
+            "team": team.model_dump(),
+            "next_to_nominate": draft_state.next_to_nominate,
+            "new_version": draft_state.version,
+        }
 
 
 @app.post("/api/v1/admin/draft")
 async def admin_draft_player(request: AdminDraftRequest):
     """Admin-only endpoint to draft a player directly without auction.
 
-    Intentionally skips budget and position-max validation — this is the
+    Intentionally skips budget and position-max validation -- this is the
     admin escape hatch for keepers and mid-draft corrections.
     """
-    # Load current state
-    draft_state = load_draft_state()
+    async with _state_lock:
+        # Load current state
+        draft_state = load_draft_state()
 
-    # Check version
-    check_version(draft_state.version, request.expected_version)
+        # Check version
+        check_version(draft_state.version, request.expected_version)
 
-    # Validate player exists in players database
-    players = load_players()
-    player = next((p for p in players if p.id == request.player_id), None)
-    if not player:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Player {request.player_id} not found in players database",
+        # Validate player exists in players database
+        players = load_players()
+        player = next((p for p in players if p.id == request.player_id), None)
+        if not player:
+            raise HTTPException(
+                status_code=400,
+                detail=(f"Player {request.player_id} not found in players database"),
+            )
+
+        # Reject if the player is currently nominated.
+        if (
+            draft_state.nominated is not None
+            and draft_state.nominated.player_id == request.player_id
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Player {request.player_id} is currently "
+                    "nominated. Cancel the nomination first."
+                ),
+            )
+
+        # Validate player is available for draft
+        if request.player_id not in draft_state.available_player_ids:
+            raise HTTPException(
+                status_code=422,
+                detail=(f"Player {request.player_id} is not available for draft"),
+            )
+
+        # Validate owner exists
+        owners = load_owners()
+        if request.owner_id not in owners:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Owner {request.owner_id} not found",
+            )
+
+        # Validate price is positive
+        if request.price <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Price must be greater than 0",
+            )
+
+        # Find team (must exist for valid owner)
+        team = next(
+            (t for t in draft_state.teams if t.owner_id == request.owner_id),
+            None,
+        )
+        if not team:
+            raise HTTPException(
+                status_code=422,
+                detail=(f"Team not found for owner {request.owner_id} in draft state"),
+            )
+
+        # Create draft pick
+        all_picks = [pick for team in draft_state.teams for pick in team.picks]
+        pick_id = max([pick.pick_id for pick in all_picks], default=0) + 1
+
+        pick = DraftPick(
+            pick_id=pick_id,
+            player_id=request.player_id,
+            owner_id=request.owner_id,
+            price=request.price,
         )
 
-    # Reject if the player is currently nominated — cancel the nomination first.
-    if (
-        draft_state.nominated is not None
-        and draft_state.nominated.player_id == request.player_id
-    ):
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                f"Player {request.player_id} is currently nominated. "
-                "Cancel the nomination first."
-            ),
+        # Add pick to team and adjust budget
+        team.picks.append(pick)
+        team.budget_remaining -= request.price
+
+        # Remove player from available list
+        draft_state.available_player_ids.remove(request.player_id)
+
+        # Repair the nominator pointer.
+        config = load_configuration()
+        nxt = next_eligible_nominator(
+            draft_state,
+            config,
+            from_id=draft_state.next_to_nominate,
+            inclusive=True,
+        )
+        if nxt is not None:
+            draft_state.next_to_nominate = nxt
+
+        # Save state with version increment
+        draft_state.save_to_file(DRAFT_STATE_FILE)
+
+        # Get names for logging (player already loaded above)
+        owner = owners.get(request.owner_id, {})
+
+        player_name = f"{player.first_name} {player.last_name}"
+        owner_name = owner.get("owner_name", f"ID:{request.owner_id}")
+
+        # Log action
+        logger.info(
+            f"ADMIN DRAFT: {owner_name} drafted {player_name} for ${request.price}"
         )
 
-    # Validate player is available for draft
-    if request.player_id not in draft_state.available_player_ids:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Player {request.player_id} is not available for draft",
-        )
-
-    # Validate owner exists
-    owners = load_owners()
-    if request.owner_id not in owners:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Owner {request.owner_id} not found",
-        )
-
-    # Validate price is positive
-    if request.price <= 0:
-        raise HTTPException(
-            status_code=400,
-            detail="Price must be greater than 0",
-        )
-
-    # Find team (must exist for valid owner)
-    team = next((t for t in draft_state.teams if t.owner_id == request.owner_id), None)
-    if not team:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Team not found for owner {request.owner_id} in draft state",
-        )
-
-    # Create draft pick
-
-    # Generate pick_id (max existing + 1)
-    all_picks = [pick for team in draft_state.teams for pick in team.picks]
-    pick_id = max([pick.pick_id for pick in all_picks], default=0) + 1
-
-    pick = DraftPick(
-        pick_id=pick_id,
-        player_id=request.player_id,
-        owner_id=request.owner_id,
-        price=request.price,
-    )
-
-    # Add pick to team and adjust budget
-    team.picks.append(pick)
-    team.budget_remaining -= request.price
-
-    # Remove player from available list
-    draft_state.available_player_ids.remove(request.player_id)
-
-    # Repair the nominator pointer in case this pick filled its roster.
-    config = load_configuration()
-    nxt = next_eligible_nominator(
-        draft_state, config, from_id=draft_state.next_to_nominate, inclusive=True
-    )
-    if nxt is not None:
-        draft_state.next_to_nominate = nxt
-
-    # Save state with version increment
-    draft_state.save_to_file(DRAFT_STATE_FILE)
-
-    # Get names for logging (player already loaded above)
-    owner = owners.get(request.owner_id, {})
-
-    player_name = f"{player.first_name} {player.last_name}"
-    owner_name = owner.get("owner_name", f"ID:{request.owner_id}")
-
-    # Log action
-    logger.info(f"ADMIN DRAFT: {owner_name} drafted {player_name} for ${request.price}")
-
-    return {
-        "success": True,
-        "pick": pick.model_dump(),
-        "team": team.model_dump(),
-        "new_version": draft_state.version,
-    }
+        return {
+            "success": True,
+            "pick": pick.model_dump(),
+            "team": team.model_dump(),
+            "new_version": draft_state.version,
+        }
 
 
 @app.patch("/api/v1/teams/{owner_id}")
 async def update_team(owner_id: int, request: TeamUpdateRequest):
     """Set or clear a team's manually-done flag (admin action)."""
-    draft_state = load_draft_state()
-    check_version(draft_state.version, request.expected_version)
+    async with _state_lock:
+        draft_state = load_draft_state()
+        check_version(draft_state.version, request.expected_version)
 
-    team = next((t for t in draft_state.teams if t.owner_id == owner_id), None)
-    if not team:
-        raise HTTPException(
-            status_code=404, detail=f"Team not found for owner {owner_id}"
+        team = next((t for t in draft_state.teams if t.owner_id == owner_id), None)
+        if not team:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Team not found for owner {owner_id}",
+            )
+
+        team.manually_done = request.manually_done
+
+        # Repair the nominator pointer.
+        config = load_configuration()
+        nxt = next_eligible_nominator(
+            draft_state,
+            config,
+            from_id=draft_state.next_to_nominate,
+            inclusive=True,
         )
+        if nxt is not None:
+            draft_state.next_to_nominate = nxt
 
-    team.manually_done = request.manually_done
+        draft_state.save_to_file(DRAFT_STATE_FILE)
 
-    # Repair the nominator pointer in case the current nominator was just marked done.
-    config = load_configuration()
-    nxt = next_eligible_nominator(
-        draft_state, config, from_id=draft_state.next_to_nominate, inclusive=True
-    )
-    if nxt is not None:
-        draft_state.next_to_nominate = nxt
+        owners = load_owners()
+        owner_name = owners.get(owner_id, {}).get("owner_name", f"ID:{owner_id}")
+        logger.info(f"Team for {owner_name} manually_done set to {team.manually_done}")
 
-    draft_state.save_to_file(DRAFT_STATE_FILE)
-
-    owners = load_owners()
-    owner_name = owners.get(owner_id, {}).get("owner_name", f"ID:{owner_id}")
-    logger.info(f"Team for {owner_name} manually_done set to {team.manually_done}")
-
-    return {
-        "success": True,
-        "owner_id": owner_id,
-        "manually_done": team.manually_done,
-        "next_to_nominate": draft_state.next_to_nominate,
-        "new_version": draft_state.version,
-    }
+        return {
+            "success": True,
+            "owner_id": owner_id,
+            "manually_done": team.manually_done,
+            "next_to_nominate": draft_state.next_to_nominate,
+            "new_version": draft_state.version,
+        }
 
 
 # Admin endpoints
@@ -1064,51 +1111,52 @@ async def cancel_nomination(
     ),
 ):
     """Cancel current nomination (admin action)."""
-    # Load current state
-    draft_state = load_draft_state()
+    async with _state_lock:
+        # Load current state
+        draft_state = load_draft_state()
 
-    # Parse ETag and check version for optimistic locking
-    try:
-        expected_version = int(if_match.strip('"'))
-    except ValueError:
-        raise HTTPException(
-            status_code=400,
-            detail="If-Match header must contain a valid version number",
+        # Parse ETag and check version for optimistic locking
+        try:
+            expected_version = int(if_match.strip('"'))
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=("If-Match header must contain a valid version number"),
+            )
+
+        # Check version
+        check_version(draft_state.version, expected_version)
+
+        # Validate nomination exists
+        if draft_state.nominated is None:
+            raise HTTPException(
+                status_code=422,
+                detail="No nomination to cancel",
+            )
+
+        # Clear nomination
+        cancelled_player = draft_state.nominated.player_id
+        draft_state.nominated = None
+
+        # Save state with version increment
+        draft_state.save_to_file(DRAFT_STATE_FILE)
+
+        # Get player name for logging
+        players = load_players()
+        player = next((p for p in players if p.id == cancelled_player), None)
+        player_name = (
+            f"{player.first_name} {player.last_name}"
+            if player
+            else f"ID:{cancelled_player}"
         )
 
-    # Check version
-    check_version(draft_state.version, expected_version)
+        logger.info(f"Nomination for {player_name} cancelled")
 
-    # Validate nomination exists
-    if draft_state.nominated is None:
-        raise HTTPException(
-            status_code=422,
-            detail="No nomination to cancel",
-        )
-
-    # Clear nomination
-    cancelled_player = draft_state.nominated.player_id
-    draft_state.nominated = None
-
-    # Save state with version increment
-    draft_state.save_to_file(DRAFT_STATE_FILE)
-
-    # Get player name for logging
-    players = load_players()
-    player = next((p for p in players if p.id == cancelled_player), None)
-    player_name = (
-        f"{player.first_name} {player.last_name}"
-        if player
-        else f"ID:{cancelled_player}"
-    )
-
-    logger.info(f"Nomination for {player_name} cancelled")
-
-    return {
-        "success": True,
-        "cancelled_player_id": cancelled_player,
-        "new_version": draft_state.version,
-    }
+        return {
+            "success": True,
+            "cancelled_player_id": cancelled_player,
+            "new_version": draft_state.version,
+        }
 
 
 @app.delete("/api/v1/draft/{pick_id}")
@@ -1119,122 +1167,132 @@ async def remove_draft_pick(
     ),
 ):
     """Remove a draft pick and restore player to available pool."""
-    # Load current state
-    draft_state = load_draft_state()
+    async with _state_lock:
+        # Load current state
+        draft_state = load_draft_state()
 
-    # Parse ETag and check version for optimistic locking
-    try:
-        expected_version = int(if_match.strip('"'))
-    except ValueError:
-        raise HTTPException(
-            status_code=400,
-            detail="If-Match header must contain a valid version number",
-        )
+        # Parse ETag and check version for optimistic locking
+        try:
+            expected_version = int(if_match.strip('"'))
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=("If-Match header must contain a valid version number"),
+            )
 
-    check_version(draft_state.version, expected_version)
+        check_version(draft_state.version, expected_version)
 
-    # Find the pick and team
-    pick_found = False
-    target_team = None
-    target_pick = None
+        # Find the pick and team
+        pick_found = False
+        target_team = None
+        target_pick = None
 
-    for team in draft_state.teams:
-        for pick in team.picks:
-            if pick.pick_id == pick_id:
-                # Found the pick to remove
-                target_team = team
-                target_pick = pick
-                pick_found = True
+        for team in draft_state.teams:
+            for pick in team.picks:
+                if pick.pick_id == pick_id:
+                    target_team = team
+                    target_pick = pick
+                    pick_found = True
+                    break
+            if pick_found:
                 break
-        if pick_found:
-            break
 
-    if not pick_found:
-        raise HTTPException(status_code=404, detail=f"Pick with ID {pick_id} not found")
+        if not pick_found:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Pick with ID {pick_id} not found",
+            )
 
-    # Critical integrity check: drafted player should NOT be in available pool
-    if target_pick.player_id in draft_state.available_player_ids:
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                f"Data integrity error: Player {target_pick.player_id} is "
-                f"drafted but also in available pool. Manual intervention required."
-            ),
+        # Critical integrity check
+        if target_pick.player_id in draft_state.available_player_ids:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Data integrity error: Player "
+                    f"{target_pick.player_id} is drafted but also "
+                    f"in available pool. Manual intervention "
+                    f"required."
+                ),
+            )
+
+        # Remove pick from team
+        target_team.picks.remove(target_pick)
+
+        # Restore budget
+        target_team.budget_remaining += target_pick.price
+
+        # Add player back to available pool
+        draft_state.available_player_ids.append(target_pick.player_id)
+        draft_state.available_player_ids.sort()
+
+        # Save state with version increment
+        draft_state.save_to_file(DRAFT_STATE_FILE)
+
+        # Get player name for logging
+        players = load_players()
+        player = next((p for p in players if p.id == target_pick.player_id), None)
+        player_name = (
+            f"{player.first_name} {player.last_name}"
+            if player
+            else f"ID:{target_pick.player_id}"
         )
 
-    # Remove pick from team
-    target_team.picks.remove(target_pick)
+        logger.info(f"Removed pick {pick_id}, returned {player_name} to available pool")
 
-    # Restore budget
-    target_team.budget_remaining += target_pick.price
-
-    # Add player back to available pool
-    draft_state.available_player_ids.append(target_pick.player_id)
-    draft_state.available_player_ids.sort()
-
-    # Save state with version increment
-    draft_state.save_to_file(DRAFT_STATE_FILE)
-
-    # Get player name for logging
-    players = load_players()
-    player = next((p for p in players if p.id == target_pick.player_id), None)
-    player_name = (
-        f"{player.first_name} {player.last_name}"
-        if player
-        else f"ID:{target_pick.player_id}"
-    )
-
-    logger.info(f"Removed pick {pick_id}, returned {player_name} to available pool")
-
-    return {
-        "success": True,
-        "removed_pick_id": pick_id,
-        "restored_player_id": target_pick.player_id,
-        "new_version": draft_state.version,
-    }
+        return {
+            "success": True,
+            "removed_pick_id": pick_id,
+            "restored_player_id": target_pick.player_id,
+            "new_version": draft_state.version,
+        }
 
 
 @app.post("/api/v1/reset")
 async def reset_draft(request: ResetRequest):
     """Reset draft to initial state (admin action)."""
-    # Load configuration for initial state
-    config = load_configuration()
-    players = load_players()
-    owners = load_owners()
+    async with _state_lock:
+        # Load configuration for initial state
+        config = load_configuration()
+        players = load_players()
+        owners = load_owners()
 
-    # If not forcing, require and check version
-    if not request.force:
-        if request.expected_version is None:
-            raise HTTPException(
-                status_code=422,
-                detail="expected_version is required unless force=true",
-            )
-        current_state = load_draft_state()
-        check_version(current_state.version, request.expected_version)
+        # If not forcing, require and check version
+        if not request.force:
+            if request.expected_version is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail=("expected_version is required unless force=true"),
+                )
+            current_state = load_draft_state()
+            check_version(current_state.version, request.expected_version)
 
-    # Create fresh draft state
-    owner_ids = sorted(owners.keys()) if owners else []
-    initial_state = DraftState(
-        nominated=None,
-        available_player_ids=[p.id for p in players],
-        teams=[
-            Team(owner_id=owner_id, budget_remaining=config.initial_budget, picks=[])
-            for owner_id in owner_ids
-        ],
-        next_to_nominate=owner_ids[0] if owner_ids else 1,
-        version=1,
-    )
+        # Create fresh draft state
+        owner_ids = sorted(owners.keys()) if owners else []
+        initial_state = DraftState(
+            nominated=None,
+            available_player_ids=[p.id for p in players],
+            teams=[
+                Team(
+                    owner_id=owner_id,
+                    budget_remaining=config.initial_budget,
+                    picks=[],
+                )
+                for owner_id in owner_ids
+            ],
+            next_to_nominate=owner_ids[0] if owner_ids else 1,
+            version=1,
+        )
 
-    # Save without incrementing version (fresh start at v1)
-    initial_state.save_to_file(DRAFT_STATE_FILE, increment_version=False)
+        # Save without incrementing version (fresh start at v1)
+        initial_state.save_to_file(DRAFT_STATE_FILE, increment_version=False)
 
-    logger.info("Draft reset to initial state")
+        logger.info("Draft reset to initial state")
 
-    return {
-        "success": True,
-        "message": "Draft reset to initial state",
-        "new_version": 1,
-    }
+        return {
+            "success": True,
+            "message": "Draft reset to initial state",
+            "new_version": 1,
+        }
 
 
 # Create a separate app instance for the team viewer

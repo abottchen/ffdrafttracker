@@ -4,7 +4,6 @@ from pathlib import Path
 
 from src.enums import NFLTeam, Position
 from src.models import (
-    ActionLog,
     Configuration,
     DraftPick,
     DraftState,
@@ -13,7 +12,6 @@ from src.models import (
     Player,
     Team,
 )
-from src.models.action_logger import ActionLogger
 
 
 class TestFilePersistence:
@@ -131,72 +129,6 @@ class TestFilePersistence:
             # Clean up temp file
             if temp_path.exists():
                 temp_path.unlink()
-
-    def test_action_logger_integration_workflow(self):
-        """Test ActionLogger complete workflow with real file I/O."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            log_file = Path(temp_dir) / "action_log.json"
-            logger = ActionLogger(log_file)
-
-            # Log multiple actions
-            logger.log_action(
-                "nomination", 1, {"player_id": 101, "nomination_price": 15}
-            )
-            logger.log_action("bid", 2, {"player_id": 101, "bid_amount": 20})
-            logger.log_action("bid", 3, {"player_id": 101, "bid_amount": 25})
-            logger.log_action("draft_pick", 3, {"player_id": 101, "final_price": 25})
-
-            # Verify file was created and contains valid JSON
-            assert log_file.exists()
-            log_content = log_file.read_text()
-            parsed_logs = json.loads(log_content)
-            assert len(parsed_logs) == 4
-
-            # Verify log structure and data
-            assert parsed_logs[0]["action_type"] == "nomination"
-            assert parsed_logs[0]["owner_id"] == 1
-            assert parsed_logs[0]["data"]["player_id"] == 101
-            assert parsed_logs[0]["data"]["nomination_price"] == 15
-
-            assert parsed_logs[1]["action_type"] == "bid"
-            assert parsed_logs[1]["owner_id"] == 2
-
-            assert parsed_logs[3]["action_type"] == "draft_pick"
-            assert parsed_logs[3]["data"]["final_price"] == 25
-
-            # Test loading logs back (internal method test)
-            loaded_logs = logger._load_logs()
-            assert len(loaded_logs) == 4
-            assert all(isinstance(log, ActionLog) for log in loaded_logs)
-
-            # Test appending to existing logs
-            logger.log_action(
-                "nomination", 1, {"player_id": 102, "nomination_price": 12}
-            )
-
-            final_logs = logger._load_logs()
-            assert len(final_logs) == 5
-            assert final_logs[-1].action_type == "nomination"
-            assert final_logs[-1].data["player_id"] == 102
-
-    def test_action_logger_handles_corrupted_log_file(self):
-        """Test ActionLogger gracefully handles corrupted existing log files."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            log_file = Path(temp_dir) / "corrupted_log.json"
-
-            # Create a corrupted log file
-            log_file.write_text("{ invalid json content }")
-
-            logger = ActionLogger(log_file)
-
-            # Should start fresh with new logs despite corruption
-            logger.log_action("nomination", 1, {"player_id": 201})
-
-            # Verify new log was written correctly
-            loaded_logs = logger._load_logs()
-            assert len(loaded_logs) == 1
-            assert loaded_logs[0].action_type == "nomination"
-            assert loaded_logs[0].data["player_id"] == 201
 
     def test_model_construction_with_realistic_fantasy_data(self):
         """Test complete object construction with realistic fantasy football data."""
