@@ -62,7 +62,7 @@ def test_all_comments_returned_seq_ordered(client, log_file):
         _line("Booger", "second"),
         _line("Eisen", "third"),
     )
-    with patch("main.COMMENTS_FILE", log_file):
+    with patch("src.api.read_routes.COMMENTS_FILE", log_file):
         resp = client.get("/api/v1/comments")
 
     assert resp.status_code == 200
@@ -81,7 +81,7 @@ def test_since_returns_only_newer(client, log_file):
         _line("Booger", "second"),
         _line("Eisen", "third"),
     )
-    with patch("main.COMMENTS_FILE", log_file):
+    with patch("src.api.read_routes.COMMENTS_FILE", log_file):
         resp = client.get("/api/v1/comments", params={"since": 1})
 
     assert resp.status_code == 200
@@ -90,7 +90,7 @@ def test_since_returns_only_newer(client, log_file):
 
 def test_since_at_head_returns_empty(client, log_file):
     _write_log(log_file, _line("Kiper", "first"), _line("Booger", "second"))
-    with patch("main.COMMENTS_FILE", log_file):
+    with patch("src.api.read_routes.COMMENTS_FILE", log_file):
         resp = client.get("/api/v1/comments", params={"since": 2})
 
     assert resp.status_code == 200
@@ -104,7 +104,7 @@ def test_limit_returns_most_recent(client, log_file):
         _line("Booger", "second"),
         _line("Eisen", "third"),
     )
-    with patch("main.COMMENTS_FILE", log_file):
+    with patch("src.api.read_routes.COMMENTS_FILE", log_file):
         resp = client.get("/api/v1/comments", params={"limit": 2})
 
     assert resp.status_code == 200
@@ -118,7 +118,7 @@ def test_before_returns_older(client, log_file):
         _line("Booger", "second"),
         _line("Eisen", "third"),
     )
-    with patch("main.COMMENTS_FILE", log_file):
+    with patch("src.api.read_routes.COMMENTS_FILE", log_file):
         resp = client.get("/api/v1/comments", params={"before": 3})
 
     assert resp.status_code == 200
@@ -127,7 +127,7 @@ def test_before_returns_older(client, log_file):
 
 def test_before_and_limit_returns_window(client, log_file):
     _write_log(log_file, *[_line("Kiper", str(i)) for i in range(1, 6)])
-    with patch("main.COMMENTS_FILE", log_file):
+    with patch("src.api.read_routes.COMMENTS_FILE", log_file):
         resp = client.get("/api/v1/comments", params={"before": 4, "limit": 2})
 
     assert resp.status_code == 200
@@ -136,7 +136,9 @@ def test_before_and_limit_returns_window(client, log_file):
 
 
 def test_missing_file_returns_empty_list(client):
-    with patch("main.COMMENTS_FILE", Path("/tmp/does-not-exist-xyz.jsonl")):
+    with patch(
+        "src.api.read_routes.COMMENTS_FILE", Path("/tmp/does-not-exist-xyz.jsonl")
+    ):
         resp = client.get("/api/v1/comments")
 
     assert resp.status_code == 200
@@ -152,7 +154,7 @@ def test_torn_tail_excluded_from_seq(client, log_file):
         '{"ts":"2026-06-20T07:35:00Z","state_version":1,"persona":"Eisen"',
         terminated=False,
     )
-    with patch("main.COMMENTS_FILE", log_file):
+    with patch("src.api.read_routes.COMMENTS_FILE", log_file):
         resp = client.get("/api/v1/comments")
 
     assert resp.status_code == 200
@@ -162,7 +164,7 @@ def test_torn_tail_excluded_from_seq(client, log_file):
 
 def test_limit_zero_rejected(client, log_file):
     _write_log(log_file, _line("Kiper", "first"))
-    with patch("main.COMMENTS_FILE", log_file):
+    with patch("src.api.read_routes.COMMENTS_FILE", log_file):
         resp = client.get("/api/v1/comments", params={"limit": 0})
 
     assert resp.status_code == 422

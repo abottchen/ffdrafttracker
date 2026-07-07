@@ -68,7 +68,7 @@ class TestPlayerStatsEndpoint:
             temp_file = Path(f.name)
 
         try:
-            with patch("main.PLAYER_STATS_FILE", temp_file):
+            with patch("src.api.read_routes.PLAYER_STATS_FILE", temp_file):
                 response = self.client.get("/api/v1/player/stats")
 
             assert response.status_code == 200
@@ -101,7 +101,7 @@ class TestPlayerStatsEndpoint:
         """Test behavior when player stats file doesn't exist."""
         non_existent_file = Path("/tmp/nonexistent_player_stats.json")
 
-        with patch("main.PLAYER_STATS_FILE", non_existent_file):
+        with patch("src.api.read_routes.PLAYER_STATS_FILE", non_existent_file):
             response = self.client.get("/api/v1/player/stats")
 
         assert response.status_code == 200
@@ -117,7 +117,7 @@ class TestPlayerStatsEndpoint:
             temp_file = Path(f.name)
 
         try:
-            with patch("main.PLAYER_STATS_FILE", temp_file):
+            with patch("src.api.read_routes.PLAYER_STATS_FILE", temp_file):
                 response = self.client.get("/api/v1/player/stats")
 
             assert response.status_code == 200
@@ -137,7 +137,7 @@ class TestPlayerStatsEndpoint:
 
         try:
             # Mock file exists but open raises PermissionError
-            with patch("main.PLAYER_STATS_FILE", temp_file):
+            with patch("src.api.read_routes.PLAYER_STATS_FILE", temp_file):
                 with patch(
                     "builtins.open", side_effect=PermissionError("Access denied")
                 ):
@@ -167,7 +167,7 @@ class TestPlayerStatsEndpoint:
             temp_file = Path(f.name)
 
         try:
-            with patch("main.PLAYER_STATS_FILE", temp_file):
+            with patch("src.api.read_routes.PLAYER_STATS_FILE", temp_file):
                 response = self.client.get("/api/v1/player/stats")
 
             assert response.status_code == 200
@@ -187,7 +187,7 @@ class TestPlayerStatsEndpoint:
         temp_file = Path(f.name)
 
         try:
-            with patch("main.PLAYER_STATS_FILE", temp_file):
+            with patch("src.api.read_routes.PLAYER_STATS_FILE", temp_file):
                 response = self.client.get("/api/v1/player/stats")
 
             assert response.status_code == 200

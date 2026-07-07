@@ -40,19 +40,19 @@ def test_complete_draft_workflow():
         _setup_test_data(test_data_dir)
 
         # Patch the application to use our test directory
-        import main
+        import src.persistence as persistence
 
-        original_data_dir = main.DATA_DIR
-        original_draft_state_file = main.DRAFT_STATE_FILE
-        original_players_file = main.PLAYERS_FILE
-        original_owners_file = main.OWNERS_FILE
-        original_config_file = main.CONFIG_FILE
+        original_data_dir = persistence.DATA_DIR
+        original_draft_state_file = persistence.DRAFT_STATE_FILE
+        original_players_file = persistence.PLAYERS_FILE
+        original_owners_file = persistence.OWNERS_FILE
+        original_config_file = persistence.CONFIG_FILE
 
-        main.DATA_DIR = test_data_dir
-        main.DRAFT_STATE_FILE = test_data_dir / "draft_state.json"
-        main.PLAYERS_FILE = test_data_dir / "players.json"
-        main.OWNERS_FILE = test_data_dir / "owners.json"
-        main.CONFIG_FILE = test_data_dir / "config.json"
+        persistence.DATA_DIR = test_data_dir
+        persistence.DRAFT_STATE_FILE = test_data_dir / "draft_state.json"
+        persistence.PLAYERS_FILE = test_data_dir / "players.json"
+        persistence.OWNERS_FILE = test_data_dir / "owners.json"
+        persistence.CONFIG_FILE = test_data_dir / "config.json"
 
         try:
             # Use TestClient for making requests
@@ -101,11 +101,11 @@ def test_complete_draft_workflow():
 
         finally:
             # Restore original file paths
-            main.DATA_DIR = original_data_dir
-            main.DRAFT_STATE_FILE = original_draft_state_file
-            main.PLAYERS_FILE = original_players_file
-            main.OWNERS_FILE = original_owners_file
-            main.CONFIG_FILE = original_config_file
+            persistence.DATA_DIR = original_data_dir
+            persistence.DRAFT_STATE_FILE = original_draft_state_file
+            persistence.PLAYERS_FILE = original_players_file
+            persistence.OWNERS_FILE = original_owners_file
+            persistence.CONFIG_FILE = original_config_file
 
 
 def _setup_test_data(data_dir: Path) -> None:
