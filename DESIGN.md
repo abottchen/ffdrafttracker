@@ -85,7 +85,6 @@ A local fantasy football auction draft tracking tool with a web-based interface 
 - `draft_state.json` - JSON representation of the pydantic DraftState object
 - `players.json` - List of all available players and defenses with their details
 - `owners.json` - Owner information and ID mappings
-- `action_log.json` - History of all draft actions for undo capability
 - `config.json` - Application configuration (budgets, min bids, etc.)
 - `player_stats.json` - Player statistics and bye weeks (optional, generated separately)
 - The multi-season `league_history.json` / `auction_prices.json` archives are **not** app data files: they live under `docs/data/` and are published to GitHub Pages (see the standalone League History page above)
@@ -187,8 +186,6 @@ ffdrafttracker/
 │       ├── draft_pick.py  # DraftPick model
 │       ├── team.py        # Team model
 │       ├── draft_state.py # DraftState model
-│       ├── action_log.py  # ActionLog model
-│       ├── action_logger.py # ActionLogger utility
 │       ├── configuration.py # Configuration model
 │       ├── player_stats.py # Player statistics models
 │       └── league_history.py # League history archive models
@@ -200,7 +197,6 @@ ffdrafttracker/
 │   ├── draft_state.json   # Current draft state
 │   ├── players.json       # Player database
 │   ├── owners.json        # Owner information
-│   ├── action_log.json    # Complete action history
 │   ├── config.json        # Application configuration
 │   └── player_stats.json  # Player statistics and bye weeks (optional)
 ├── docs/                  # GitHub Pages site (draft recap + League History page)
@@ -322,12 +318,6 @@ Pydantic Models (Python) → FastAPI Endpoints → OpenAPI Schema
 - `teams[].manually_done: bool` - Persisted mark-done flag (see Team)
 - `up_next: int | null` - Owner ID of the next *distinct* eligible nominator after `next_to_nominate`; `null` when fewer than two teams can still nominate
 
-**ActionLog** (`action_log.py`): Audit trail for undo capability
-- `timestamp: datetime` - When the action occurred
-- `action_type: str` - Type of action (nominate, bid, draft, undo)
-- `owner_id: int` - Who performed the action
-- `data: dict` - Action-specific data
-
 **Configuration** (`configuration.py`): Application settings
 - `initial_budget: int` - Starting budget per team (e.g., 200)
 - `min_bid: int` - Minimum bid amount (e.g., 1)
@@ -355,7 +345,7 @@ Pydantic Models (Python) → FastAPI Endpoints → OpenAPI Schema
 - Player objects remain immutable - prices are tracked in DraftPick
 - Using IDs instead of embedded objects prevents data duplication
 - The `id` fields enable flexible image handling for both players and owners
-- ActionLog enables full undo/redo capability
+- Undo is performed via `DELETE /api/v1/draft/{pick_id}` using the `pick_id` alone
 - Configuration loaded once at startup from config.json
 
 ## Validation Rules
@@ -400,11 +390,3 @@ Pydantic Models (Python) → FastAPI Endpoints → OpenAPI Schema
 - Prevents corruption during manual edits or system failures
 - 1-2 second transaction time acceptable for data integrity
 
-**Action Logging:**
-- Every POST to nominate/bid/draft writes to action_log.json
-- Logs include: timestamp, action_type, owner_id, and action-specific data
-- **Nominate**: player_id, initial_bid
-- **Bid**: player_id, bid_amount, previous_bid
-- **Draft**: player_id, final_price, pick_id
-- Enables complete audit trail and potential undo functionality
-- Uses same atomic file operations as draft state

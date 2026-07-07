@@ -1032,3 +1032,34 @@ class TestMainApiIntegration:
         context = m.call_args.args[2]
         assert "config" in context
         assert context["config"]["total_rounds"] == 19
+
+    def test_duplicate_mutation_same_version_yields_409(self):
+        """Two sequential mutations with the same expected_version:
+        one succeeds (200) and the other is rejected (409)."""
+        state = self.client.get("/api/v1/draft-state").json()
+        version = state["version"]
+
+        # First admin-draft succeeds
+        first = self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 1,
+                "player_id": 1,
+                "price": 5,
+                "expected_version": version,
+            },
+        )
+        assert first.status_code == 200
+
+        # Second admin-draft with the same expected_version is rejected
+        second = self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 2,
+                "player_id": 2,
+                "price": 5,
+                "expected_version": version,
+            },
+        )
+        assert second.status_code == 409
+        assert "Draft state has changed" in second.json()["detail"]

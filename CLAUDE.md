@@ -70,10 +70,6 @@ This is a **Fantasy Football Auction Draft Tracker** - a FastAPI web application
 - **Configuration**: App settings (budgets, position limits, data directory)
 - **PlayerStats**: Per-player stat lines (passing/rushing/receiving) shown in the viewer
 
-**Infrastructure**:
-- **ActionLog**: Audit trail entries for undo capability  
-- **ActionLogger**: Utility for atomic logging to JSON files
-
 **Booth Module** (`src/booth/`):
 - Live draft commentary system — personas react to `draft_state.json` changes
 - Posts running commentary to `data/analyst-comments.jsonl`
@@ -122,7 +118,6 @@ def save_to_file(self, filepath: Path) -> None:
 - Test business logic only with full mocking
 - High coverage (no enforced `fail_under` gate)
 - Each model has focused validation and behavior tests
-- ActionLogger tests use mocked file I/O
 - `tests/unit/booth/` covers the commentary module (`watch`/`slice`/`log`)
 
 **Integration Tests** (`tests/integration/`):
