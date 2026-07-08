@@ -276,7 +276,7 @@ Pydantic Models (Python) → FastAPI Endpoints → OpenAPI Schema
 ### Models (src/models/)
 
 **Player** (`player.py`): Core player representation (immutable)
-- `id: int` - Unique identifier for image retrieval
+- `id: int` - **Must be an ESPN player ID.** Both `headshotUrl()` (in `draft-shared.js`) and `getTeamLogoUrl()` build ESPN CDN URLs from this ID. If `players.json` is regenerated from a non-ESPN source, headshot/photo URLs will 404.
 - `first_name: str` - Player's first name
 - `last_name: str` - Player's last name  
 - `team: NFLTeam` - NFL team (validated enum)

@@ -26,6 +26,30 @@
         let adminHighlightedIndex = -1;
         let cursorIndex = null;   // keyboard bid cursor: index into draftState.teams
 
+        // Shared fetch wrapper for mutating endpoints: standardizes 409 (version
+        // conflict) handling across all admin actions.  GET-only fetches stay raw.
+        async function apiCall(url, opts, {onSuccess, label = 'Action'} = {}) {
+            try {
+                const res = await fetch(url, opts);
+                if (res.status === 409) {
+                    await refreshData();
+                    showMessage(`${label}: state changed — please retry`, 'error');
+                    return null;
+                }
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({detail: res.statusText}));
+                    showMessage(`${label} failed: ${err.detail}`, 'error');
+                    return null;
+                }
+                const data = await res.json();
+                if (onSuccess) onSuccess(data);
+                return data;
+            } catch (e) {
+                showMessage(`${label}: ${e.message}`, 'error');
+                return null;
+            }
+        }
+
         function openDrawer() {
             document.getElementById('scrim').classList.add('open');
             document.getElementById('drawer').classList.add('open');
@@ -614,35 +638,26 @@
                 }
             }
 
-            try {
-                const response = await fetch('/api/v1/nominate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        owner_id: currentDraftState ? currentDraftState.next_to_nominate : 1,
-                        player_id: selectedPlayerId,
-                        initial_bid: bid,
-                        expected_version: currentVersion
-                    })
-                });
-                
-                if (response.ok) {
-                    const result = await response.json();
-                    showMessage('Player nominated successfully!', 'success');
-                    currentVersion = result.new_version;
-                    await refreshData();
-                    document.getElementById('nomination-bid').value = '1';
-                    document.getElementById('player-search').value = '';
-                    document.getElementById('player-search').blur();   // hand off to the bid console
-                    selectedPlayerId = null;
-                    selectedPlayerName = null;
-                } else {
-                    const error = await response.json();
-                    showMessage('Nomination failed: ' + error.detail, 'error');
-                }
-            } catch (error) {
-                showMessage('Error nominating player: ' + error.message, 'error');
-            }
+            const data = await apiCall('/api/v1/nominate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    owner_id: currentDraftState ? currentDraftState.next_to_nominate : 1,
+                    player_id: selectedPlayerId,
+                    initial_bid: bid,
+                    expected_version: currentVersion
+                })
+            }, { label: 'Nomination' });
+            if (!data) return;
+
+            showMessage('Player nominated successfully!', 'success');
+            currentVersion = data.new_version;
+            await refreshData();
+            document.getElementById('nomination-bid').value = '1';
+            document.getElementById('player-search').value = '';
+            document.getElementById('player-search').blur();   // hand off to the bid console
+            selectedPlayerId = null;
+            selectedPlayerName = null;
         }
 
         async function placeBidForOwner(ownerId, amountOverride) {
@@ -656,32 +671,23 @@
                 return;
             }
 
-            try {
-                const response = await fetch('/api/v1/bid', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        owner_id: ownerId,
-                        bid_amount: bid,
-                        expected_version: currentVersion
-                    })
-                });
+            const data = await apiCall('/api/v1/bid', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    owner_id: ownerId,
+                    bid_amount: bid,
+                    expected_version: currentVersion
+                })
+            }, { label: 'Bid' });
+            if (!data) return;
 
-                if (response.ok) {
-                    const result = await response.json();
-                    showMessage('Bid placed successfully!', 'success');
-                    currentVersion = result.new_version;
-                    // Blur the manual-bid box (if any) so the rail can rebuild post-commit.
-                    if (ae && ae.closest && ae.closest('.bidctl')) ae.blur();
-                    await refreshData();
-                    flashBid(ownerId);   // confirm the bid landed (no modal — speed)
-                } else {
-                    const error = await response.json();
-                    showMessage('Bid failed: ' + error.detail, 'error');
-                }
-            } catch (error) {
-                showMessage('Error placing bid: ' + error.message, 'error');
-            }
+            showMessage('Bid placed successfully!', 'success');
+            currentVersion = data.new_version;
+            // Blur the manual-bid box (if any) so the rail can rebuild post-commit.
+            if (ae && ae.closest && ae.closest('.bidctl')) ae.blur();
+            await refreshData();
+            flashBid(ownerId);   // confirm the bid landed (no modal — speed)
         }
 
         // ---------- Bid console: keyboard-driven live bidding ----------
@@ -806,64 +812,50 @@
         document.addEventListener('keydown', handleConsoleKey);
 
         async function completeDraft() {
+            // Pre-fetch for freshness so the version we send matches the data we read.
             try {
                 const draftState = await (await fetch('/api/v1/draft-state')).json();
                 if (!draftState.nominated) {
                     showMessage('No player nominated', 'error');
                     return;
                 }
-                // Sync module-level state with the fresh fetch so the version
-                // we send matches the data we read (prevents spurious 409s).
                 currentVersion = draftState.version;
                 currentDraftState = draftState;
-
-                const response = await fetch('/api/v1/draft', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        owner_id: draftState.nominated.current_bidder_id,
-                        player_id: draftState.nominated.player_id,
-                        final_price: draftState.nominated.current_bid,
-                        expected_version: draftState.version
-                    })
-                });
-                
-                if (response.ok) {
-                    const result = await response.json();
-                    showMessage('Player drafted successfully!', 'success');
-                    currentVersion = result.new_version;
-                    await refreshData();
-                } else {
-                    const error = await response.json();
-                    showMessage('Draft failed: ' + error.detail, 'error');
-                }
             } catch (error) {
-                showMessage('Error completing draft: ' + error.message, 'error');
+                showMessage('Error fetching draft state: ' + error.message, 'error');
+                return;
             }
+
+            const data = await apiCall('/api/v1/draft', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    owner_id: currentDraftState.nominated.current_bidder_id,
+                    player_id: currentDraftState.nominated.player_id,
+                    final_price: currentDraftState.nominated.current_bid,
+                    expected_version: currentVersion
+                })
+            }, { label: 'Draft' });
+            if (!data) return;
+
+            showMessage('Player drafted successfully!', 'success');
+            currentVersion = data.new_version;
+            await refreshData();
         }
 
         async function cancelNomination() {
-            try {
-                const response = await fetch('/api/v1/nominate', {
-                    method: 'DELETE',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'If-Match': `"${currentVersion}"`
-                    }
-                });
-                
-                if (response.ok) {
-                    const result = await response.json();
-                    showMessage('Nomination cancelled', 'success');
-                    currentVersion = result.new_version;
-                    await refreshData();
-                } else {
-                    const error = await response.json();
-                    showMessage('Cancel failed: ' + error.detail, 'error');
+            const data = await apiCall('/api/v1/nominate', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'If-Match': `"${currentVersion}"`
                 }
-            } catch (error) {
-                showMessage('Error cancelling nomination: ' + error.message, 'error');
-            }
+            }, { label: 'Cancel nomination' });
+            if (!data) return;
+
+            showMessage('Nomination cancelled', 'success');
+            currentVersion = data.new_version;
+            await refreshData();
         }
 
         function setTickerSpeed(s) {
@@ -898,14 +890,15 @@
         })();
 
         async function doReset() {
-            try {
-                const resp = await fetch('/api/v1/reset', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ force: true })
-                });
-                if (resp.ok) { showMessage('Draft reset', 'success'); closeDrawer(); await refreshData(); }
-                else { const e = await resp.json(); showMessage('Reset failed: ' + e.detail, 'error'); }
-            } catch (err) { showMessage('Error resetting: ' + err.message, 'error'); }
+            const data = await apiCall('/api/v1/reset', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ force: true })
+            }, { label: 'Reset' });
+            if (!data) return;
+
+            showMessage('Draft reset', 'success');
+            closeDrawer();
+            await refreshData();
         }
 
         function showMessage(text, type) {
@@ -962,38 +955,33 @@
             if (ok) showMessage('All done teams cleared', 'success');
         }
         async function patchTeamDone(ownerId, value) {
-            try {
-                const resp = await fetch(`/api/v1/teams/${ownerId}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ manually_done: value, expected_version: currentVersion })
-                });
-                if (resp.ok) {
-                    const r = await resp.json();
-                    currentVersion = r.new_version;
-                    if (value) showMessage('Team marked done', 'success');
-                    await refreshData();
-                    return true;
-                } else {
-                    const e = await resp.json();
-                    showMessage('Update failed: ' + e.detail, 'error');
-                    return false;
-                }
-            } catch (err) { showMessage('Error: ' + err.message, 'error'); return false; }
+            const data = await apiCall(`/api/v1/teams/${ownerId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ manually_done: value, expected_version: currentVersion })
+            }, { label: 'Team update' });
+            if (!data) return false;
+
+            currentVersion = data.new_version;
+            if (value) showMessage('Team marked done', 'success');
+            await refreshData();
+            return true;
         }
 
         async function removeDraftedPlayer() {
             const sel = document.getElementById('remove-select');
             const pickId = parseInt(sel.value);
             if (!pickId) { showMessage('Please select a player to remove', 'error'); return; }
-            try {
-                const resp = await fetch(`/api/v1/draft/${pickId}`, {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json', 'If-Match': `"${currentVersion}"` }
-                });
-                if (resp.ok) { const r = await resp.json(); currentVersion = r.new_version; showMessage('Player removed', 'success'); await refreshData(); }
-                else { const e = await resp.json(); showMessage('Remove failed: ' + e.detail, 'error'); }
-            } catch (err) { showMessage('Error removing: ' + err.message, 'error'); }
+
+            const data = await apiCall(`/api/v1/draft/${pickId}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json', 'If-Match': `"${currentVersion}"` }
+            }, { label: 'Remove player' });
+            if (!data) return;
+
+            currentVersion = data.new_version;
+            showMessage('Player removed', 'success');
+            await refreshData();
         }
 
         // Atomic pick transfer via single server-side endpoint.
@@ -1005,14 +993,16 @@
             if (!pickId || !targetOwnerId) { showMessage('Select a player and a target team', 'error'); return; }
             const price = parseInt(opt.dataset.price);
             if (isNaN(price)) { showMessage('Unable to parse pick price — aborting transfer', 'error'); return; }
-            try {
-                const resp = await fetch('/api/v1/admin/transfer', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ pick_id: pickId, to_owner_id: targetOwnerId, expected_version: currentVersion })
-                });
-                if (resp.ok) { currentVersion = (await resp.json()).new_version; showMessage('Player transferred', 'success'); await refreshData(); }
-                else { const e = await resp.json(); showMessage('Transfer failed: ' + e.detail, 'error'); }
-            } catch (err) { showMessage('Error transferring: ' + err.message, 'error'); }
+
+            const data = await apiCall('/api/v1/admin/transfer', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pick_id: pickId, to_owner_id: targetOwnerId, expected_version: currentVersion })
+            }, { label: 'Transfer' });
+            if (!data) return;
+
+            currentVersion = data.new_version;
+            showMessage('Player transferred', 'success');
+            await refreshData();
         }
 
         // Admin draft functionality
@@ -1135,54 +1125,32 @@
                 return;
             }
             
-            try {
-                const response = await fetch('/api/v1/admin/draft', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        owner_id: ownerId,
-                        player_id: adminSelectedPlayerId,
-                        price: price,
-                        expected_version: currentVersion
-                    })
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    currentVersion = data.new_version;
-                    
-                    // Save player name for success message before clearing
-                    const draftedPlayerName = adminSelectedPlayerName;
-                    
-                    // Clear the form
-                    document.getElementById('admin-player-search').value = '';
-                    document.getElementById('admin-owner-select').value = '';
-                    document.getElementById('admin-price-input').value = '';
-                    adminSelectedPlayerId = null;
-                    adminSelectedPlayerName = null;
-                    
-                    showMessage(`Successfully drafted ${draftedPlayerName} for $${price}`, 'success');
-                    
-                    // Refresh data - this updates all UI components
-                    console.log('Admin draft successful, refreshing data...');
-                    await refreshData();
-                    console.log('Data refresh complete');
-                } else {
-                    const errorData = await response.json();
-                    if (response.status === 409) {
-                        // Version mismatch, refresh and retry
-                        await refreshData();
-                        showMessage('Draft state changed, please try again', 'error');
-                    } else {
-                        showMessage(`Failed to draft player: ${errorData.detail}`, 'error');
-                    }
-                }
-            } catch (error) {
-                console.error('Error drafting player:', error);
-                showMessage('Failed to draft player', 'error');
-            }
+            const data = await apiCall('/api/v1/admin/draft', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    owner_id: ownerId,
+                    player_id: adminSelectedPlayerId,
+                    price: price,
+                    expected_version: currentVersion
+                })
+            }, { label: 'Admin draft' });
+            if (!data) return;
+
+            currentVersion = data.new_version;
+
+            // Save player name for success message before clearing
+            const draftedPlayerName = adminSelectedPlayerName;
+
+            // Clear the form
+            document.getElementById('admin-player-search').value = '';
+            document.getElementById('admin-owner-select').value = '';
+            document.getElementById('admin-price-input').value = '';
+            adminSelectedPlayerId = null;
+            adminSelectedPlayerName = null;
+
+            showMessage(`Successfully drafted ${draftedPlayerName} for $${price}`, 'success');
+            await refreshData();
         }
 
         // FOUT guard: reveal once webfonts are ready (--hu/cqw layout depends on metrics).
