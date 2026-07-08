@@ -608,9 +608,9 @@
                 return;
             }
             
-            // Show dropdown with matches
+            // Show dropdown with matches (cap at 15 — parity with drawer search)
             dropdown.innerHTML = '';
-            matchingPlayers.forEach((player, index) => {
+            matchingPlayers.slice(0, 15).forEach((player, index) => {
                 const option = document.createElement('div');
                 option.className = 'player-option';
                 option.dataset.playerId = player.id;
@@ -884,7 +884,29 @@
                 showMessage('Please enter a valid bid amount', 'error');
                 return;
             }
-            
+
+            // Client-side max-bid guard: reject bids above the nominator's
+            // legal maximum before hitting the server (parity with
+            // updateBidButtonState / canTeamBid for the bidding rail).
+            if (currentDraftState) {
+                const nominatorTeam = currentDraftState.teams.find(
+                    t => t.owner_id === currentDraftState.next_to_nominate
+                );
+                if (nominatorTeam) {
+                    const maxBid = (nominatorTeam.max_bid === null || nominatorTeam.max_bid === undefined)
+                        ? nominatorTeam.budget_remaining : nominatorTeam.max_bid;
+                    const teamName = (owners.find(o => o.id === nominatorTeam.owner_id) || {}).team_name || 'team';
+                    if (bid > nominatorTeam.budget_remaining) {
+                        showMessage(`Bid $${bid} exceeds ${teamName}'s budget of $${nominatorTeam.budget_remaining}`, 'error');
+                        return;
+                    }
+                    if (bid > maxBid) {
+                        showMessage(`Bid $${bid} exceeds ${teamName}'s max bid of $${maxBid}`, 'error');
+                        return;
+                    }
+                }
+            }
+
             try {
                 const response = await fetch('/api/v1/nominate', {
                     method: 'POST',
@@ -1083,7 +1105,11 @@
                     showMessage('No player nominated', 'error');
                     return;
                 }
-                
+                // Sync module-level state with the fresh fetch so the version
+                // we send matches the data we read (prevents spurious 409s).
+                currentVersion = draftState.version;
+                currentDraftState = draftState;
+
                 const response = await fetch('/api/v1/draft', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1091,7 +1117,7 @@
                         owner_id: draftState.nominated.current_bidder_id,
                         player_id: draftState.nominated.player_id,
                         final_price: draftState.nominated.current_bid,
-                        expected_version: currentVersion
+                        expected_version: draftState.version
                     })
                 });
                 
