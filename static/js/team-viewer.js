@@ -50,9 +50,10 @@
         function median(a){ const s=[...a].sort((x,y)=>x-y), m=s.length>>1; return s.length? (s.length%2? s[m] : (s[m-1]+s[m])/2) : 0; }
         function ab2(n){ return (n||'').slice(0,2).toUpperCase(); }
         // D/ST headshot falls back to the team logo (no player headshot for defenses).
+        // ESPN CDN images: hide on error so a CDN hiccup doesn't litter broken-image icons.
         const shotImg = (p, cls) => p.pos === 'D/ST'
-            ? `<img class="${cls} logo" src="${getTeamLogoUrl(p.nfl)}" alt="">`
-            : `<img class="${cls}" src="${headshotUrl(p.id)}" alt="">`;
+            ? `<img class="${cls} logo" src="${getTeamLogoUrl(p.nfl)}" alt="" onerror="this.style.display='none'">`
+            : `<img class="${cls}" src="${headshotUrl(p.id)}" alt="" onerror="this.style.display='none'">`;
         function defenseBye(teamAbbr){
             for (const id in playerStats){ const s = playerStats[id]; if (s && s.team === teamAbbr && s.bye_week) return s.bye_week; }
             return null;
@@ -189,9 +190,9 @@
               :i===nextIdx?'<span class="chip-badge next">Next</span>'
               :done?'<span class="chip-badge done">✓ Full</span>':'';
             const cls=`chip ${i===selected?'active':''} ${i===clockIdx?'is-clock':''}`;
-            return `<div class="${cls}" style="--tc:${t.color}" onclick="selectTeam(${i})" title="View ${esc(t.team)}">
+            return `<button type="button" class="${cls}" style="--tc:${t.color}" onclick="selectTeam(${i})" title="View ${esc(t.team)}">
               <div class="ct">${esc(t.team)}</div>
-              <div class="chip-foot"><span class="co">${esc(t.owner)}</span>${badge}</div></div>`;
+              <div class="chip-foot"><span class="co">${esc(t.owner)}</span>${badge}</div></button>`;
           }).join('');
         }
         function renderClockNote(){
@@ -215,7 +216,7 @@
             if (t) {
                 const url = new URL(window.location);
                 url.searchParams.set('team_id', t.owner_id);
-                window.history.pushState({}, '', url);
+                window.history.replaceState({}, '', url);
             }
             renderChips();
             renderTeamsView();
@@ -438,7 +439,11 @@
         const SKILL = { QB: 1, RB: 1, WR: 1, TE: 1 };   // positions where a shared bye actually hurts
         function setRosterMode(m) {
             rosterMode = m;
-            document.querySelectorAll('#rmode button').forEach(b => b.classList.toggle('active', b.id === 'rm-' + m));
+            document.querySelectorAll('#rmode button').forEach(b => {
+                const on = b.id === 'rm-' + m;
+                b.classList.toggle('active', on);
+                b.setAttribute('aria-pressed', String(on));
+            });
             renderRoster();
         }
         function renderRoster() {
@@ -456,7 +461,7 @@
                 const byeChip = p.bye ? `<span class="pc-bye tnum">BYE ${p.bye}</span>` : '';
                 html += `<div class="pcard" style="--pc:${POSCOLOR[p.pos]};--tmc:${teamColor(p.nfl)}" data-idx="${idx}" onmouseenter="showTip(event,${idx})" onmousemove="moveTip(event)" onmouseleave="hideTip()">
       <div class="pc-photo">
-        <img class="pc-wm" src="${getTeamLogoUrl(p.nfl)}" alt="">
+        <img class="pc-wm" src="${getTeamLogoUrl(p.nfl)}" alt="" onerror="this.style.display='none'">
         ${shotImg(p, 'pc-shot')}
         <span class="pc-pos ${LIGHTPOS[p.pos] ? 'light' : ''}">${p.pos}</span>
         <div class="pc-corner"><span class="pc-price tnum">$${p.price}</span>${byeChip}</div>
@@ -622,8 +627,11 @@
         }
         const arrow = dir => dir > 0 ? ' <i class="ar">▲</i>' : ' <i class="ar">▼</i>';
         function thCells(elId, cols, activeKey, dir, setter) {
-            document.getElementById(elId).innerHTML = cols.map(c =>
-                `<span class="th ${c.cls || ''} ${activeKey === c.k ? 'active' : ''}" onclick="${setter}('${c.k}')">${c.lbl}${activeKey === c.k ? arrow(dir) : ''}</span>`).join('');
+            document.getElementById(elId).innerHTML = cols.map(c => {
+                const isActive = activeKey === c.k;
+                const ariaSort = isActive ? ` aria-sort="${dir > 0 ? 'ascending' : 'descending'}"` : '';
+                return `<span class="th ${c.cls || ''} ${isActive ? 'active' : ''}" role="button" tabindex="0"${ariaSort} onclick="${setter}('${c.k}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${setter}('${c.k}')}">${c.lbl}${isActive ? arrow(dir) : ''}</span>`;
+            }).join('');
         }
         function setLedgerSort(k) {
             if (ledgerSort === k) ledgerDir *= -1;
@@ -659,6 +667,8 @@
                     <span class="ld-price tnum ${pcls}">$${r.price}</span></div>`;
             }).join('');
         }
+        // Production score -- intentionally distinct from booth's production_score
+        // (src/booth/slice.py) and ledger price tiers (valueTier below).
         function prodScore(p) {
             const st = playerStats[p.id]; if (!st) return -1;
             const n = v => num(v) || 0;
@@ -697,8 +707,8 @@
             const counts = {}; AVAILABLE.forEach(p => counts[p.pos] = (counts[p.pos] || 0) + 1);
             const order = RADAR_ORDER.filter(pos => counts[pos]);
             document.getElementById('availCount').textContent = `${AVAILABLE.length} left`;
-            const chips = [`<button class="af-chip ${availPos === 'ALL' ? 'active' : ''}" onclick="setAvailPos('ALL')">All <i>${AVAILABLE.length}</i></button>`]
-                .concat(order.map(pos => `<button class="af-chip ${availPos === pos ? 'active' : ''}" style="--pc:${POSCOLOR[pos]}" onclick="setAvailPos('${pos}')">${pos} <i>${counts[pos]}</i></button>`));
+            const chips = [`<button class="af-chip ${availPos === 'ALL' ? 'active' : ''}" aria-pressed="${availPos === 'ALL'}" onclick="setAvailPos('ALL')">All <i>${AVAILABLE.length}</i></button>`]
+                .concat(order.map(pos => `<button class="af-chip ${availPos === pos ? 'active' : ''}" aria-pressed="${availPos === pos}" style="--pc:${POSCOLOR[pos]}" onclick="setAvailPos('${pos}')">${pos} <i>${counts[pos]}</i></button>`));
             document.getElementById('availFilter').innerHTML = chips.join('');
             thCells('avHead', [{ k: 'pos', lbl: 'Pos', cls: 'ct' }, { k: 'name', lbl: 'Player' }, { k: 'team', lbl: 'Tm' }, { k: 'bye', lbl: 'Bye', cls: 'rt' }, { k: 'prod', lbl: STATS_YR, cls: 'rt' }], availSort, availDir, 'setAvailSort');
             const list = AVAILABLE.filter(p => availPos === 'ALL' || p.pos === availPos).sort(availCmp);
@@ -793,6 +803,8 @@
             else if (pos === 'K') { if (st.kicking) r.push(['FG Made', st.kicking.fgm, STATMAX.FG], ['FG%', st.kicking.fg_pct, 100], ['Long', st.kicking.long, 70], ['XP', st.kicking.xpm, STATMAX.XP], ['Points', st.kicking.points, STATMAX.PTS]); }
             return r;
         }
+        // Price tiers -- intentionally distinct from booth's production_score
+        // (src/booth/slice.py) and the viewer's prodScore above.
         // Plain-language read on a price vs the position's going rate. Uses the median
         // ratio (not spread): auction prices decay toward the $1 floor late, which wrecks
         // std-dev. $1 picks are treated as a neutral "minimum bid", never "below market".
@@ -972,7 +984,11 @@
         }
         function setMatrixMode(m) {
             matrixMode = m;
-            document.querySelectorAll('#mxmode button').forEach(b => b.classList.toggle('active', b.id === 'mx-' + m));
+            document.querySelectorAll('#mxmode button').forEach(b => {
+                const on = b.id === 'mx-' + m;
+                b.classList.toggle('active', on);
+                b.setAttribute('aria-pressed', String(on));
+            });
             renderMatrix();
         }
         // Per-team aggregate by position: how many filled, and how many dollars spent.

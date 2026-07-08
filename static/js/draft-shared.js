@@ -87,7 +87,10 @@ function teamColor(teamAbbr) {
 }
 
 /* ── ESPN player headshot ─────────────────────────────────────────────────
-   D/ST has no headshot; callers substitute the team logo. */
+   D/ST has no headshot; callers substitute the team logo.
+   IMPORTANT: playerId must be an ESPN player ID — players.json IDs are ESPN
+   IDs by convention. If the data is ever sourced from a non-ESPN provider,
+   these URLs will 404. See DESIGN.md "Data Models > Player" for details. */
 function headshotUrl(playerId) {
     return `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${playerId}.png&w=350&h=254`;
 }

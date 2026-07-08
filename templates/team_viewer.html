@@ -12,6 +12,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Anton&family=Saira+Condensed:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap"
           rel="stylesheet">
+    <!-- Bump ?v= on link/script tags below when editing the referenced CSS/JS files -->
     <link rel="stylesheet" href="/static/css/draft-set-viewer.css?v=4">
   </head>
   <body>
@@ -44,9 +45,12 @@
           <div class="rp-head">
             <div class="rp-title cond">Roster</div>
             <div class="rmode" id="rmode">
-              <button id="rm-cards" class="active" onclick="setRosterMode('cards')">Cards</button>
-              <button id="rm-bye" onclick="setRosterMode('bye')">Bye Weeks</button>
-              <button id="rm-list" onclick="setRosterMode('list')">List</button>
+              <button id="rm-cards"
+                      class="active"
+                      aria-pressed="true"
+                      onclick="setRosterMode('cards')">Cards</button>
+              <button id="rm-bye" aria-pressed="false" onclick="setRosterMode('bye')">Bye Weeks</button>
+              <button id="rm-list" aria-pressed="false" onclick="setRosterMode('list')">List</button>
             </div>
           </div>
           <div class="roster-scroll">
@@ -170,8 +174,13 @@
               <h3>Roster Matrix</h3>
               <div class="ch-right">
                 <div class="rmode mxmode" id="mxmode">
-                  <button id="mx-count" class="active" onclick="setMatrixMode('count')">#</button>
-                  <button id="mx-dollars" onclick="setMatrixMode('dollars')">$</button>
+                  <button id="mx-count"
+                          class="active"
+                          aria-pressed="true"
+                          onclick="setMatrixMode('count')">#</button>
+                  <button id="mx-dollars"
+                          aria-pressed="false"
+                          onclick="setMatrixMode('dollars')">$</button>
                 </div>
                 <span class="card-note" id="matrixNote">filled vs max · gaps glow</span>
               </div>

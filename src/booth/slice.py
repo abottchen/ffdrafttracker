@@ -62,6 +62,9 @@ def production_score(stats: PlayerStats | None) -> float:
     A deterministic, market-derived proxy for "how productive was this player
     last season" — used only to ORDER players within a position. Players with
     no recorded production score 0.0 (and are flagged as rookies elsewhere).
+
+    Production score -- intentionally distinct from the viewer's prodScore()
+    (static/js/team-viewer.js) and ledger price tiers (valueTier, same file).
     """
     if stats is None:
         return 0.0
