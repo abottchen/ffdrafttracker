@@ -55,7 +55,8 @@
                src=""
                alt=""
                width="500"
-               height="500">
+               height="500"
+               onerror="this.style.display='none'">
           <div class="hero-eyebrow">
             <span class="auctioning">Now Auctioning</span>
             <span class="live"><span class="dot"></span>LIVE</span>
@@ -228,6 +229,7 @@
         </div>
       </div>
     </aside>
+    <script src="/static/js/draft-shared.js?v=1"></script>
     <script>
         // Server-injected (change F): config is authoritative; no hardcoded fallbacks.
         let config = {{ config | tojson }};
@@ -259,59 +261,10 @@
         }
         document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
 
-        function getTeamLogoUrl(teamAbbr) {
-            const teamMappings = {
-                'ARI': 'https://a.espncdn.com/i/teamlogos/nfl/500/ari.png',
-                'ATL': 'https://a.espncdn.com/i/teamlogos/nfl/500/atl.png',
-                'BAL': 'https://a.espncdn.com/i/teamlogos/nfl/500/bal.png',
-                'BUF': 'https://a.espncdn.com/i/teamlogos/nfl/500/buf.png',
-                'CAR': 'https://a.espncdn.com/i/teamlogos/nfl/500/car.png',
-                'CHI': 'https://a.espncdn.com/i/teamlogos/nfl/500/chi.png',
-                'CIN': 'https://a.espncdn.com/i/teamlogos/nfl/500/cin.png',
-                'CLE': 'https://a.espncdn.com/i/teamlogos/nfl/500/cle.png',
-                'DAL': 'https://a.espncdn.com/i/teamlogos/nfl/500/dal.png',
-                'DEN': 'https://a.espncdn.com/i/teamlogos/nfl/500/den.png',
-                'DET': 'https://a.espncdn.com/i/teamlogos/nfl/500/det.png',
-                'GB': 'https://a.espncdn.com/i/teamlogos/nfl/500/gb.png',
-                'HOU': 'https://a.espncdn.com/i/teamlogos/nfl/500/hou.png',
-                'IND': 'https://a.espncdn.com/i/teamlogos/nfl/500/ind.png',
-                'JAX': 'https://a.espncdn.com/i/teamlogos/nfl/500/jax.png',
-                'KC': 'https://a.espncdn.com/i/teamlogos/nfl/500/kc.png',
-                'LV': 'https://a.espncdn.com/i/teamlogos/nfl/500/lv.png',
-                'LAC': 'https://a.espncdn.com/i/teamlogos/nfl/500/lac.png',
-                'LAR': 'https://a.espncdn.com/i/teamlogos/nfl/500/lar.png',
-                'MIA': 'https://a.espncdn.com/i/teamlogos/nfl/500/mia.png',
-                'MIN': 'https://a.espncdn.com/i/teamlogos/nfl/500/min.png',
-                'NE': 'https://a.espncdn.com/i/teamlogos/nfl/500/ne.png',
-                'NO': 'https://a.espncdn.com/i/teamlogos/nfl/500/no.png',
-                'NYG': 'https://a.espncdn.com/i/teamlogos/nfl/500/nyg.png',
-                'NYJ': 'https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png',
-                'PHI': 'https://a.espncdn.com/i/teamlogos/nfl/500/phi.png',
-                'PIT': 'https://a.espncdn.com/i/teamlogos/nfl/500/pit.png',
-                'SEA': 'https://a.espncdn.com/i/teamlogos/nfl/500/sea.png',
-                'SF': 'https://a.espncdn.com/i/teamlogos/nfl/500/sf.png',
-                'TB': 'https://a.espncdn.com/i/teamlogos/nfl/500/tb.png',
-                'TEN': 'https://a.espncdn.com/i/teamlogos/nfl/500/ten.png',
-                'WAS': 'https://a.espncdn.com/i/teamlogos/nfl/500/was.png'
-            };
-            return teamMappings[teamAbbr] || 'https://a.espncdn.com/i/teamlogos/nfl/500/nfl.png';
-        }
+        // esc(), getTeamLogoUrl(), teamColor(), headshotUrl(), budgetClass(),
+        // BOOTH_PERSONAS/boothPersona(), revealOnReady() all come from
+        // /static/js/draft-shared.js (loaded above) — shared with the team viewer.
 
-        // Hardcoded per-team tint for the auction backdrop — each team's signature color,
-        // shifted brighter where the brand primary is too dark to read on the steel bg.
-        function getTeamColor(teamAbbr) {
-            const colors = {
-                'ARI': '#C8102E', 'ATL': '#E31837', 'BAL': '#5E48A8', 'BUF': '#1A6DD6',
-                'CAR': '#0085CA', 'CHI': '#E0541C', 'CIN': '#FB4F14', 'CLE': '#FF6A2B',
-                'DAL': '#2A5BD0', 'DEN': '#FB4F14', 'DET': '#1B8FD6', 'GB': '#3A8C52',
-                'HOU': '#C8324B', 'IND': '#2A74C4', 'JAX': '#13909E', 'KC': '#E31837',
-                'LV': '#B9C0C4', 'LAC': '#0FA0E0', 'LAR': '#2A63E0', 'MIA': '#00B6C0',
-                'MIN': '#6A3CB0', 'NE': '#D33C50', 'NO': '#D3BC8D', 'NYG': '#2A52C9',
-                'NYJ': '#2E8C5E', 'PHI': '#1A8579', 'PIT': '#FFB612', 'SEA': '#69BE28',
-                'SF': '#C8102E', 'TB': '#D50A0A', 'TEN': '#4B92DB', 'WAS': '#9A3550'
-            };
-            return colors[teamAbbr] || '#E8A33D';
-        }
         async function loadData() {
             try {
                 players = await (await fetch('/api/v1/players')).json();
@@ -385,7 +338,7 @@
             if (position === 'RB' && s.rushing) return ` · ${s.rushing.yards} yds · ${s.rushing.tds} TD`;
             if ((position === 'WR' || position === 'TE') && s.receiving) return ` · ${s.receiving.yards} yds · ${s.receiving.tds} TD`;
             if (position === 'K' && s.kicking) return ` · ${s.kicking.points} pts`;
-            return s.stats_summary ? ` · ${s.stats_summary}` : '';
+            return s.stats_summary ? ` · ${esc(s.stats_summary)}` : '';   // free text -> escaped
         }
 
         // Bye week for the nominee. D/ST has no per-player stats row, so derive it from
@@ -410,24 +363,25 @@
                 if (player) {
                     const logo = getTeamLogoUrl(player.team);
                     const heroActive = document.querySelector('.hero.active');
-                    if (heroActive) heroActive.style.setProperty('--team-tint', getTeamColor(player.team));
-                    const img = player.position === 'D/ST'
-                        ? logo
-                        : `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${player.id}.png&w=350&h=254`;
+                    if (heroActive) heroActive.style.setProperty('--team-tint', teamColor(player.team));
+                    const img = player.position === 'D/ST' ? logo : headshotUrl(player.id);
                     const name = player.position === 'D/ST'
                         ? `${player.first_name} ${player.last_name}`
                         : `${player.last_name}, ${player.first_name}`;
                     document.getElementById('hero-posbadge').textContent = player.position;
                     const photo = document.getElementById('hero-photo-img');
                     photo.style.display = ''; photo.src = img; photo.alt = player.last_name; photo.onerror = function(){ this.style.display='none'; };
-                    document.getElementById('hero-logo').src = logo;
+                    // Un-hide first: the inline onerror hides the logo on a 404, and the
+                    // element is reused for every nominee.
+                    const logoEl = document.getElementById('hero-logo');
+                    logoEl.style.display = ''; logoEl.src = logo;
                     document.getElementById('hero-name').textContent = name;
                     const bye = playerByeWeek(player);
                     const byeEl = document.getElementById('hero-bye');
                     if (bye) document.getElementById('hero-bye-num').textContent = bye;
                     byeEl.classList.toggle('is-hidden', !bye);
                     document.getElementById('hero-meta').innerHTML =
-                        `${player.position} · <b>${player.team}</b>${heroStatLine(player.id, player.position)}`;
+                        `${esc(player.position)} · <b>${esc(player.team)}</b>${heroStatLine(player.id, player.position)}`;
                     document.getElementById('bid-amt').textContent = `$${nominated.current_bid}`;
                     document.getElementById('bidder-chip').style.background = bidder ? bidder.color : '#8A9BB5';
                     document.getElementById('bidder-nm').textContent = bidder ? bidder.team_name : 'Unknown';
@@ -446,7 +400,7 @@
             nameEl.textContent = team ? team.team_name : '—';
             nameEl.style.color = color;
             document.getElementById('standby-meta').innerHTML =
-                `${team ? team.owner_name : ''} · <b>awaiting nomination</b>`;
+                `${team ? esc(team.owner_name) : ''} · <b>awaiting nomination</b>`;
             const sil = document.getElementById('standby-sil');
             sil.querySelectorAll('[fill]').forEach(node => node.setAttribute('fill', color));
         }
@@ -455,8 +409,8 @@
             const onClock = owners.find(o => o.id === draftState.next_to_nominate);
             const upNext = draftState.up_next ? owners.find(o => o.id === draftState.up_next) : null;
             let html = '';
-            if (onClock) html = `On the clock: <b>${onClock.team_name}</b>`;
-            if (upNext) html += ` · Up Next <b>${upNext.team_name}</b>`;
+            if (onClock) html = `On the clock: <b>${esc(onClock.team_name)}</b>`;
+            if (upNext) html += ` · Up Next <b>${esc(upNext.team_name)}</b>`;
             document.getElementById('ondeck').innerHTML = html;
         }
 
@@ -470,7 +424,7 @@
                 t.picks.forEach(pk => {
                     const p = players.find(pl => pl.id === pk.player_id);
                     if (p) picks.push({ id: pk.pick_id,
-                        html: `<b>${p.first_name} ${p.last_name}</b> (${p.position}) → ${o ? o.team_name : '?'} <span class="amt">$${pk.price}</span>` });
+                        html: `<b>${esc(p.first_name)} ${esc(p.last_name)}</b> (${p.position}) → ${o ? esc(o.team_name) : '?'} <span class="amt">$${pk.price}</span>` });
                 });
             });
             picks.sort((a, b) => b.id - a.id);
@@ -490,24 +444,7 @@
         }
 
         // ---- Analyst booth chyron (live commentary from /api/v1/comments) ----
-        // Per-persona identity: accent ring + headshot file (or initials fallback).
-        const BOOTH_PERSONAS = {
-            eisen:    { accent: '#E8A33D', slug: 'eisen',    name: 'Rich Eisen' },
-            kiper:    { accent: '#56C5D0', slug: 'kiper',    name: 'Mel Kiper Jr.' },
-            schefter: { accent: '#E2574C', slug: 'schefter', name: 'Adam Schefter' },
-            booger:   { accent: '#5BBF7B', slug: 'booger',   name: 'Booger McFarland' },
-            kimes:    { accent: '#9B8CEF', slug: 'kimes',    name: 'Mina Kimes' },
-            mcafee:   { accent: '#F0913E', slug: 'mcafee',   name: 'Pat McAfee' },
-        };
-        function boothPersona(name) {
-            const key = (name || '').toLowerCase().replace(/[^a-z]/g, '');
-            const m = BOOTH_PERSONAS[key];
-            const label = (name || '?').toUpperCase();
-            const initials = (name || '?').replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase() || '?';
-            return m
-                ? { label, fullName: m.name, accent: m.accent, img: `/static/img/personas/${m.slug}.jpg`, initials }
-                : { label, fullName: (name || ''), accent: 'var(--slate)', img: '', initials };  // unknown -> monogram
-        }
+        // Persona identity (BOOTH_PERSONAS / boothPersona) lives in draft-shared.js.
         let boothBuffer = [];        // recent comments, ascending seq
         let boothLastSeq = 0;        // watermark
         let boothExpanded = false;
@@ -614,7 +551,7 @@
                 const option = document.createElement('div');
                 option.className = 'player-option';
                 option.dataset.playerId = player.id;
-                option.innerHTML = `<strong>${player.first_name} ${player.last_name}</strong> - ${player.position} (${player.team})`;
+                option.innerHTML = `<strong>${esc(player.first_name)} ${esc(player.last_name)}</strong> - ${esc(player.position)} (${esc(player.team)})`;
                 option.onclick = () => selectPlayerFromDropdown(player);
                 dropdown.appendChild(option);
             });
@@ -709,13 +646,6 @@
             const p = players.find(pl => pl.id === draftState.nominated.player_id);
             return p ? p.position : null;
         }
-        function budgetClass(team) {
-            const pct = (team.budget_remaining / config.initial_budget) * 100;
-            if (pct <= 15) return 'crit';
-            if (pct <= 35) return 'warn';
-            return 'ok';
-        }
-
         // Can this team legally bid `amount` on the current nominee? (parity with
         // backend + updateBidButtonState): not done, within budget, within roster-safe
         // max bid, and not already at the position maximum for the nominee.
@@ -786,7 +716,7 @@
 
                 const pct = Math.round(team.picks.length / total * 100);
                 const budgetPct = Math.round(team.budget_remaining / config.initial_budget * 100);
-                const bcls = budgetClass(team);
+                const bcls = budgetClass(team.budget_remaining, config.initial_budget);
                 const maxBid = team.max_bid;  // server: int | null
                 const maxEl = (maxBid === null || maxBid === undefined)
                     ? '<span class="v max">—</span>'
@@ -818,8 +748,8 @@
                             ${statusEl}
                             ${hk ? `<span class="hotkey" title="Press ${hk} to select this team">${hk}</span>` : ''}
                         </div>
-                        <span class="tname">${owner ? owner.team_name : 'Unknown Team'}</span>
-                        <span class="owner">${owner ? owner.owner_name : 'Unknown'}</span>
+                        <span class="tname">${owner ? esc(owner.team_name) : 'Unknown Team'}</span>
+                        <span class="owner">${owner ? esc(owner.owner_name) : 'Unknown'}</span>
                         <span class="spacer"></span>
                         <div class="stat-row">
                             <div class="stat"><span class="k">Budget</span><span class="v money ${bcls} tnum">$${team.budget_remaining}</span></div>
@@ -1216,14 +1146,14 @@
             doneSel.innerHTML = '<option value="">Select team…</option>';
             teams.forEach(t => {
                 const o = owners.find(ow => ow.id === t.owner_id);
-                if (o && !t.manually_done) doneSel.insertAdjacentHTML('beforeend', `<option value="${t.owner_id}">${o.team_name}</option>`);
+                if (o && !t.manually_done) doneSel.insertAdjacentHTML('beforeend', `<option value="${t.owner_id}">${esc(o.team_name)}</option>`);
             });
             // Transfer target: all teams
             const transferSel = document.getElementById('transfer-select');
             transferSel.innerHTML = '<option value="">Transfer to…</option>';
             teams.forEach(t => {
                 const o = owners.find(ow => ow.id === t.owner_id);
-                if (o) transferSel.insertAdjacentHTML('beforeend', `<option value="${t.owner_id}">${o.team_name}</option>`);
+                if (o) transferSel.insertAdjacentHTML('beforeend', `<option value="${t.owner_id}">${esc(o.team_name)}</option>`);
             });
             // Remove/Transfer source: every drafted pick, sorted by last name
             const removeSel = document.getElementById('remove-select');
@@ -1237,9 +1167,9 @@
                         label: `${p.last_name}, ${p.first_name} · ${o ? o.team_name : '?'} ($${pk.price})` });
                 });
             });
-            picks.sort((a, b) => a.label.localeCompare(b.label));
+            picks.sort((a, b) => a.label.localeCompare(b.label));   // sort on the raw label, escape at render
             picks.forEach(pk => removeSel.insertAdjacentHTML('beforeend',
-                `<option value="${pk.pickId}" data-player="${pk.playerId}" data-price="${pk.price}">${pk.label}</option>`));
+                `<option value="${pk.pickId}" data-player="${pk.playerId}" data-price="${pk.price}">${esc(pk.label)}</option>`));
         }
 
         async function markTeamDone() {
@@ -1341,8 +1271,8 @@
                     option.className = `player-option ${index === adminHighlightedIndex ? 'highlighted' : ''}`;
                     option.dataset.index = index;
                     option.innerHTML = `
-                        <div class="player-name">${player.first_name} ${player.last_name}</div>
-                        <div class="player-meta">${player.position} - ${player.team}</div>
+                        <div class="player-name">${esc(player.first_name)} ${esc(player.last_name)}</div>
+                        <div class="player-meta">${esc(player.position)} - ${esc(player.team)}</div>
                     `;
                     option.onclick = () => selectAdminPlayer(player.id, `${player.first_name} ${player.last_name}`);
                     dropdown.appendChild(option);
@@ -1479,10 +1409,7 @@
         }
 
         // FOUT guard: reveal once webfonts are ready (--hu/cqw layout depends on metrics).
-        const stage = document.getElementById('stage');
-        function revealStage() { stage.classList.add('ready'); }
-        if (document.fonts && document.fonts.ready) { document.fonts.ready.then(revealStage); }
-        setTimeout(revealStage, 1500);
+        revealOnReady(document.getElementById('stage'));
 
         // Hero height unit: --hu = 1% of the hero's rendered height, so calc(N*var(--hu))
         // in the CSS behaves like the old Ncqh — but works in Firefox, where cqh on a
