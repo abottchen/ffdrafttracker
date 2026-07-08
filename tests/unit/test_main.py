@@ -101,7 +101,7 @@ class TestGetEndpoints(TestMainApp):
             assert "text/html" in response.headers["content-type"]
             assert "Fantasy Football Draft Tracker" in response.text
 
-    @patch("main.load_draft_state")
+    @patch("src.api.read_routes.load_draft_state")
     def test_get_draft_state(self, mock_load):
         """Test GET /api/v1/draft-state."""
         mock_load.return_value = self.sample_draft_state
@@ -115,7 +115,7 @@ class TestGetEndpoints(TestMainApp):
         assert len(data["teams"]) == 2
         assert data["nominated"] is None
 
-    @patch("main.load_players")
+    @patch("src.api.read_routes.load_players")
     def test_get_players(self, mock_load):
         """Test GET /api/v1/players."""
         mock_load.return_value = self.sample_players
@@ -128,8 +128,8 @@ class TestGetEndpoints(TestMainApp):
         assert data[0]["first_name"] == "Josh"
         assert data[0]["last_name"] == "Allen"
 
-    @patch("main.load_players")
-    @patch("main.load_draft_state")
+    @patch("src.api.read_routes.load_players")
+    @patch("src.api.read_routes.load_draft_state")
     def test_get_available_players(self, mock_draft_state, mock_players):
         """Test GET /api/v1/players/available."""
         mock_players.return_value = self.sample_players
@@ -145,7 +145,7 @@ class TestGetEndpoints(TestMainApp):
         assert 3 in player_ids
         assert 2 not in player_ids  # Player 2 is drafted
 
-    @patch("main.load_owners")
+    @patch("src.api.read_routes.load_owners")
     def test_get_owners(self, mock_load):
         """Test GET /api/v1/owners."""
         mock_load.return_value = self.sample_owners
@@ -157,7 +157,7 @@ class TestGetEndpoints(TestMainApp):
         assert len(data) == 2
         assert data[0]["owner_name"] == "Rick Sanchez"
 
-    @patch("main.load_owners")
+    @patch("src.api.read_routes.load_owners")
     def test_get_owner_by_id_success(self, mock_load):
         """Test GET /api/v1/owners/{owner_id} with valid ID."""
         mock_load.return_value = self.sample_owners
@@ -170,7 +170,7 @@ class TestGetEndpoints(TestMainApp):
         assert data["owner_name"] == "Rick Sanchez"
         assert data["team_name"] == "Portal Gunners"
 
-    @patch("main.load_owners")
+    @patch("src.api.read_routes.load_owners")
     def test_get_owner_by_id_not_found(self, mock_load):
         """Test GET /api/v1/owners/{owner_id} with invalid ID."""
         mock_load.return_value = self.sample_owners
@@ -180,8 +180,8 @@ class TestGetEndpoints(TestMainApp):
         assert response.status_code == 404
         assert "Owner 999 not found" in response.json()["detail"]
 
-    @patch("main.load_players")
-    @patch("main.load_draft_state")
+    @patch("src.api.read_routes.load_players")
+    @patch("src.api.read_routes.load_draft_state")
     def test_get_team_by_owner_id_success(self, mock_draft_state, mock_players):
         """Test GET /api/v1/teams/{owner_id} with valid ID."""
         mock_players.return_value = self.sample_players
@@ -196,8 +196,8 @@ class TestGetEndpoints(TestMainApp):
         assert len(data["picks"]) == 1
         assert data["picks"][0]["player"]["first_name"] == "Christian"
 
-    @patch("main.load_players")
-    @patch("main.load_draft_state")
+    @patch("src.api.read_routes.load_players")
+    @patch("src.api.read_routes.load_draft_state")
     def test_get_team_by_owner_id_not_found(self, mock_draft_state, mock_players):
         """Test GET /api/v1/teams/{owner_id} with invalid ID."""
         mock_players.return_value = self.sample_players
@@ -208,7 +208,7 @@ class TestGetEndpoints(TestMainApp):
         assert response.status_code == 404
         assert "Team not found for owner 999" in response.json()["detail"]
 
-    @patch("main.load_configuration")
+    @patch("src.api.read_routes.load_configuration")
     def test_get_config(self, mock_config):
         """Test GET /api/v1/config."""
         mock_config.return_value = Configuration(
@@ -229,9 +229,9 @@ class TestGetEndpoints(TestMainApp):
         assert "position_maximums" in data
         assert data["draft_year"] == 2026
 
-    @patch("main.load_players")
-    @patch("main.load_owners")
-    @patch("main.load_draft_state")
+    @patch("src.api.admin_routes.load_players")
+    @patch("src.api.admin_routes.load_owners")
+    @patch("src.api.admin_routes.load_draft_state")
     def test_export_csv_success(self, mock_draft_state, mock_owners, mock_players):
         """Test GET /api/v1/export/csv returns properly formatted CSV."""
         # Setup mock data with some drafted players
@@ -287,7 +287,7 @@ class TestGetEndpoints(TestMainApp):
         assert '"Allen, Josh"' in third_row or '"McCaffrey, Christian"' in third_row
         assert "15" in third_row or "20" in third_row
 
-    @patch("main.generate_draft_csv")
+    @patch("src.api.admin_routes.generate_draft_csv")
     def test_export_csv_handles_generation_error(self, mock_generate):
         """Test GET /api/v1/export/csv handles CSV generation errors."""
         mock_generate.side_effect = Exception("CSV generation failed")
@@ -302,9 +302,9 @@ class TestGetEndpoints(TestMainApp):
 class TestPostEndpoints(TestMainApp):
     """Test POST endpoints."""
 
-    @patch("main.load_draft_state")
-    @patch("main.load_owners")
-    @patch("main.load_configuration")
+    @patch("src.api.admin_routes.load_draft_state")
+    @patch("src.api.admin_routes.load_owners")
+    @patch("src.api.admin_routes.load_configuration")
     def test_nominate_success_200(self, mock_config, mock_owners, mock_draft_state):
         """Test POST /api/v1/nominate returns 200 with valid nomination."""
         # DESIGN.md: 200 - Success with nomination confirmation and player details
@@ -339,7 +339,7 @@ class TestPostEndpoints(TestMainApp):
         # Uses atomic file operations
         mock_draft_state.return_value.save_to_file.assert_called_once()
 
-    @patch("main.load_draft_state")
+    @patch("src.api.admin_routes.load_draft_state")
     def test_nominate_409_version_mismatch(self, mock_draft_state):
         """Test POST /api/v1/nominate returns 409 for version mismatch."""
         # DESIGN.md: 409 - Conflict (version mismatch - state modified by
@@ -359,7 +359,7 @@ class TestPostEndpoints(TestMainApp):
         assert response.status_code == 409
         assert "Draft state has changed" in response.json()["detail"]
 
-    @patch("main.load_draft_state")
+    @patch("src.api.admin_routes.load_draft_state")
     def test_nominate_422_nomination_already_active(self, mock_draft_state):
         """Test POST /api/v1/nominate returns 422 when nomination already active."""
         # DESIGN.md: 422 - Unprocessable (nomination already active, bid below minimum)
@@ -383,9 +383,9 @@ class TestPostEndpoints(TestMainApp):
         assert response.status_code == 422
         assert "A player is already nominated" in response.json()["detail"]
 
-    @patch("main.load_draft_state")
-    @patch("main.load_owners")
-    @patch("main.load_configuration")
+    @patch("src.api.admin_routes.load_draft_state")
+    @patch("src.api.admin_routes.load_owners")
+    @patch("src.api.admin_routes.load_configuration")
     def test_nominate_422_bid_below_minimum(
         self, mock_config, mock_owners, mock_draft_state
     ):
@@ -425,7 +425,7 @@ class TestPostEndpoints(TestMainApp):
             response.status_code == 422
         )  # FastAPI validation returns 422 for missing fields
 
-    @patch("main.load_draft_state")
+    @patch("src.api.admin_routes.load_draft_state")
     def test_nominate_version_mismatch(self, mock_draft_state):
         """Test POST /api/v1/nominate with version mismatch."""
         mock_draft_state.return_value = self.create_mock_draft_state()
@@ -443,7 +443,7 @@ class TestPostEndpoints(TestMainApp):
         assert response.status_code == 409
         assert "Draft state has changed" in response.json()["detail"]
 
-    @patch("main.load_draft_state")
+    @patch("src.api.admin_routes.load_draft_state")
     def test_nominate_player_already_nominated(self, mock_draft_state):
         """Test POST /api/v1/nominate when player already nominated."""
         nomination = Nominated(
@@ -466,8 +466,8 @@ class TestPostEndpoints(TestMainApp):
         assert response.status_code == 422
         assert "A player is already nominated" in response.json()["detail"]
 
-    @patch("main.load_draft_state")
-    @patch("main.load_configuration")
+    @patch("src.api.admin_routes.load_draft_state")
+    @patch("src.api.admin_routes.load_configuration")
     def test_bid_success_200(self, mock_config, mock_draft_state):
         """Test POST /api/v1/bid returns 200 with valid bid."""
         # DESIGN.md: 200 - Success with updated nomination info
@@ -504,7 +504,7 @@ class TestPostEndpoints(TestMainApp):
         # Uses atomic file operations
         mock_draft_state.return_value.save_to_file.assert_called_once()
 
-    @patch("main.load_draft_state")
+    @patch("src.api.admin_routes.load_draft_state")
     def test_bid_409_version_mismatch(self, mock_draft_state):
         """Test POST /api/v1/bid returns 409 for version mismatch."""
         # DESIGN.md: 409 - Conflict (version mismatch - state modified by
@@ -528,7 +528,7 @@ class TestPostEndpoints(TestMainApp):
         assert response.status_code == 409
         assert "Draft state has changed" in response.json()["detail"]
 
-    @patch("main.load_draft_state")
+    @patch("src.api.admin_routes.load_draft_state")
     def test_bid_422_no_active_nomination(self, mock_draft_state):
         """Test POST /api/v1/bid returns 422 when no active nomination."""
         # DESIGN.md: 422 - Unprocessable (no active nomination, insufficient
@@ -542,8 +542,8 @@ class TestPostEndpoints(TestMainApp):
         assert response.status_code == 422
         assert "No player is currently nominated" in response.json()["detail"]
 
-    @patch("main.load_draft_state")
-    @patch("main.load_configuration")
+    @patch("src.api.admin_routes.load_draft_state")
+    @patch("src.api.admin_routes.load_configuration")
     def test_bid_422_insufficient_bid_amount(self, mock_config, mock_draft_state):
         """Test POST /api/v1/bid returns 422 for insufficient bid amount."""
         # DESIGN.md: Validates bid amount exceeds current bid and >= min_bid
@@ -570,8 +570,8 @@ class TestPostEndpoints(TestMainApp):
         assert response.status_code == 422
         assert "Bid must exceed current bid" in response.json()["detail"]
 
-    @patch("main.load_draft_state")
-    @patch("main.load_configuration")
+    @patch("src.api.admin_routes.load_draft_state")
+    @patch("src.api.admin_routes.load_configuration")
     def test_bid_422_insufficient_budget(self, mock_config, mock_draft_state):
         """Test POST /api/v1/bid returns 422 for insufficient budget to complete
         roster."""
@@ -613,8 +613,8 @@ class TestPostEndpoints(TestMainApp):
         assert "Insufficient budget" in response.json()["detail"]
         assert "roster spots" in response.json()["detail"]
 
-    @patch("main.load_draft_state")
-    @patch("main.load_configuration")
+    @patch("src.api.admin_routes.load_draft_state")
+    @patch("src.api.admin_routes.load_configuration")
     def test_bid_422_sufficient_budget_for_roster_completion(
         self, mock_config, mock_draft_state
     ):
@@ -661,8 +661,8 @@ class TestPostEndpoints(TestMainApp):
         data = response.json()
         assert data["success"] is True
 
-    @patch("main.load_draft_state")
-    @patch("main.load_configuration")
+    @patch("src.api.admin_routes.load_draft_state")
+    @patch("src.api.admin_routes.load_configuration")
     def test_bid_edge_case_one_dollar_for_one_player(
         self, mock_config, mock_draft_state
     ):
@@ -708,8 +708,8 @@ class TestPostEndpoints(TestMainApp):
         data = response.json()
         assert data["success"] is True
 
-    @patch("main.load_draft_state")
-    @patch("main.load_configuration")
+    @patch("src.api.admin_routes.load_draft_state")
+    @patch("src.api.admin_routes.load_configuration")
     def test_bid_edge_case_zero_dollars_roster_complete(
         self, mock_config, mock_draft_state
     ):
@@ -759,7 +759,7 @@ class TestPostEndpoints(TestMainApp):
         # Uses atomic file operations
         mock_draft_state.return_value.save_to_file.assert_called_once()
 
-    @patch("main.load_draft_state")
+    @patch("src.api.admin_routes.load_draft_state")
     def test_draft_success(self, mock_draft_state):
         """Test POST /api/v1/draft with valid data."""
         nomination = Nominated(
@@ -770,7 +770,7 @@ class TestPostEndpoints(TestMainApp):
             available_player_ids=[1, 3],  # Player 1 must be available to be drafted
         )
 
-        with patch("main.load_owners") as mock_owners:
+        with patch("src.api.admin_routes.load_owners") as mock_owners:
             mock_owners.return_value = self.sample_owners
 
             response = self.client.post(
@@ -790,16 +790,16 @@ class TestPostEndpoints(TestMainApp):
             assert data["pick"]["price"] == 20
             mock_draft_state.return_value.save_to_file.assert_called_once()
 
-    @patch("main.load_draft_state")
+    @patch("src.api.admin_routes.load_draft_state")
     def test_reset_draft_success(self, mock_draft_state):
         """Test POST /api/v1/reset with valid data."""
         mock_draft_state.return_value = self.sample_draft_state
 
         with (
-            patch("main.load_configuration") as mock_config,
-            patch("main.load_players") as mock_players,
-            patch("main.load_owners") as mock_owners,
-            patch("main.DraftState") as mock_draft_class,
+            patch("src.api.admin_routes.load_configuration") as mock_config,
+            patch("src.api.admin_routes.load_players") as mock_players,
+            patch("src.api.admin_routes.load_owners") as mock_owners,
+            patch("src.api.admin_routes.DraftState") as mock_draft_class,
         ):
             mock_config.return_value = MagicMock(initial_budget=200)
             mock_players.return_value = self.sample_players
@@ -818,10 +818,10 @@ class TestPostEndpoints(TestMainApp):
             assert data["new_version"] == 1
             mock_initial_state.save_to_file.assert_called_once()
 
-    @patch("main.load_draft_state")
-    @patch("main.load_configuration")
-    @patch("main.load_owners")
-    @patch("main.load_players")
+    @patch("src.api.admin_routes.load_draft_state")
+    @patch("src.api.admin_routes.load_configuration")
+    @patch("src.api.admin_routes.load_owners")
+    @patch("src.api.admin_routes.load_players")
     def test_admin_draft_success_200(
         self, mock_players, mock_owners, mock_config, mock_draft_state
     ):
@@ -857,7 +857,7 @@ class TestPostEndpoints(TestMainApp):
         # Validate business logic - uses atomic file operations
         mock_draft_state.return_value.save_to_file.assert_called_once()
 
-    @patch("main.load_draft_state")
+    @patch("src.api.admin_routes.load_draft_state")
     def test_admin_draft_409_version_mismatch(self, mock_draft_state):
         """Test POST /api/v1/admin/draft returns 409 for version mismatch."""
         mock_draft_state.return_value = self.create_mock_draft_state()
@@ -875,8 +875,8 @@ class TestPostEndpoints(TestMainApp):
         assert response.status_code == 409
         assert "Draft state has changed" in response.json()["detail"]
 
-    @patch("main.load_draft_state")
-    @patch("main.load_players")
+    @patch("src.api.admin_routes.load_draft_state")
+    @patch("src.api.admin_routes.load_players")
     def test_admin_draft_422_player_not_available(self, mock_players, mock_draft_state):
         """Test POST /api/v1/admin/draft returns 422 for unavailable player."""
         # Player 2 exists but is not in available_player_ids
@@ -898,8 +898,8 @@ class TestPostEndpoints(TestMainApp):
         assert response.status_code == 422
         assert "Player 2 is not available for draft" in response.json()["detail"]
 
-    @patch("main.load_draft_state")
-    @patch("main.load_players")
+    @patch("src.api.admin_routes.load_draft_state")
+    @patch("src.api.admin_routes.load_players")
     def test_admin_draft_400_player_not_found(self, mock_players, mock_draft_state):
         """Test POST /api/v1/admin/draft returns 400 for player not in database."""
         mock_players.return_value = self.sample_players  # Only players 1, 2, 3
@@ -924,9 +924,9 @@ class TestPostEndpoints(TestMainApp):
         assert response.status_code == 400
         assert "Player 999 not found in players database" in response.json()["detail"]
 
-    @patch("main.load_draft_state")
-    @patch("main.load_players")
-    @patch("main.load_owners")
+    @patch("src.api.admin_routes.load_draft_state")
+    @patch("src.api.admin_routes.load_players")
+    @patch("src.api.admin_routes.load_owners")
     def test_admin_draft_400_owner_not_found(
         self, mock_owners, mock_players, mock_draft_state
     ):
@@ -948,10 +948,10 @@ class TestPostEndpoints(TestMainApp):
         assert response.status_code == 400
         assert "Owner 999 not found" in response.json()["detail"]
 
-    @patch("main.load_draft_state")
-    @patch("main.load_configuration")
-    @patch("main.load_players")
-    @patch("main.load_owners")
+    @patch("src.api.admin_routes.load_draft_state")
+    @patch("src.api.admin_routes.load_configuration")
+    @patch("src.api.admin_routes.load_players")
+    @patch("src.api.admin_routes.load_owners")
     def test_admin_draft_400_invalid_price(
         self, mock_owners, mock_players, mock_config, mock_draft_state
     ):
@@ -976,10 +976,10 @@ class TestPostEndpoints(TestMainApp):
         assert response.status_code == 400
         assert "Price must be greater than 0" in response.json()["detail"]
 
-    @patch("main.load_draft_state")
-    @patch("main.load_configuration")
-    @patch("main.load_owners")
-    @patch("main.load_players")
+    @patch("src.api.admin_routes.load_draft_state")
+    @patch("src.api.admin_routes.load_configuration")
+    @patch("src.api.admin_routes.load_owners")
+    @patch("src.api.admin_routes.load_players")
     def test_admin_draft_skips_budget_validation(
         self, mock_players, mock_owners, mock_config, mock_draft_state
     ):
@@ -1012,10 +1012,10 @@ class TestPostEndpoints(TestMainApp):
         assert data["success"] is True
         assert data["pick"]["price"] == 100
 
-    @patch("main.load_draft_state")
-    @patch("main.load_configuration")
-    @patch("main.load_players")
-    @patch("main.load_owners")
+    @patch("src.api.admin_routes.load_draft_state")
+    @patch("src.api.admin_routes.load_configuration")
+    @patch("src.api.admin_routes.load_players")
+    @patch("src.api.admin_routes.load_owners")
     def test_admin_draft_422_team_not_found(
         self, mock_owners, mock_players, mock_config, mock_draft_state
     ):
@@ -1044,10 +1044,10 @@ class TestPostEndpoints(TestMainApp):
         assert response.status_code == 422
         assert "Team not found for owner 1 in draft state" in response.json()["detail"]
 
-    @patch("main.load_draft_state")
-    @patch("main.load_configuration")
-    @patch("main.load_owners")
-    @patch("main.load_players")
+    @patch("src.api.admin_routes.load_draft_state")
+    @patch("src.api.admin_routes.load_configuration")
+    @patch("src.api.admin_routes.load_owners")
+    @patch("src.api.admin_routes.load_players")
     def test_admin_draft_generates_pick_id(
         self, mock_players, mock_owners, mock_config, mock_draft_state
     ):
@@ -1105,7 +1105,7 @@ class TestPostEndpoints(TestMainApp):
 class TestDeleteEndpoints(TestMainApp):
     """Test DELETE endpoints."""
 
-    @patch("main.load_draft_state")
+    @patch("src.api.admin_routes.load_draft_state")
     def test_cancel_nomination_success(self, mock_draft_state):
         """Test DELETE /api/v1/nominate with valid nomination."""
         nomination = Nominated(
@@ -1125,7 +1125,7 @@ class TestDeleteEndpoints(TestMainApp):
         assert data["cancelled_player_id"] == 1
         mock_draft_state.return_value.save_to_file.assert_called_once()
 
-    @patch("main.load_draft_state")
+    @patch("src.api.admin_routes.load_draft_state")
     def test_cancel_nomination_no_nomination(self, mock_draft_state):
         """Test DELETE /api/v1/nominate when no nomination exists."""
         mock_draft_state.return_value = self.sample_draft_state
@@ -1137,7 +1137,7 @@ class TestDeleteEndpoints(TestMainApp):
         assert response.status_code == 422
         assert "No nomination to cancel" in response.json()["detail"]
 
-    @patch("main.load_draft_state")
+    @patch("src.api.admin_routes.load_draft_state")
     def test_remove_draft_pick_success(self, mock_draft_state):
         """Test DELETE /api/v1/draft/{pick_id} with valid pick."""
         mock_draft_state.return_value = self.create_mock_draft_state()
@@ -1153,7 +1153,7 @@ class TestDeleteEndpoints(TestMainApp):
         assert data["restored_player_id"] == 2
         mock_draft_state.return_value.save_to_file.assert_called_once()
 
-    @patch("main.load_draft_state")
+    @patch("src.api.admin_routes.load_draft_state")
     def test_remove_draft_pick_not_found(self, mock_draft_state):
         """Test DELETE /api/v1/draft/{pick_id} with invalid pick."""
         mock_draft_state.return_value = self.create_mock_draft_state()
@@ -1171,7 +1171,7 @@ class TestErrorHandling(TestMainApp):
 
     def test_version_check_function(self):
         """Test the check_version utility function."""
-        from main import check_version
+        from src.api.admin_routes import check_version
 
         # Should not raise for matching versions
         check_version(5, 5)
@@ -1180,7 +1180,7 @@ class TestErrorHandling(TestMainApp):
         with pytest.raises(Exception):  # HTTPException
             check_version(5, 3)
 
-    @patch("main.load_draft_state")
+    @patch("src.api.admin_routes.load_draft_state")
     def test_missing_request_body(self, mock_draft_state):
         """Test endpoints with missing request body."""
         mock_draft_state.return_value = self.sample_draft_state
@@ -1188,7 +1188,7 @@ class TestErrorHandling(TestMainApp):
         response = self.client.post("/api/v1/nominate")
         assert response.status_code == 422  # Validation error
 
-    @patch("main.load_draft_state")
+    @patch("src.api.admin_routes.load_draft_state")
     def test_invalid_json(self, mock_draft_state):
         """Test endpoints with invalid JSON."""
         mock_draft_state.return_value = self.sample_draft_state
@@ -1204,9 +1204,9 @@ class TestErrorHandling(TestMainApp):
 class TestD1NominationMaxBid(TestMainApp):
     """D1: Nomination initial bid must respect the max-bid reserve rule."""
 
-    @patch("main.load_draft_state")
-    @patch("main.load_owners")
-    @patch("main.load_configuration")
+    @patch("src.api.admin_routes.load_draft_state")
+    @patch("src.api.admin_routes.load_owners")
+    @patch("src.api.admin_routes.load_configuration")
     def test_nominate_422_initial_bid_exceeds_max_bid(
         self, mock_config, mock_owners, mock_draft_state
     ):
@@ -1239,9 +1239,9 @@ class TestD1NominationMaxBid(TestMainApp):
         assert response.status_code == 422
         assert "Insufficient budget" in response.json()["detail"]
 
-    @patch("main.load_draft_state")
-    @patch("main.load_owners")
-    @patch("main.load_configuration")
+    @patch("src.api.admin_routes.load_draft_state")
+    @patch("src.api.admin_routes.load_owners")
+    @patch("src.api.admin_routes.load_configuration")
     def test_nominate_at_exact_max_bid_succeeds(
         self, mock_config, mock_owners, mock_draft_state
     ):
@@ -1273,9 +1273,9 @@ class TestD1NominationMaxBid(TestMainApp):
 
         assert response.status_code == 200
 
-    @patch("main.load_draft_state")
-    @patch("main.load_owners")
-    @patch("main.load_configuration")
+    @patch("src.api.admin_routes.load_draft_state")
+    @patch("src.api.admin_routes.load_owners")
+    @patch("src.api.admin_routes.load_configuration")
     def test_nominate_422_roster_full(self, mock_config, mock_owners, mock_draft_state):
         """Nominating when roster is full is rejected."""
         mock_config.return_value = Configuration(
@@ -1310,8 +1310,8 @@ class TestD1NominationMaxBid(TestMainApp):
 class TestD2AdminDraftNominatedPlayer(TestMainApp):
     """D2: admin_draft must reject the currently nominated player."""
 
-    @patch("main.load_draft_state")
-    @patch("main.load_players")
+    @patch("src.api.admin_routes.load_draft_state")
+    @patch("src.api.admin_routes.load_players")
     def test_admin_draft_422_player_currently_nominated(
         self, mock_players, mock_draft_state
     ):
@@ -1339,10 +1339,10 @@ class TestD2AdminDraftNominatedPlayer(TestMainApp):
         # State should not be saved
         mock_draft_state.return_value.save_to_file.assert_not_called()
 
-    @patch("main.load_draft_state")
-    @patch("main.load_configuration")
-    @patch("main.load_players")
-    @patch("main.load_owners")
+    @patch("src.api.admin_routes.load_draft_state")
+    @patch("src.api.admin_routes.load_configuration")
+    @patch("src.api.admin_routes.load_players")
+    @patch("src.api.admin_routes.load_owners")
     def test_admin_draft_different_player_during_nomination_succeeds(
         self, mock_owners, mock_players, mock_config, mock_draft_state
     ):
@@ -1372,10 +1372,10 @@ class TestD2AdminDraftNominatedPlayer(TestMainApp):
         assert response.status_code == 200
         assert response.json()["success"] is True
 
-    @patch("main.load_draft_state")
-    @patch("main.load_configuration")
-    @patch("main.load_players")
-    @patch("main.load_owners")
+    @patch("src.api.admin_routes.load_draft_state")
+    @patch("src.api.admin_routes.load_configuration")
+    @patch("src.api.admin_routes.load_players")
+    @patch("src.api.admin_routes.load_owners")
     def test_complete_draft_422_player_missing_from_available(
         self, mock_owners, mock_players, mock_config, mock_draft_state
     ):
@@ -1411,7 +1411,7 @@ class TestD2AdminDraftNominatedPlayer(TestMainApp):
 class TestD3ResetVersionGuard(TestMainApp):
     """D3: reset_draft must require expected_version unless force=True."""
 
-    @patch("main.load_draft_state")
+    @patch("src.api.admin_routes.load_draft_state")
     def test_reset_422_no_version_no_force(self, mock_draft_state):
         """Reset with empty body (no version, no force) returns 422."""
         mock_draft_state.return_value = self.sample_draft_state
@@ -1421,16 +1421,16 @@ class TestD3ResetVersionGuard(TestMainApp):
         assert response.status_code == 422
         assert "expected_version is required" in response.json()["detail"]
 
-    @patch("main.load_draft_state")
+    @patch("src.api.admin_routes.load_draft_state")
     def test_reset_force_true_no_version_succeeds(self, mock_draft_state):
         """Reset with force=true and no version succeeds."""
         mock_draft_state.return_value = self.sample_draft_state
 
         with (
-            patch("main.load_configuration") as mock_config,
-            patch("main.load_players") as mock_players,
-            patch("main.load_owners") as mock_owners,
-            patch("main.DraftState") as mock_draft_class,
+            patch("src.api.admin_routes.load_configuration") as mock_config,
+            patch("src.api.admin_routes.load_players") as mock_players,
+            patch("src.api.admin_routes.load_owners") as mock_owners,
+            patch("src.api.admin_routes.DraftState") as mock_draft_class,
         ):
             mock_config.return_value = MagicMock(initial_budget=200)
             mock_players.return_value = self.sample_players
@@ -1444,16 +1444,16 @@ class TestD3ResetVersionGuard(TestMainApp):
             assert response.status_code == 200
             assert response.json()["success"] is True
 
-    @patch("main.load_draft_state")
+    @patch("src.api.admin_routes.load_draft_state")
     def test_reset_correct_version_succeeds(self, mock_draft_state):
         """Reset with correct expected_version succeeds."""
         mock_draft_state.return_value = self.sample_draft_state
 
         with (
-            patch("main.load_configuration") as mock_config,
-            patch("main.load_players") as mock_players,
-            patch("main.load_owners") as mock_owners,
-            patch("main.DraftState") as mock_draft_class,
+            patch("src.api.admin_routes.load_configuration") as mock_config,
+            patch("src.api.admin_routes.load_players") as mock_players,
+            patch("src.api.admin_routes.load_owners") as mock_owners,
+            patch("src.api.admin_routes.DraftState") as mock_draft_class,
         ):
             mock_config.return_value = MagicMock(initial_budget=200)
             mock_players.return_value = self.sample_players
@@ -1467,15 +1467,15 @@ class TestD3ResetVersionGuard(TestMainApp):
             assert response.status_code == 200
             assert response.json()["success"] is True
 
-    @patch("main.load_draft_state")
+    @patch("src.api.admin_routes.load_draft_state")
     def test_reset_stale_version_409(self, mock_draft_state):
         """Reset with stale expected_version returns 409."""
         mock_draft_state.return_value = self.sample_draft_state
 
         with (
-            patch("main.load_configuration") as mock_config,
-            patch("main.load_players") as mock_players,
-            patch("main.load_owners") as mock_owners,
+            patch("src.api.admin_routes.load_configuration") as mock_config,
+            patch("src.api.admin_routes.load_players") as mock_players,
+            patch("src.api.admin_routes.load_owners") as mock_owners,
         ):
             mock_config.return_value = MagicMock(initial_budget=200)
             mock_players.return_value = self.sample_players
@@ -1490,9 +1490,9 @@ class TestD3ResetVersionGuard(TestMainApp):
 class TestD4CsvExport(TestMainApp):
     """D4: CSV export must handle special characters safely."""
 
-    @patch("main.load_players")
-    @patch("main.load_owners")
-    @patch("main.load_draft_state")
+    @patch("src.api.admin_routes.load_players")
+    @patch("src.api.admin_routes.load_owners")
+    @patch("src.api.admin_routes.load_draft_state")
     def test_csv_handles_quotes_and_commas_in_names(
         self, mock_draft_state, mock_owners, mock_players
     ):
@@ -1542,9 +1542,9 @@ class TestD4CsvExport(TestMainApp):
         assert rows[2][0] == 'Jr, III, O\'Brien "OB"'
         assert rows[2][1] == "25"
 
-    @patch("main.load_players")
-    @patch("main.load_owners")
-    @patch("main.load_draft_state")
+    @patch("src.api.admin_routes.load_players")
+    @patch("src.api.admin_routes.load_owners")
+    @patch("src.api.admin_routes.load_draft_state")
     def test_csv_normal_output_structure_preserved(
         self, mock_draft_state, mock_owners, mock_players
     ):

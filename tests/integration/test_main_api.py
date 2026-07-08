@@ -31,9 +31,12 @@ class TestMainApiIntegration:
         self.owners_file = self.temp_dir / "owners.json"
         self.config_file = self.temp_dir / "config.json"
 
-        # Patch the global file path constants
+        # Patch the global file path constants. Both the loader functions and
+        # the mutating routes reference these through the src.persistence module
+        # namespace (reads via load_*(); writes via _persistence.DRAFT_STATE_FILE),
+        # so patching src.persistence covers reads and writes alike.
         patch_paths = patch.multiple(
-            "main",
+            "src.persistence",
             DRAFT_STATE_FILE=self.draft_state_file,
             PLAYERS_FILE=self.players_file,
             OWNERS_FILE=self.owners_file,
