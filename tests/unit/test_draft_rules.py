@@ -1,10 +1,12 @@
 from src.draft_rules import (
+    check_position_limit,
     max_bid,
     next_eligible_nominator,
+    next_pick_id,
     position_count,
     remaining_roster_spots,
 )
-from src.models import Configuration, DraftPick, DraftState, Team
+from src.models import Configuration, DraftPick, DraftState, Player, Team
 
 
 def _config(total_rounds=17):
@@ -149,3 +151,112 @@ class TestNextEligibleNominator:
         state = _state([_team(200, 0, 1), _team(0, 17, 2)])
         nxt = next_eligible_nominator(state, _config(17), from_id=1, inclusive=False)
         assert nxt == 1
+
+
+class TestCheckPositionLimit:
+    def _player(self, pid=1, position="RB"):
+        return Player(
+            id=pid,
+            first_name="Test",
+            last_name="Player",
+            team="BUF",
+            position=position,
+        )
+
+    def _players(self, *positions):
+        return [
+            Player(
+                id=i + 1,
+                first_name="P",
+                last_name=f"{i}",
+                team="BUF",
+                position=pos,
+            )
+            for i, pos in enumerate(positions)
+        ]
+
+    def test_returns_none_when_team_is_none(self):
+        player = self._player()
+        assert check_position_limit(None, player, [player], _config()) is None
+
+    def test_returns_none_when_position_has_no_cap(self):
+        # Position "FLEX" is not in position_maximums
+        cfg = Configuration(
+            initial_budget=200,
+            min_bid=1,
+            position_maximums={"QB": 3},
+            total_rounds=17,
+        )
+        player = self._player(position="RB")
+        team = _team(200, 0)
+        assert check_position_limit(team, player, [player], cfg) is None
+
+    def test_returns_none_when_under_limit(self):
+        players = self._players("RB", "RB", "WR")
+        team = Team(
+            owner_id=1,
+            budget_remaining=100,
+            picks=[
+                DraftPick(pick_id=1, player_id=1, owner_id=1, price=5),
+            ],
+        )
+        new_player = self._player(pid=4, position="RB")
+        # 1 RB on team, max is 8 -> OK
+        assert check_position_limit(team, new_player, players, _config()) is None
+
+    def test_returns_error_when_at_limit(self):
+        # Config has QB max = 3
+        players = self._players("QB", "QB", "QB")
+        team = Team(
+            owner_id=1,
+            budget_remaining=100,
+            picks=[
+                DraftPick(pick_id=i + 1, player_id=i + 1, owner_id=1, price=5)
+                for i in range(3)
+            ],
+        )
+        new_qb = self._player(pid=10, position="QB")
+        result = check_position_limit(team, new_qb, players, _config())
+        assert result is not None
+        assert "maximum of 3" in result
+        assert "QB" in result
+
+
+class TestNextPickId:
+    def test_returns_one_when_no_picks(self):
+        state = _state([_team(200, 0, 1), _team(200, 0, 2)])
+        assert next_pick_id(state) == 1
+
+    def test_returns_max_plus_one(self):
+        teams = [
+            Team(
+                owner_id=1,
+                budget_remaining=100,
+                picks=[
+                    DraftPick(pick_id=1, player_id=10, owner_id=1, price=5),
+                    DraftPick(pick_id=3, player_id=11, owner_id=1, price=5),
+                ],
+            ),
+            Team(
+                owner_id=2,
+                budget_remaining=100,
+                picks=[
+                    DraftPick(pick_id=2, player_id=12, owner_id=2, price=5),
+                ],
+            ),
+        ]
+        state = _state(teams)
+        assert next_pick_id(state) == 4
+
+    def test_single_pick(self):
+        teams = [
+            Team(
+                owner_id=1,
+                budget_remaining=100,
+                picks=[
+                    DraftPick(pick_id=5, player_id=10, owner_id=1, price=5),
+                ],
+            ),
+        ]
+        state = _state(teams)
+        assert next_pick_id(state) == 6

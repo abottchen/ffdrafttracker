@@ -900,8 +900,8 @@ class TestPostEndpoints(TestMainApp):
 
     @patch("src.api.admin_routes.load_draft_state")
     @patch("src.api.admin_routes.load_players")
-    def test_admin_draft_400_player_not_found(self, mock_players, mock_draft_state):
-        """Test POST /api/v1/admin/draft returns 400 for player not in database."""
+    def test_admin_draft_422_player_not_found(self, mock_players, mock_draft_state):
+        """Test POST /api/v1/admin/draft returns 422 for player not in database."""
         mock_players.return_value = self.sample_players  # Only players 1, 2, 3
         mock_draft_state.return_value = self.create_mock_draft_state(
             available_player_ids=[
@@ -921,16 +921,16 @@ class TestPostEndpoints(TestMainApp):
             },
         )
 
-        assert response.status_code == 400
+        assert response.status_code == 422
         assert "Player 999 not found in players database" in response.json()["detail"]
 
     @patch("src.api.admin_routes.load_draft_state")
     @patch("src.api.admin_routes.load_players")
     @patch("src.api.admin_routes.load_owners")
-    def test_admin_draft_400_owner_not_found(
+    def test_admin_draft_422_owner_not_found(
         self, mock_owners, mock_players, mock_draft_state
     ):
-        """Test POST /api/v1/admin/draft returns 400 for invalid owner."""
+        """Test POST /api/v1/admin/draft returns 422 for invalid owner."""
         mock_players.return_value = self.sample_players
         mock_owners.return_value = self.sample_owners
         mock_draft_state.return_value = self.create_mock_draft_state()
@@ -945,7 +945,7 @@ class TestPostEndpoints(TestMainApp):
             },
         )
 
-        assert response.status_code == 400
+        assert response.status_code == 422
         assert "Owner 999 not found" in response.json()["detail"]
 
     @patch("src.api.admin_routes.load_draft_state")

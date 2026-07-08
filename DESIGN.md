@@ -111,12 +111,14 @@ To prevent double-submissions and race conditions, all state-modifying endpoints
 
 The API uses semantic HTTP status codes to distinguish different error scenarios:
 
-- **400 Bad Request:** Invalid input data (missing required fields, malformed JSON, invalid IDs)
+- **400 Bad Request:** Truly malformed input (invalid ETag format, price <= 0)
+- **404 Not Found:** Resource addressed by URL path does not exist (owner by ID, team by ID, pick by ID)
 - **409 Conflict:** Version mismatch due to concurrent modification
-- **422 Unprocessable Entity:** Business rule violations (insufficient budget, position limits, etc.)
+- **422 Unprocessable Entity:** Body-referenced entity validation failures (owner_id/player_id in request body not found, business rule violations such as insufficient budget, position limits, etc.)
 
 This allows frontend to handle errors appropriately:
 - 400 → Log error (shouldn't happen with proper frontend validation)
+- 404 → Resource not found at the given URL
 - 409 → Automatically refresh state and retry
 - 422 → Display specific error message to user
 

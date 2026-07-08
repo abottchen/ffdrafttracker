@@ -17,9 +17,10 @@ from src.api.schemas import (
     TeamUpdateRequest,
 )
 from src.draft_rules import (
+    check_position_limit,
     max_bid,
     next_eligible_nominator,
-    position_count,
+    next_pick_id,
     remaining_roster_spots,
 )
 from src.models import DraftPick, DraftState, Nominated, Team
@@ -47,6 +48,20 @@ def check_version(current_version: int, expected_version: int) -> None:
                 f"Draft state has changed (version {current_version} != "
                 f"{expected_version}). Please refresh and try again."
             ),
+        )
+
+
+def parse_etag_version(if_match: str) -> int:
+    """Extract the integer version from an ``If-Match`` ETag header.
+
+    Raises ``HTTPException(400)`` when the value is not a valid integer.
+    """
+    try:
+        return int(if_match.strip('"'))
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="If-Match header must contain a valid version number",
         )
 
 
@@ -163,7 +178,7 @@ async def nominate_player(request: NominateRequest):
         owners = load_owners()
         if request.owner_id not in owners:
             raise HTTPException(
-                status_code=400,
+                status_code=422,
                 detail=f"Owner {request.owner_id} does not exist",
             )
 
@@ -197,21 +212,9 @@ async def nominate_player(request: NominateRequest):
         players = load_players()
         player = next((p for p in players if p.id == request.player_id), None)
         if player is not None:
-            max_at_pos = config.position_maximums.get(player.position)
-            player_positions = {p.id: p.position for p in players}
-            if max_at_pos is not None:
-                if team is not None and (
-                    position_count(team, player.position, player_positions)
-                    >= max_at_pos
-                ):
-                    raise HTTPException(
-                        status_code=422,
-                        detail=(
-                            f"Team is already at the maximum of "
-                            f"{max_at_pos} players at the "
-                            f"{player.position} position"
-                        ),
-                    )
+            pos_err = check_position_limit(team, player, players, config)
+            if pos_err is not None:
+                raise HTTPException(status_code=422, detail=pos_err)
 
         # Create nomination
         draft_state.nominated = Nominated(
@@ -321,21 +324,9 @@ async def place_bid(request: BidRequest):
             None,
         )
         if player is not None:
-            max_at_pos = config.position_maximums.get(player.position)
-            if max_at_pos is not None:
-                player_positions = {p.id: p.position for p in players}
-                if (
-                    position_count(team, player.position, player_positions)
-                    >= max_at_pos
-                ):
-                    raise HTTPException(
-                        status_code=422,
-                        detail=(
-                            f"Team is already at the maximum of "
-                            f"{max_at_pos} players at the "
-                            f"{player.position} position"
-                        ),
-                    )
+            pos_err = check_position_limit(team, player, players, config)
+            if pos_err is not None:
+                raise HTTPException(status_code=422, detail=pos_err)
 
         # Update bid
         previous_bid = draft_state.nominated.current_bid
@@ -436,12 +427,8 @@ async def complete_draft(request: DraftRequest):
             )
 
         # Create draft pick
-        max_pick_id = max(
-            [p.pick_id for t in draft_state.teams for p in t.picks],
-            default=0,
-        )
         pick = DraftPick(
-            pick_id=max_pick_id + 1,
+            pick_id=next_pick_id(draft_state),
             player_id=request.player_id,
             owner_id=request.owner_id,
             price=request.final_price,
@@ -524,7 +511,7 @@ async def admin_draft_player(request: AdminDraftRequest):
         player = next((p for p in players if p.id == request.player_id), None)
         if not player:
             raise HTTPException(
-                status_code=400,
+                status_code=422,
                 detail=(f"Player {request.player_id} not found in players database"),
             )
 
@@ -552,7 +539,7 @@ async def admin_draft_player(request: AdminDraftRequest):
         owners = load_owners()
         if request.owner_id not in owners:
             raise HTTPException(
-                status_code=400,
+                status_code=422,
                 detail=f"Owner {request.owner_id} not found",
             )
 
@@ -575,11 +562,8 @@ async def admin_draft_player(request: AdminDraftRequest):
             )
 
         # Create draft pick
-        all_picks = [pick for team in draft_state.teams for pick in team.picks]
-        pick_id = max([pick.pick_id for pick in all_picks], default=0) + 1
-
         pick = DraftPick(
-            pick_id=pick_id,
+            pick_id=next_pick_id(draft_state),
             player_id=request.player_id,
             owner_id=request.owner_id,
             price=request.price,
@@ -679,15 +663,7 @@ async def cancel_nomination(
         draft_state = load_draft_state()
 
         # Parse ETag and check version for optimistic locking
-        try:
-            expected_version = int(if_match.strip('"'))
-        except ValueError:
-            raise HTTPException(
-                status_code=400,
-                detail=("If-Match header must contain a valid version number"),
-            )
-
-        # Check version
+        expected_version = parse_etag_version(if_match)
         check_version(draft_state.version, expected_version)
 
         # Validate nomination exists
@@ -735,14 +711,7 @@ async def remove_draft_pick(
         draft_state = load_draft_state()
 
         # Parse ETag and check version for optimistic locking
-        try:
-            expected_version = int(if_match.strip('"'))
-        except ValueError:
-            raise HTTPException(
-                status_code=400,
-                detail=("If-Match header must contain a valid version number"),
-            )
-
+        expected_version = parse_etag_version(if_match)
         check_version(draft_state.version, expected_version)
 
         # Find the pick and team
