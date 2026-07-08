@@ -50,9 +50,10 @@
         function median(a){ const s=[...a].sort((x,y)=>x-y), m=s.length>>1; return s.length? (s.length%2? s[m] : (s[m-1]+s[m])/2) : 0; }
         function ab2(n){ return (n||'').slice(0,2).toUpperCase(); }
         // D/ST headshot falls back to the team logo (no player headshot for defenses).
+        // ESPN CDN images: hide on error so a CDN hiccup doesn't litter broken-image icons.
         const shotImg = (p, cls) => p.pos === 'D/ST'
-            ? `<img class="${cls} logo" src="${getTeamLogoUrl(p.nfl)}" alt="">`
-            : `<img class="${cls}" src="${headshotUrl(p.id)}" alt="">`;
+            ? `<img class="${cls} logo" src="${getTeamLogoUrl(p.nfl)}" alt="" onerror="this.style.display='none'">`
+            : `<img class="${cls}" src="${headshotUrl(p.id)}" alt="" onerror="this.style.display='none'">`;
         function defenseBye(teamAbbr){
             for (const id in playerStats){ const s = playerStats[id]; if (s && s.team === teamAbbr && s.bye_week) return s.bye_week; }
             return null;
@@ -215,7 +216,7 @@
             if (t) {
                 const url = new URL(window.location);
                 url.searchParams.set('team_id', t.owner_id);
-                window.history.pushState({}, '', url);
+                window.history.replaceState({}, '', url);
             }
             renderChips();
             renderTeamsView();
@@ -460,7 +461,7 @@
                 const byeChip = p.bye ? `<span class="pc-bye tnum">BYE ${p.bye}</span>` : '';
                 html += `<div class="pcard" style="--pc:${POSCOLOR[p.pos]};--tmc:${teamColor(p.nfl)}" data-idx="${idx}" onmouseenter="showTip(event,${idx})" onmousemove="moveTip(event)" onmouseleave="hideTip()">
       <div class="pc-photo">
-        <img class="pc-wm" src="${getTeamLogoUrl(p.nfl)}" alt="">
+        <img class="pc-wm" src="${getTeamLogoUrl(p.nfl)}" alt="" onerror="this.style.display='none'">
         ${shotImg(p, 'pc-shot')}
         <span class="pc-pos ${LIGHTPOS[p.pos] ? 'light' : ''}">${p.pos}</span>
         <div class="pc-corner"><span class="pc-price tnum">$${p.price}</span>${byeChip}</div>
@@ -666,6 +667,8 @@
                     <span class="ld-price tnum ${pcls}">$${r.price}</span></div>`;
             }).join('');
         }
+        // Production score -- intentionally distinct from booth's production_score
+        // (src/booth/slice.py) and ledger price tiers (valueTier below).
         function prodScore(p) {
             const st = playerStats[p.id]; if (!st) return -1;
             const n = v => num(v) || 0;
@@ -800,6 +803,8 @@
             else if (pos === 'K') { if (st.kicking) r.push(['FG Made', st.kicking.fgm, STATMAX.FG], ['FG%', st.kicking.fg_pct, 100], ['Long', st.kicking.long, 70], ['XP', st.kicking.xpm, STATMAX.XP], ['Points', st.kicking.points, STATMAX.PTS]); }
             return r;
         }
+        // Price tiers -- intentionally distinct from booth's production_score
+        // (src/booth/slice.py) and the viewer's prodScore above.
         // Plain-language read on a price vs the position's going rate. Uses the median
         // ratio (not spread): auction prices decay toward the $1 floor late, which wrecks
         // std-dev. $1 picks are treated as a neutral "minimum bid", never "below market".
