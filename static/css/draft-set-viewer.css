@@ -67,6 +67,8 @@ body{
 .chip-badge.next{background:rgba(224,162,74,.16);color:var(--electric);border:1px solid rgba(224,162,74,.5);}
 .chip.is-clock{border-color:var(--gold) !important;box-shadow:0 0 0 1px var(--gold),0 6px 18px rgba(255,199,44,.25);animation:chipglow 2.2s ease-in-out infinite;}
 @keyframes chipglow{50%{box-shadow:0 0 0 1px var(--gold),0 0 22px rgba(255,199,44,.5);}}
+/* Button reset for team chips (div → button for keyboard access) */
+button.chip{font:inherit;color:inherit;text-align:left;-webkit-appearance:none;appearance:none;}
 
 /* ---------- VIEWS ---------- */
 .view{flex:1;min-height:0;display:none;}
@@ -543,6 +545,13 @@ body{
 .booth-jump{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);font-family:'Saira Condensed';font-weight:800;
   font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--accent-ink,#1A1206);background:var(--electric);
   border:none;border-radius:20px;padding:6px 14px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.4);}
+
+/* ---------- FOCUS STYLES (keyboard/ARIA accessibility) ---------- */
+button:focus-visible,
+[role="button"]:focus-visible{
+  outline:2px solid var(--electric);
+  outline-offset:2px;
+}
 
 /* Respect prefers-reduced-motion (plan §2 global constraint) — disable
    ambient/looping animations and shorten transitions for users who request it. */

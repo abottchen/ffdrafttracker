@@ -189,9 +189,9 @@
               :i===nextIdx?'<span class="chip-badge next">Next</span>'
               :done?'<span class="chip-badge done">✓ Full</span>':'';
             const cls=`chip ${i===selected?'active':''} ${i===clockIdx?'is-clock':''}`;
-            return `<div class="${cls}" style="--tc:${t.color}" onclick="selectTeam(${i})" title="View ${esc(t.team)}">
+            return `<button type="button" class="${cls}" style="--tc:${t.color}" onclick="selectTeam(${i})" title="View ${esc(t.team)}">
               <div class="ct">${esc(t.team)}</div>
-              <div class="chip-foot"><span class="co">${esc(t.owner)}</span>${badge}</div></div>`;
+              <div class="chip-foot"><span class="co">${esc(t.owner)}</span>${badge}</div></button>`;
           }).join('');
         }
         function renderClockNote(){
@@ -438,7 +438,11 @@
         const SKILL = { QB: 1, RB: 1, WR: 1, TE: 1 };   // positions where a shared bye actually hurts
         function setRosterMode(m) {
             rosterMode = m;
-            document.querySelectorAll('#rmode button').forEach(b => b.classList.toggle('active', b.id === 'rm-' + m));
+            document.querySelectorAll('#rmode button').forEach(b => {
+                const on = b.id === 'rm-' + m;
+                b.classList.toggle('active', on);
+                b.setAttribute('aria-pressed', String(on));
+            });
             renderRoster();
         }
         function renderRoster() {
@@ -622,8 +626,11 @@
         }
         const arrow = dir => dir > 0 ? ' <i class="ar">▲</i>' : ' <i class="ar">▼</i>';
         function thCells(elId, cols, activeKey, dir, setter) {
-            document.getElementById(elId).innerHTML = cols.map(c =>
-                `<span class="th ${c.cls || ''} ${activeKey === c.k ? 'active' : ''}" onclick="${setter}('${c.k}')">${c.lbl}${activeKey === c.k ? arrow(dir) : ''}</span>`).join('');
+            document.getElementById(elId).innerHTML = cols.map(c => {
+                const isActive = activeKey === c.k;
+                const ariaSort = isActive ? ` aria-sort="${dir > 0 ? 'ascending' : 'descending'}"` : '';
+                return `<span class="th ${c.cls || ''} ${isActive ? 'active' : ''}" role="button" tabindex="0"${ariaSort} onclick="${setter}('${c.k}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${setter}('${c.k}')}">${c.lbl}${isActive ? arrow(dir) : ''}</span>`;
+            }).join('');
         }
         function setLedgerSort(k) {
             if (ledgerSort === k) ledgerDir *= -1;
@@ -697,8 +704,8 @@
             const counts = {}; AVAILABLE.forEach(p => counts[p.pos] = (counts[p.pos] || 0) + 1);
             const order = RADAR_ORDER.filter(pos => counts[pos]);
             document.getElementById('availCount').textContent = `${AVAILABLE.length} left`;
-            const chips = [`<button class="af-chip ${availPos === 'ALL' ? 'active' : ''}" onclick="setAvailPos('ALL')">All <i>${AVAILABLE.length}</i></button>`]
-                .concat(order.map(pos => `<button class="af-chip ${availPos === pos ? 'active' : ''}" style="--pc:${POSCOLOR[pos]}" onclick="setAvailPos('${pos}')">${pos} <i>${counts[pos]}</i></button>`));
+            const chips = [`<button class="af-chip ${availPos === 'ALL' ? 'active' : ''}" aria-pressed="${availPos === 'ALL'}" onclick="setAvailPos('ALL')">All <i>${AVAILABLE.length}</i></button>`]
+                .concat(order.map(pos => `<button class="af-chip ${availPos === pos ? 'active' : ''}" aria-pressed="${availPos === pos}" style="--pc:${POSCOLOR[pos]}" onclick="setAvailPos('${pos}')">${pos} <i>${counts[pos]}</i></button>`));
             document.getElementById('availFilter').innerHTML = chips.join('');
             thCells('avHead', [{ k: 'pos', lbl: 'Pos', cls: 'ct' }, { k: 'name', lbl: 'Player' }, { k: 'team', lbl: 'Tm' }, { k: 'bye', lbl: 'Bye', cls: 'rt' }, { k: 'prod', lbl: STATS_YR, cls: 'rt' }], availSort, availDir, 'setAvailSort');
             const list = AVAILABLE.filter(p => availPos === 'ALL' || p.pos === availPos).sort(availCmp);
@@ -972,7 +979,11 @@
         }
         function setMatrixMode(m) {
             matrixMode = m;
-            document.querySelectorAll('#mxmode button').forEach(b => b.classList.toggle('active', b.id === 'mx-' + m));
+            document.querySelectorAll('#mxmode button').forEach(b => {
+                const on = b.id === 'mx-' + m;
+                b.classList.toggle('active', on);
+                b.setAttribute('aria-pressed', String(on));
+            });
             renderMatrix();
         }
         // Per-team aggregate by position: how many filled, and how many dollars spent.
