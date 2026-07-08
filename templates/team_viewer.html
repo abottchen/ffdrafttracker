@@ -45,7 +45,10 @@
           <div class="rp-head">
             <div class="rp-title cond">Roster</div>
             <div class="rmode" id="rmode">
-              <button id="rm-cards" class="active" aria-pressed="true" onclick="setRosterMode('cards')">Cards</button>
+              <button id="rm-cards"
+                      class="active"
+                      aria-pressed="true"
+                      onclick="setRosterMode('cards')">Cards</button>
               <button id="rm-bye" aria-pressed="false" onclick="setRosterMode('bye')">Bye Weeks</button>
               <button id="rm-list" aria-pressed="false" onclick="setRosterMode('list')">List</button>
             </div>
@@ -171,8 +174,13 @@
               <h3>Roster Matrix</h3>
               <div class="ch-right">
                 <div class="rmode mxmode" id="mxmode">
-                  <button id="mx-count" class="active" aria-pressed="true" onclick="setMatrixMode('count')">#</button>
-                  <button id="mx-dollars" aria-pressed="false" onclick="setMatrixMode('dollars')">$</button>
+                  <button id="mx-count"
+                          class="active"
+                          aria-pressed="true"
+                          onclick="setMatrixMode('count')">#</button>
+                  <button id="mx-dollars"
+                          aria-pressed="false"
+                          onclick="setMatrixMode('dollars')">$</button>
                 </div>
                 <span class="card-note" id="matrixNote">filled vs max · gaps glow</span>
               </div>
