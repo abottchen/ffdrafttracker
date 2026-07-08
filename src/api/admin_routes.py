@@ -96,6 +96,11 @@ def generate_draft_csv() -> str:
     for team in draft_state.teams:
         if team.owner_id in sorted_owner_ids:
             owner_picks[team.owner_id] = team.picks
+        else:
+            logger.warning(
+                "Team owner_id %d not in owners list, skipping from CSV export",
+                team.owner_id,
+            )
 
     max_picks = max(len(picks) for picks in owner_picks.values()) if owner_picks else 0
 
@@ -141,6 +146,7 @@ async def export_draft_csv():
 
 @admin_router.post("/api/v1/nominate")
 async def nominate_player(request: NominateRequest):
+    # Turn order intentionally not enforced -- admin controls nomination sequence.
     """Nominate a player for auction."""
     async with _state_lock:
         # Load current state
@@ -816,6 +822,8 @@ async def reset_draft(request: ResetRequest):
         )
 
         # Save without incrementing version (fresh start at v1)
+        # NB: data/analyst-comments.jsonl is not cleared; its state_version
+        # tags will collide with the new v1+ sequence.
         initial_state.save_to_file(
             _persistence.DRAFT_STATE_FILE, increment_version=False
         )

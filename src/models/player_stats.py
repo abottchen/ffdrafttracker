@@ -3,58 +3,105 @@ Player statistics model for fantasy football draft tracker.
 
 This module defines the data models for player statistics including
 2024 season stats and 2025 bye weeks.
+
+Stat fields are typed as ``int`` or ``float`` with ``BeforeValidator``
+coercion so that raw JSON strings (including blanks, dashes, and
+comma-separated numbers scraped from ESPN) are converted automatically.
 """
 
-from pydantic import BaseModel, Field, RootModel
+from __future__ import annotations
+
+from typing import Annotated
+
+from pydantic import BaseModel, BeforeValidator, Field, RootModel
+
+
+def _coerce_int(v: object) -> int:
+    """Coerce a stat value to ``int``; blanks / dashes / junk -> 0."""
+    if isinstance(v, int):
+        return v
+    if isinstance(v, float):
+        return int(v)
+    if not isinstance(v, str):
+        return 0
+    v = v.strip().replace(",", "")
+    if not v or v == "-":
+        return 0
+    try:
+        return int(v)
+    except ValueError:
+        try:
+            return int(float(v))
+        except ValueError:
+            return 0
+
+
+def _coerce_float(v: object) -> float:
+    """Coerce a stat value to ``float``; blanks / dashes / junk -> 0.0."""
+    if isinstance(v, (int, float)):
+        return float(v)
+    if not isinstance(v, str):
+        return 0.0
+    v = v.strip().replace(",", "")
+    if not v or v == "-":
+        return 0.0
+    try:
+        return float(v)
+    except ValueError:
+        return 0.0
+
+
+StatInt = Annotated[int, BeforeValidator(_coerce_int)]
+StatFloat = Annotated[float, BeforeValidator(_coerce_float)]
 
 
 class PassingStats(BaseModel):
     """Passing statistics for quarterbacks."""
 
-    completions: str = Field(..., description="Number of completions")
-    attempts: str = Field(..., description="Number of passing attempts")
-    pct: str = Field(..., description="Completion percentage")
-    yards: str = Field(..., description="Passing yards")
-    avg: str = Field(..., description="Yards per attempt")
-    tds: str = Field(..., description="Passing touchdowns")
-    ints: str = Field(..., description="Interceptions thrown")
-    sacks: str = Field(..., description="Times sacked")
-    rating: str = Field(..., description="Passer rating")
+    completions: StatInt = Field(..., description="Number of completions")
+    attempts: StatInt = Field(..., description="Number of passing attempts")
+    pct: StatFloat = Field(..., description="Completion percentage")
+    yards: StatInt = Field(..., description="Passing yards")
+    avg: StatFloat = Field(..., description="Yards per attempt")
+    tds: StatInt = Field(..., description="Passing touchdowns")
+    ints: StatInt = Field(..., description="Interceptions thrown")
+    sacks: StatInt = Field(..., description="Times sacked")
+    rating: StatFloat = Field(..., description="Passer rating")
 
 
 class RushingStats(BaseModel):
     """Rushing statistics for running backs, wide receivers, and quarterbacks."""
 
-    carries: str = Field(..., description="Number of rushing attempts")
-    yards: str = Field(..., description="Rushing yards")
-    avg: str = Field(..., description="Yards per carry")
-    tds: str = Field(..., description="Rushing touchdowns")
-    long: str = Field(..., description="Longest rush")
-    fumbles: str = Field(..., description="Fumbles")
+    carries: StatInt = Field(..., description="Number of rushing attempts")
+    yards: StatInt = Field(..., description="Rushing yards")
+    avg: StatFloat = Field(..., description="Yards per carry")
+    tds: StatInt = Field(..., description="Rushing touchdowns")
+    long: StatInt = Field(..., description="Longest rush")
+    fumbles: StatInt = Field(..., description="Fumbles")
 
 
 class ReceivingStats(BaseModel):
     """Receiving statistics for wide receivers, tight ends, and running backs."""
 
-    receptions: str = Field(..., description="Number of receptions")
-    targets: str = Field(..., description="Number of targets")
-    yards: str = Field(..., description="Receiving yards")
-    avg: str = Field(..., description="Yards per reception")
-    tds: str = Field(..., description="Receiving touchdowns")
-    long: str = Field(..., description="Longest reception")
-    fumbles: str = Field(..., description="Fumbles")
+    receptions: StatInt = Field(..., description="Number of receptions")
+    targets: StatInt = Field(..., description="Number of targets")
+    yards: StatInt = Field(..., description="Receiving yards")
+    avg: StatFloat = Field(..., description="Yards per reception")
+    tds: StatInt = Field(..., description="Receiving touchdowns")
+    long: StatInt = Field(..., description="Longest reception")
+    fumbles: StatInt = Field(..., description="Fumbles")
 
 
 class KickingStats(BaseModel):
     """Kicking statistics for kickers."""
 
-    fgm: str = Field(..., description="Field goals made")
-    fga: str = Field(..., description="Field goals attempted")
-    fg_pct: str = Field(..., description="Field goal percentage")
-    long: str = Field(..., description="Longest field goal")
-    xpm: str = Field(..., description="Extra points made")
-    xpa: str = Field(..., description="Extra points attempted")
-    points: str = Field(..., description="Total points scored")
+    fgm: StatInt = Field(..., description="Field goals made")
+    fga: StatInt = Field(..., description="Field goals attempted")
+    fg_pct: StatFloat = Field(..., description="Field goal percentage")
+    long: StatInt = Field(..., description="Longest field goal")
+    xpm: StatInt = Field(..., description="Extra points made")
+    xpa: StatInt = Field(..., description="Extra points attempted")
+    points: StatInt = Field(..., description="Total points scored")
 
 
 class PlayerStats(BaseModel):

@@ -46,16 +46,6 @@ RECENT_PICKS_N = 8
 # ---------------------------------------------------------------------------
 # Production scoring (market-derived, no ADP)
 # ---------------------------------------------------------------------------
-def _num(value: str | None) -> float:
-    """Parse a stat string to float; blanks / dashes / junk -> 0.0."""
-    if value is None:
-        return 0.0
-    try:
-        return float(str(value).strip())
-    except ValueError:
-        return 0.0
-
-
 def _has_real_stats(stats: PlayerStats | None) -> bool:
     """True if the player has any prior-season production block recorded."""
     if stats is None:
@@ -77,20 +67,20 @@ def production_score(stats: PlayerStats | None) -> float:
         return 0.0
     score = 0.0
     if stats.passing is not None:
-        score += _num(stats.passing.yards) / 25.0
-        score += _num(stats.passing.tds) * 4.0
-        score -= _num(stats.passing.ints) * 2.0
+        score += stats.passing.yards / 25.0
+        score += stats.passing.tds * 4.0
+        score -= stats.passing.ints * 2.0
     if stats.rushing is not None:
-        score += _num(stats.rushing.yards) / 10.0
-        score += _num(stats.rushing.tds) * 6.0
-        score -= _num(stats.rushing.fumbles) * 2.0
+        score += stats.rushing.yards / 10.0
+        score += stats.rushing.tds * 6.0
+        score -= stats.rushing.fumbles * 2.0
     if stats.receiving is not None:
-        score += _num(stats.receiving.receptions) * 1.0  # PPR
-        score += _num(stats.receiving.yards) / 10.0
-        score += _num(stats.receiving.tds) * 6.0
-        score -= _num(stats.receiving.fumbles) * 2.0
+        score += stats.receiving.receptions * 1.0  # PPR
+        score += stats.receiving.yards / 10.0
+        score += stats.receiving.tds * 6.0
+        score -= stats.receiving.fumbles * 2.0
     if stats.kicking is not None:
-        score += _num(stats.kicking.points)
+        score += stats.kicking.points
     return round(score, 1)
 
 
@@ -116,7 +106,7 @@ class StatLine(BaseModel):
     rookie: bool = False  # no prior-season production -> empty stat line
 
 
-class RosterEntry(BaseModel):
+class RosterLine(BaseModel):
     player_id: int
     name: str
     position: str
@@ -135,7 +125,7 @@ class TeamSnapshot(BaseModel):
     slots_filled: int
     slots_left: int
     position_counts: dict[str, int]
-    roster: list[RosterEntry] = Field(default_factory=list)
+    roster: list[RosterLine] = Field(default_factory=list)
     # Positions still worth chasing, ordered RB>WR>QB>TE>D/ST>K. Threshold-based,
     # not "under position max": RB/WR need to 3 all draft; QB to 1 (2nd late);
     # TE gated on elite-TE availability / roster fill; D/ST & K only when nearly
@@ -380,14 +370,14 @@ def _needs(
     return needs
 
 
-def _roster_entries(team: Team, players: dict[int, Player]) -> list[RosterEntry]:
-    entries: list[RosterEntry] = []
+def _roster_entries(team: Team, players: dict[int, Player]) -> list[RosterLine]:
+    entries: list[RosterLine] = []
     for pick in team.picks:
         player = players.get(pick.player_id)
         if player is None:
             continue
         entries.append(
-            RosterEntry(
+            RosterLine(
                 player_id=player.id,
                 name=player.full_name,
                 position=str(player.position),

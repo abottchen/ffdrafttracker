@@ -24,13 +24,12 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Add CORS middleware for development
+# LAN-only tool; no auth/cookies.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["*"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "If-Match"],
 )
 
 # Set up paths
@@ -94,13 +93,11 @@ viewer_app = FastAPI(
     version="1.0.0",
 )
 
-# Add CORS for viewer app
 viewer_app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "OPTIONS"],
+    allow_headers=["Content-Type", "If-Match"],
 )
 
 # Mount static files for viewer app (same as main app)
