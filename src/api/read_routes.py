@@ -144,6 +144,13 @@ def get_team(owner_id: int):
                     "player": player.model_dump(),
                 }
             )
+        else:
+            logger.warning(
+                "Player %d not found in players.json, skipping from"
+                " team %d roster display",
+                pick.player_id,
+                owner_id,
+            )
 
     return {
         "owner_id": team.owner_id,

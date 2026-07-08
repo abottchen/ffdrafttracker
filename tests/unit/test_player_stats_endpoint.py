@@ -83,7 +83,7 @@ class TestPlayerStatsEndpoint:
             assert rb_stats["bye_week"] == 5
             assert rb_stats["position"] == "RB"
             assert rb_stats["team"] == "GB"
-            assert rb_stats["rushing"]["carries"] == "66"
+            assert rb_stats["rushing"]["carries"] == 66
             assert rb_stats["stats_summary"] == "Rush: 66att 311yds 2TD"
 
             # Check QB stats
@@ -91,7 +91,7 @@ class TestPlayerStatsEndpoint:
             assert qb_stats["bye_week"] == 7
             assert qb_stats["position"] == "QB"
             assert qb_stats["team"] == "BUF"
-            assert qb_stats["passing"]["completions"] == "359"
+            assert qb_stats["passing"]["completions"] == 359
             assert qb_stats["stats_summary"] == "359/541 4306yds 29TD 18INT"
 
         finally:
