@@ -197,6 +197,7 @@
     </div>
     <div id="ptip"></div>
     <div id="vError" class="tb-empty verror-toast"></div>
+    <script src="/static/js/draft-shared.js?v=1"></script>
     {# Hand-tuned single-line JS below; djlint's reformat collapses a // comment over later code. #}
     {# djlint:off #}
     <script>
@@ -233,67 +234,17 @@
         let ledgerSort = 'order', ledgerDir = -1, ledgerQuery = '';   // ledger sort key + direction (-1 desc)
         let availPos = 'ALL', availSort = 'pos', availDir = 1;         // available-board filter + sort
 
-        // NFL Team Logo URLs - using ESPN's CDN
-        function getTeamLogoUrl(teamAbbr) {
-            const teamMappings = {
-                'ARI': 'https://a.espncdn.com/i/teamlogos/nfl/500/ari.png',
-                'ATL': 'https://a.espncdn.com/i/teamlogos/nfl/500/atl.png',
-                'BAL': 'https://a.espncdn.com/i/teamlogos/nfl/500/bal.png',
-                'BUF': 'https://a.espncdn.com/i/teamlogos/nfl/500/buf.png',
-                'CAR': 'https://a.espncdn.com/i/teamlogos/nfl/500/car.png',
-                'CHI': 'https://a.espncdn.com/i/teamlogos/nfl/500/chi.png',
-                'CIN': 'https://a.espncdn.com/i/teamlogos/nfl/500/cin.png',
-                'CLE': 'https://a.espncdn.com/i/teamlogos/nfl/500/cle.png',
-                'DAL': 'https://a.espncdn.com/i/teamlogos/nfl/500/dal.png',
-                'DEN': 'https://a.espncdn.com/i/teamlogos/nfl/500/den.png',
-                'DET': 'https://a.espncdn.com/i/teamlogos/nfl/500/det.png',
-                'GB': 'https://a.espncdn.com/i/teamlogos/nfl/500/gb.png',
-                'HOU': 'https://a.espncdn.com/i/teamlogos/nfl/500/hou.png',
-                'IND': 'https://a.espncdn.com/i/teamlogos/nfl/500/ind.png',
-                'JAX': 'https://a.espncdn.com/i/teamlogos/nfl/500/jax.png',
-                'KC': 'https://a.espncdn.com/i/teamlogos/nfl/500/kc.png',
-                'LV': 'https://a.espncdn.com/i/teamlogos/nfl/500/lv.png',
-                'LAC': 'https://a.espncdn.com/i/teamlogos/nfl/500/lac.png',
-                'LAR': 'https://a.espncdn.com/i/teamlogos/nfl/500/lar.png',
-                'MIA': 'https://a.espncdn.com/i/teamlogos/nfl/500/mia.png',
-                'MIN': 'https://a.espncdn.com/i/teamlogos/nfl/500/min.png',
-                'NE': 'https://a.espncdn.com/i/teamlogos/nfl/500/ne.png',
-                'NO': 'https://a.espncdn.com/i/teamlogos/nfl/500/no.png',
-                'NYG': 'https://a.espncdn.com/i/teamlogos/nfl/500/nyg.png',
-                'NYJ': 'https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png',
-                'PHI': 'https://a.espncdn.com/i/teamlogos/nfl/500/phi.png',
-                'PIT': 'https://a.espncdn.com/i/teamlogos/nfl/500/pit.png',
-                'SF': 'https://a.espncdn.com/i/teamlogos/nfl/500/sf.png',
-                'SEA': 'https://a.espncdn.com/i/teamlogos/nfl/500/sea.png',
-                'TB': 'https://a.espncdn.com/i/teamlogos/nfl/500/tb.png',
-                'TEN': 'https://a.espncdn.com/i/teamlogos/nfl/500/ten.png',
-                'WAS': 'https://a.espncdn.com/i/teamlogos/nfl/500/wsh.png'
-            };
-            
-            return teamMappings[teamAbbr] || `https://a.espncdn.com/i/teamlogos/nfl/500/${teamAbbr.toLowerCase()}.png`;
-        }
+        // esc(), getTeamLogoUrl(), NFL_COLORS/teamColor(), headshotUrl(), budgetClass(),
+        // BOOTH_PERSONAS/BOOTH_LINEUP/boothPersona(), revealOnReady() all come from
+        // /static/js/draft-shared.js (loaded above) — shared with the admin console.
 
-        const headshot = id => `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${id}.png&w=350&h=254`;
-        const logoUrl = abbr => getTeamLogoUrl(abbr);
-        // Per-NFL-team signature colors (ported from the admin console), brightened where
-        // the brand primary is too dark to read on the dark viewer bg. Used for subtle tints.
-        const NFL_COLORS = {
-            ARI:'#C8102E',ATL:'#E31837',BAL:'#5E48A8',BUF:'#1A6DD6',CAR:'#0085CA',CHI:'#E0541C',
-            CIN:'#FB4F14',CLE:'#FF6A2B',DAL:'#2A5BD0',DEN:'#FB4F14',DET:'#1B8FD6',GB:'#3A8C52',
-            HOU:'#C8324B',IND:'#2A74C4',JAX:'#13909E',KC:'#E31837',LV:'#B9C0C4',LAC:'#0FA0E0',
-            LAR:'#2A63E0',MIA:'#00B6C0',MIN:'#6A3CB0',NE:'#D33C50',NO:'#D3BC8D',NYG:'#2A52C9',
-            NYJ:'#2E8C5E',PHI:'#1A8579',PIT:'#FFB612',SEA:'#69BE28',SF:'#C8102E',TB:'#D50A0A',
-            TEN:'#4B92DB',WAS:'#9A3550'
-        };
-        const teamColor = abbr => NFL_COLORS[abbr] || '#E0A24A';
         function hexA(hex, a){ const n = parseInt(hex.slice(1),16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; }
         function median(a){ const s=[...a].sort((x,y)=>x-y), m=s.length>>1; return s.length? (s.length%2? s[m] : (s[m-1]+s[m])/2) : 0; }
         function ab2(n){ return (n||'').slice(0,2).toUpperCase(); }
-        const budgetClass = b => { const p = b/INITIAL*100; return p<=15?'crit':p<=35?'warn':'ok'; };
         // D/ST headshot falls back to the team logo (no player headshot for defenses).
         const shotImg = (p, cls) => p.pos === 'D/ST'
-            ? `<img class="${cls} logo" src="${logoUrl(p.nfl)}" alt="">`
-            : `<img class="${cls}" src="${headshot(p.id)}" alt="">`;
+            ? `<img class="${cls} logo" src="${getTeamLogoUrl(p.nfl)}" alt="">`
+            : `<img class="${cls}" src="${headshotUrl(p.id)}" alt="">`;
         function defenseBye(teamAbbr){
             for (const id in playerStats){ const s = playerStats[id]; if (s && s.team === teamAbbr && s.bye_week) return s.bye_week; }
             return null;
@@ -418,10 +369,7 @@
         function maxPickId(ds){ let m = 0; ds.teams.forEach(t => t.picks.forEach(p => { if (p.pick_id > m) m = p.pick_id; })); return m; }
 
         // FOUT guard
-        const app = document.getElementById('app');
-        function reveal(){ app.classList.add('ready'); }
-        if (document.fonts && document.fonts.ready) document.fonts.ready.then(reveal);
-        setTimeout(reveal, 1500);
+        revealOnReady(document.getElementById('app'));
 
         function renderChips(){
           const {clockIdx,nextIdx}=clockInfo();
@@ -433,17 +381,17 @@
               :i===nextIdx?'<span class="chip-badge next">Next</span>'
               :done?'<span class="chip-badge done">✓ Full</span>':'';
             const cls=`chip ${i===selected?'active':''} ${i===clockIdx?'is-clock':''}`;
-            return `<div class="${cls}" style="--tc:${t.color}" onclick="selectTeam(${i})" title="View ${t.team}">
-              <div class="ct">${t.team}</div>
-              <div class="chip-foot"><span class="co">${t.owner}</span>${badge}</div></div>`;
+            return `<div class="${cls}" style="--tc:${t.color}" onclick="selectTeam(${i})" title="View ${esc(t.team)}">
+              <div class="ct">${esc(t.team)}</div>
+              <div class="chip-foot"><span class="co">${esc(t.owner)}</span>${badge}</div></div>`;
           }).join('');
         }
         function renderClockNote(){
           const {clockIdx,nextIdx}=clockInfo();
           const c=clockIdx>=0?TEAMS[clockIdx]:null, n=nextIdx>=0?TEAMS[nextIdx]:null;
           document.getElementById('clocknote').innerHTML=
-            (c?`<span class="cn-clock"><span class="cn-dot"></span>On the Clock <b>${c.team}</b></span>`:'')+
-            (n?`<span class="cn-next">Up Next <b>${n.team}</b></span>`:'');
+            (c?`<span class="cn-clock"><span class="cn-dot"></span>On the Clock <b>${esc(c.team)}</b></span>`:'')+
+            (n?`<span class="cn-next">Up Next <b>${esc(n.team)}</b></span>`:'');
         }
         function renderChrome() {
             renderChips();
@@ -480,10 +428,10 @@
         });
 
         function renderIdentity() {
-            const t = TEAMS[selected], bc = budgetClass(t.budget), spent = INITIAL - t.budget;
+            const t = TEAMS[selected], bc = budgetClass(t.budget, INITIAL), spent = INITIAL - t.budget;
             const el = document.getElementById('identity'); el.style.setProperty('--tc', t.color);
             el.innerHTML = `
-    <div class="id-main"><span class="id-name cond">${t.team}</span><span class="id-eyebrow">Managed by <b>${t.owner}</b></span></div>
+    <div class="id-main"><span class="id-name cond">${esc(t.team)}</span><span class="id-eyebrow">Managed by <b>${esc(t.owner)}</b></span></div>
     <div class="id-stats">
       <div class="idstat"><span class="k">Budget</span><b class="v money ${bc} tnum">$${t.budget}</b></div>
       <div class="idstat"><span class="k">Max Bid</span><b class="v max tnum">${t.picks >= TOTAL ? '—' : '$' + maxBid(t)}</b></div>
@@ -505,25 +453,7 @@
         function activeViewId() { const a = document.querySelector('.view.active'); return a ? a.id : 'view-teams'; }
 
         // ---- The Booth: live analyst commentary (/api/v1/comments) ----
-        // Per-persona identity: accent ring + headshot file (or initials fallback).
-        const BOOTH_PERSONAS = {
-            eisen:    { accent: '#E8A33D', slug: 'eisen',    name: 'Rich Eisen' },
-            kiper:    { accent: '#56C5D0', slug: 'kiper',    name: 'Mel Kiper Jr.' },
-            schefter: { accent: '#E2574C', slug: 'schefter', name: 'Adam Schefter' },
-            booger:   { accent: '#5BBF7B', slug: 'booger',   name: 'Booger McFarland' },
-            kimes:    { accent: '#9B8CEF', slug: 'kimes',    name: 'Mina Kimes' },
-            mcafee:   { accent: '#F0913E', slug: 'mcafee',   name: 'Pat McAfee' },
-        };
-        const BOOTH_LINEUP = ['eisen', 'kiper', 'schefter', 'booger', 'kimes', 'mcafee'];
-        function boothPersona(name) {
-            const key = (name || '').toLowerCase().replace(/[^a-z]/g, '');
-            const m = BOOTH_PERSONAS[key];
-            const label = (name || '?').toUpperCase();
-            const initials = (name || '?').replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase() || '?';
-            return m
-                ? { key, label, fullName: m.name, accent: m.accent, img: `/static/img/personas/${m.slug}.jpg`, initials }
-                : { key, label, fullName: (name || ''), accent: 'var(--slate)', img: '', initials };
-        }
+        // Persona identity (BOOTH_PERSONAS / BOOTH_LINEUP / boothPersona) lives in draft-shared.js.
         let boothMaxSeq = 0;          // newest seq shown (live-tail watermark)
         let boothMinSeq = null;       // oldest seq shown (backward-paging cursor)
         let boothPinned = true;       // user is parked at the live edge
@@ -718,11 +648,11 @@
                 const byeChip = p.bye ? `<span class="pc-bye tnum">BYE ${p.bye}</span>` : '';
                 html += `<div class="pcard" style="--pc:${POSCOLOR[p.pos]};--tmc:${teamColor(p.nfl)}" data-idx="${idx}" onmouseenter="showTip(event,${idx})" onmousemove="moveTip(event)" onmouseleave="hideTip()">
       <div class="pc-photo">
-        <img class="pc-wm" src="${logoUrl(p.nfl)}" alt="">
+        <img class="pc-wm" src="${getTeamLogoUrl(p.nfl)}" alt="">
         ${shotImg(p, 'pc-shot')}
         <span class="pc-pos ${LIGHTPOS[p.pos] ? 'light' : ''}">${p.pos}</span>
         <div class="pc-corner"><span class="pc-price tnum">$${p.price}</span>${byeChip}</div>
-        <div class="pc-scrim"><div class="pc-name">${p.fn} ${p.ln}</div><div class="pc-sub">${p.nfl}</div></div>
+        <div class="pc-scrim"><div class="pc-name">${esc(p.fn)} ${esc(p.ln)}</div><div class="pc-sub">${esc(p.nfl)}</div></div>
       </div>
       <div class="pc-stats">${cells}</div>
     </div>`;
@@ -742,7 +672,7 @@
                 const hot = Object.entries(pb).filter(([k, v]) => SKILL[k] && v >= 2);
                 const flag = hot.length ? hot.map(([k, v]) => `${v}× ${k}`).join(' · ') : '';
                 const chips = items.sort((a, b) => POSORDER[a.p.pos] - POSORDER[b.p.pos]).map(({ p, idx }) =>
-                    `<div class="bw-chip" style="--pc:${POSCOLOR[p.pos]};--tmc:${teamColor(p.nfl)}" data-idx="${idx}" onmouseenter="showTip(event,${idx})" onmousemove="moveTip(event)" onmouseleave="hideTip()"><span class="bw-pos">${p.pos}</span><span class="bw-nm">${p.ln}</span></div>`).join('');
+                    `<div class="bw-chip" style="--pc:${POSCOLOR[p.pos]};--tmc:${teamColor(p.nfl)}" data-idx="${idx}" onmouseenter="showTip(event,${idx})" onmousemove="moveTip(event)" onmouseleave="hideTip()"><span class="bw-pos">${p.pos}</span><span class="bw-nm">${esc(p.ln)}</span></div>`).join('');
                 return `<div class="bye-wk ${hot.length ? 'exposed' : ''}">
                     <div class="bw-head"><span class="bw-num cond">WK ${w}</span><span class="bw-cnt">${items.length}</span></div>
                     ${flag ? `<div class="bw-flag">${flag}</div>` : '<div class="bw-flag ok">covered</div>'}
@@ -760,8 +690,8 @@
                 const byeCls = curRoster.filter(q => q.bye && q.bye === p.bye && SKILL[q.pos] && q.pos === p.pos).length >= 2 ? ' clash' : '';
                 html += `<div class="rl-row" style="--tmc:${teamColor(p.nfl)}" data-idx="${idx}" onmouseenter="showTip(event,${idx})" onmousemove="moveTip(event)" onmouseleave="hideTip()">
                     <span class="rl-pos" style="background:${POSCOLOR[p.pos]}${LIGHTPOS[p.pos] ? ';color:#fff' : ''}">${p.pos}</span>
-                    <span class="rl-nm">${p.fn} ${p.ln}</span>
-                    <span class="rl-team">${p.nfl}</span>
+                    <span class="rl-nm">${esc(p.fn)} ${esc(p.ln)}</span>
+                    <span class="rl-team">${esc(p.nfl)}</span>
                     <span class="rl-c rl-bye${byeCls}">${p.bye || '—'}</span>
                     <span class="rl-c rl-stat"><b class="tnum">${key[1]}</b><i>${key[0]}</i></span>
                     <span class="rl-c rl-price tnum">$${p.price}</span></div>`;
@@ -860,9 +790,9 @@
             el.innerHTML = `<div class="la-body">
                 <div class="la-photo"><span class="la-pos" style="background:${POSCOLOR[p.pos]}">${p.pos}</span>${shotImg(p, '')}</div>
                 <div class="la-info"><div class="la-eyebrow">Now Auctioning <span class="la-live"><span class="d"></span>LIVE</span></div>
-                  <div class="la-name cond">${p.fn} ${p.ln}</div><div class="la-sub">${p.nfl} · ${p.pos}</div></div>
+                  <div class="la-name cond">${esc(p.fn)} ${esc(p.ln)}</div><div class="la-sub">${esc(p.nfl)} · ${p.pos}</div></div>
                 <div class="la-bid"><div class="k">Current Bid</div><div class="v tnum">$${nom.current_bid}</div>
-                  <div class="la-bidder"><span class="dot" style="background:${bidder ? bidder.color : '#888'}"></span>${bidder ? bidder.team_name : '—'}</div></div>
+                  <div class="la-bidder"><span class="dot" style="background:${bidder ? bidder.color : '#888'}"></span>${bidder ? esc(bidder.team_name) : '—'}</div></div>
             </div>`;
         }
 
@@ -916,8 +846,8 @@
                 return `<div class="ld-row${isNew ? ' ld-new' : ''}" style="--tmc:${teamColor(r.nfl)}">
                     <span class="ld-no tnum">${r.ord}</span>
                     <span class="ld-pos" style="background:${POSCOLOR[r.pos]}${LIGHTPOS[r.pos] ? ';color:#fff' : ''}">${r.pos}</span>
-                    <span class="ld-name">${r.name} <i>${r.nfl}</i></span>
-                    <span class="ld-team"><span class="ld-dot" style="background:${r.color}"></span>${r.team}</span>
+                    <span class="ld-name">${esc(r.name)} <i>${esc(r.nfl)}</i></span>
+                    <span class="ld-team"><span class="ld-dot" style="background:${r.color}"></span>${esc(r.team)}</span>
                     <span class="ld-price tnum ${pcls}">$${r.price}</span></div>`;
             }).join('');
         }
@@ -970,8 +900,8 @@
                 const bye = byeOf(p);
                 return `<div class="av-row">
                     <span class="av-pos" style="background:${POSCOLOR[p.pos]}${LIGHTPOS[p.pos] ? ';color:#fff' : ''}">${p.pos}</span>
-                    <span class="av-nm">${p.fn} ${p.ln}</span>
-                    <span class="av-team">${p.nfl}</span>
+                    <span class="av-nm">${esc(p.fn)} ${esc(p.ln)}</span>
+                    <span class="av-team">${esc(p.nfl)}</span>
                     <span class="av-bye tnum">${bye || '—'}</span>
                     <span class="av-prod tnum">${prodShort(p)}</span></div>`;
             }).join('');
@@ -983,7 +913,7 @@
             document.getElementById('budgetPower').innerHTML = ranked.map((t, i) => {
                 const mb = t.picks >= TOTAL ? '—' : '$' + maxBid(t);
                 return `<div class="mn-row"><span class="mn-rank tnum">${i + 1}</span>
-                    <span class="mn-name"><span class="mn-dot" style="background:${t.color}"></span><span class="nm">${t.team}</span></span>
+                    <span class="mn-name"><span class="mn-dot" style="background:${t.color}"></span><span class="nm">${esc(t.team)}</span></span>
                     <span class="mn-track"><span class="mn-fill" style="width:${t.budget / INITIAL * 100}%"></span></span>
                     <span class="mn-val tnum rt">$${t.budget}</span>
                     <span class="mn-max tnum rt" title="Max bid this team can still place">${mb}</span></div>`;
@@ -1002,7 +932,7 @@
         function tbRow(p, cls, btn) {
             return `<div class="${cls}" draggable="true" data-id="${p.id}">
           <span class="tb-pos" style="background:${POSCOLOR[p.pos]}${LIGHTPOS[p.pos] ? ';color:#fff' : ''}">${p.pos}</span>
-          <span class="tb-nm">${p.fn} ${p.ln}</span><span class="tb-meta">${p.nfl}</span>${btn}</div>`;
+          <span class="tb-nm">${esc(p.fn)} ${esc(p.ln)}</span><span class="tb-meta">${esc(p.nfl)}</span>${btn}</div>`;
         }
         function renderResults() {
             const q = document.getElementById('tbSearch').value.trim().toLowerCase(), box = document.getElementById('tbResults');
@@ -1086,8 +1016,8 @@
             const rows = det.length
                 ? det.map(c => { const n = num(c[1]); return `<div class="tt-stat"><span class="l">${c[0]}</span><span class="bar"><i style="width:${n != null ? Math.min(n / c[2] * 100, 100) : 0}%"></i></span><span class="n tnum">${c[1] == null ? '–' : c[1]}</span></div>`; }).join('')
                 : '<div class="tt-none">No box-score stats for this position.</div>';
-            tip.innerHTML = `<div class="tt-head"><span class="tt-pos ${LIGHTPOS[p.pos] ? 'light' : ''}" style="background:${POSCOLOR[p.pos]}">${p.pos}</span><span class="tt-name">${p.fn} ${p.ln}</span></div>
-                <div class="tt-sub">${p.nfl}${p.bye ? ' · Bye ' + p.bye : ''}</div>
+            tip.innerHTML = `<div class="tt-head"><span class="tt-pos ${LIGHTPOS[p.pos] ? 'light' : ''}" style="background:${POSCOLOR[p.pos]}">${p.pos}</span><span class="tt-name">${esc(p.fn)} ${esc(p.ln)}</span></div>
+                <div class="tt-sub">${esc(p.nfl)}${p.bye ? ' · Bye ' + p.bye : ''}</div>
                 ${priceCtx(p.pos, p.price)}
                 <div class="tt-stats">${rows}</div>`;
             tip.style.display = 'block'; moveTip(e);
@@ -1154,7 +1084,7 @@
                     const jitter = ((i % 5) - 2) * 4.2;
                     const cx = X(l.price).toFixed(1), yy = (cy + jitter).toFixed(1);
                     const z = (l.price - m.md) / (m.sd || 1), isDump = DUMPS.has(l.pickId);
-                    const data = `data-n="${l.name}" data-pos="${pos}" data-pr="${l.price}" data-tm="${l.teamName}" data-z="${z.toFixed(1)}" data-dump="${isDump ? 1 : ''}"`;
+                    const data = `data-n="${esc(l.name)}" data-pos="${pos}" data-pr="${l.price}" data-tm="${esc(l.teamName)}" data-z="${z.toFixed(1)}" data-dump="${isDump ? 1 : ''}"`;
                     s += `<circle class="an-dot ${isDump ? 'an-dump' : ''}" cx="${cx}" cy="${yy}" r="${isDump ? 4.5 : 4}" style="--pc:${POSCOLOR[pos]};fill:${isDump ? 'none' : POSCOLOR[pos]};stroke:${isDump ? POSCOLOR[pos] : 'none'}"/><circle class="an-hit" cx="${cx}" cy="${yy}" r="9" ${data}/>`;
                 });
                 if (inV(m.md)) {
@@ -1228,8 +1158,8 @@
                 ? `<div class="tt-ctx dump"><b>$${pr}</b> · final-pick budget dump · leftover money</div>`
                 : (t ? ctxHTML(pos, pr, t) : `<div class="tt-ctx mid"><b>$${pr}</b></div>`);
             tip.style.setProperty('--pc', POSCOLOR[pos]);
-            tip.innerHTML = `<div class="tt-head"><span class="tt-pos ${LIGHTPOS[pos] ? 'light' : ''}" style="background:${POSCOLOR[pos]}">${pos}</span><span class="tt-name">${c.dataset.n}</span></div>
-                <div class="tt-sub">${c.dataset.tm}</div>${ctx}`;
+            tip.innerHTML = `<div class="tt-head"><span class="tt-pos ${LIGHTPOS[pos] ? 'light' : ''}" style="background:${POSCOLOR[pos]}">${pos}</span><span class="tt-name">${esc(c.dataset.n)}</span></div>
+                <div class="tt-sub">${esc(c.dataset.tm)}</div>${ctx}`;
             tip.style.display = 'block'; moveTip(e);
         }
         function setMatrixMode(m) {
@@ -1251,7 +1181,7 @@
             let html = `<div class="mx-grid" style="grid-template-columns:minmax(96px,1.3fr) repeat(${order.length},1fr)">`;
             html += `<div class="mx-corner"></div>` + order.map(pos => `<div class="mx-h" style="color:${POSCOLOR[pos]}">${pos}${dollars ? '' : `<i>/${POSMAX[pos]}</i>`}</div>`).join('');
             rows.forEach(({ t, count, spend }) => {
-                html += `<div class="mx-team"><span class="mx-dot" style="background:${t.color}"></span><span class="nm">${t.team}</span></div>`;
+                html += `<div class="mx-team"><span class="mx-dot" style="background:${t.color}"></span><span class="nm">${esc(t.team)}</span></div>`;
                 order.forEach(pos => {
                     const n = count[pos] || 0, dol = spend[pos] || 0;
                     const val = dollars ? dol : n, max = POSMAX[pos] || 1;
@@ -1261,7 +1191,7 @@
                     const cls = 'mx-cell' + (val === 0 ? ' empty' : '') + (full ? ' full' : '');
                     const label = dollars ? (dol ? '$' + dol : '·') : (n || '·');
                     const title = dollars ? `${t.team} · ${pos} $${dol}` : `${t.team} · ${pos} ${n}/${max}`;
-                    html += `<div class="${cls}" style="background:${bg}" title="${title}"><span class="mx-n">${label}</span></div>`;
+                    html += `<div class="${cls}" style="background:${bg}" title="${esc(title)}"><span class="mx-n">${label}</span></div>`;
                 });
             });
             html += '</div>';
@@ -1281,7 +1211,7 @@
             const cards = [];
             let splurge = null;
             log.forEach(l => { if (DUMPS.has(l.pickId)) return; const m = MARKET[l.pos]; if (!m || l.price <= 1) return; const over = l.price - m.md; if (!splurge || over > splurge.over) splurge = { ...l, over, md: m.md }; });
-            if (splurge) cards.push({ accent: POSCOLOR[splurge.pos], eyebrow: 'Biggest Splurge', val: `$${splurge.price}`, sub: `${splurge.name} · $${splurge.over} over typical ${splurge.pos} ($${splurge.md})` });
+            if (splurge) cards.push({ accent: POSCOLOR[splurge.pos], eyebrow: 'Biggest Splurge', val: `$${splurge.price}`, sub: `${esc(splurge.name)} · $${splurge.over} over typical ${splurge.pos} ($${splurge.md})` });
             let topPos = null;
             RADAR_ORDER.forEach(pos => { const m = MARKET[pos]; if (m && (!topPos || m.total > topPos.total)) topPos = { pos, ...m }; });
             if (topPos) cards.push({ accent: POSCOLOR[topPos.pos], eyebrow: 'Where The Money Went', val: topPos.pos, sub: `$${topPos.total} over ${topPos.n} picks · median $${topPos.md}` });
@@ -1289,7 +1219,7 @@
             if (run.len >= 2) cards.push({ accent: POSCOLOR[run.pos], eyebrow: 'Hottest Run', val: `${run.len}× ${run.pos}`, sub: `picks ${run.start}–${run.end} all went ${run.pos}` });
             let conc = null;
             TEAMS.forEach(t => { const ps = t._picks.filter(p => !DUMPS.has(p.pick_id)).map(p => p.price), spent = ps.reduce((s, v) => s + v, 0); if (spent < 10 || !ps.length) return; const top = Math.max(...ps), share = top / spent; if (!conc || share > conc.share) conc = { team: t.team, share, top, spent }; });
-            if (conc) cards.push({ accent: 'var(--gold)', eyebrow: 'Stars & Scrubs', val: `${Math.round(conc.share * 100)}%`, sub: `${conc.team} — $${conc.top} of $${conc.spent} spent on one player` });
+            if (conc) cards.push({ accent: 'var(--gold)', eyebrow: 'Stars & Scrubs', val: `${Math.round(conc.share * 100)}%`, sub: `${esc(conc.team)} — $${conc.top} of $${conc.spent} spent on one player` });
             box.innerHTML = cards.map(c => `<div class="insight" style="--ac:${c.accent}"><div class="in-eyebrow">${c.eyebrow}</div><div class="in-val cond">${c.val}</div><div class="in-sub">${c.sub}</div></div>`).join('');
         }
         function renderTempo() {
@@ -1301,7 +1231,7 @@
             s += `<line class="an-axis" x1="${padL}" y1="${Y0}" x2="${W - padR}" y2="${Y0}"/>`;
             log.forEach((l, i) => {
                 const h = Math.max(2, (l.price / maxP) * (H - padT - padB)), x = padL + i * bw;
-                const data = `data-n="${l.name}" data-pos="${l.pos}" data-pr="${l.price}" data-tm="${l.teamName}" data-no="${l.no}"`;
+                const data = `data-n="${esc(l.name)}" data-pos="${l.pos}" data-pr="${l.price}" data-tm="${esc(l.teamName)}" data-no="${l.no}"`;
                 s += `<rect class="tp-bar" x="${x.toFixed(1)}" y="${(Y0 - h).toFixed(1)}" width="${Math.max(1, bw - 0.7).toFixed(1)}" height="${h.toFixed(1)}" style="fill:${POSCOLOR[l.pos]}"/>`;
                 // Full-height hit target so even tiny bars are easy to hover.
                 s += `<rect class="tp-hit" x="${x.toFixed(1)}" y="${padT}" width="${bw.toFixed(2)}" height="${(Y0 - padT).toFixed(1)}" ${data}/>`;
@@ -1313,8 +1243,8 @@
         function showTempoTip(e, b) {
             const tip = document.getElementById('ptip'), pos = b.dataset.pos;
             tip.style.setProperty('--pc', POSCOLOR[pos]);
-            tip.innerHTML = `<div class="tt-head"><span class="tt-pos ${LIGHTPOS[pos] ? 'light' : ''}" style="background:${POSCOLOR[pos]}">${pos}</span><span class="tt-name">${b.dataset.n}</span></div>
-                <div class="tt-sub">Pick ${b.dataset.no} · ${b.dataset.tm}</div>
+            tip.innerHTML = `<div class="tt-head"><span class="tt-pos ${LIGHTPOS[pos] ? 'light' : ''}" style="background:${POSCOLOR[pos]}">${pos}</span><span class="tt-name">${esc(b.dataset.n)}</span></div>
+                <div class="tt-sub">Pick ${b.dataset.no} · ${esc(b.dataset.tm)}</div>
                 <div class="tt-ctx mid"><b>$${b.dataset.pr}</b></div>`;
             tip.style.display = 'block'; moveTip(e);
         }
@@ -1325,8 +1255,8 @@
             const t = valueTier(pos, pr);
             const ctx = t ? ctxHTML(pos, pr, t) : `<div class="tt-ctx mid"><b>$${pr}</b></div>`;
             tip.style.setProperty('--pc', POSCOLOR[pos]);
-            tip.innerHTML = `<div class="tt-head"><span class="tt-pos ${LIGHTPOS[pos] ? 'light' : ''}" style="background:${POSCOLOR[pos]}">${pos}</span><span class="tt-name">${el.dataset.n}</span></div>
-                <div class="tt-sub">${el.dataset.tm}</div>${ctx}`;
+            tip.innerHTML = `<div class="tt-head"><span class="tt-pos ${LIGHTPOS[pos] ? 'light' : ''}" style="background:${POSCOLOR[pos]}">${pos}</span><span class="tt-name">${esc(el.dataset.n)}</span></div>
+                <div class="tt-sub">${esc(el.dataset.tm)}</div>${ctx}`;
             tip.style.display = 'block'; moveTip(e);
         }
 
@@ -1374,9 +1304,9 @@
             if (!under.length && !over.length) { wrap.innerHTML = '<div class="an-empty">Bargains surface once at least four players at a position are sold.</div>'; return; }
             const row = (f, kind) => {
                 const delta = kind === 'under' ? `$${f.md - f.price} under typical` : `$${f.price - f.md} over typical`;
-                return `<div class="bg-row ${kind}" data-n="${f.name}" data-pos="${f.pos}" data-pr="${f.price}" data-tm="${f.team}" onmouseenter="showCtxTip(event,this)" onmousemove="moveTip(event)" onmouseleave="hideTip()">
+                return `<div class="bg-row ${kind}" data-n="${esc(f.name)}" data-pos="${f.pos}" data-pr="${f.price}" data-tm="${esc(f.team)}" onmouseenter="showCtxTip(event,this)" onmousemove="moveTip(event)" onmouseleave="hideTip()">
                     <span class="bg-pos" style="background:${POSCOLOR[f.pos]}${LIGHTPOS[f.pos] ? ';color:#fff' : ''}">${f.pos}</span>
-                    <span class="bg-main"><span class="bg-nm">${f.name} <i>${f.nfl}</i></span><span class="bg-sub">${f.pos}#${f.prodRank} of ${f.n} by ${STATS_YR} production · to ${f.team}</span></span>
+                    <span class="bg-main"><span class="bg-nm">${esc(f.name)} <i>${esc(f.nfl)}</i></span><span class="bg-sub">${f.pos}#${f.prodRank} of ${f.n} by ${STATS_YR} production · to ${esc(f.team)}</span></span>
                     <span class="bg-right"><span class="bg-price">$${f.price}</span><span class="bg-delta">${delta}</span></span></div>`;
             };
             const grp = (label, kind, items, empty) => `<div class="bg-group"><div class="bg-glabel ${kind}">${label}</div>${items.length ? items.slice(0, 6).map(f => row(f, kind)).join('') : `<div class="bg-none">${empty}</div>`}</div>`;
@@ -1409,10 +1339,10 @@
             s += `<text class="bp-axlbl" transform="translate(12,${(padT + (H - padB - padT) / 2).toFixed(0)}) rotate(-90)" text-anchor="middle">← BUDGET LEFT</text>`;
             pts.forEach(p => {
                 const cx = X(p.spots), cy = Y(p.budget), sel = p.i === selected;
-                const data = `data-tm="${p.team}" data-ow="${p.owner}" data-bu="${p.budget}" data-sp="${p.spots}" data-mb="${p.mb}" data-cl="${p.color}"`;
+                const data = `data-tm="${esc(p.team)}" data-ow="${esc(p.owner)}" data-bu="${p.budget}" data-sp="${p.spots}" data-mb="${p.mb}" data-cl="${p.color}"`;
                 s += `<circle class="bp-dot ${sel ? 'sel' : ''}" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${sel ? 7 : 5.5}" style="fill:${p.color}"/>`;
                 s += `<circle class="bp-hit" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="13" ${data}/>`;
-                s += `<text class="bp-lbl ${sel ? 'sel' : ''}" x="${(cx + 9).toFixed(1)}" y="${(cy + 3.5).toFixed(1)}">${p.owner}</text>`;
+                s += `<text class="bp-lbl ${sel ? 'sel' : ''}" x="${(cx + 9).toFixed(1)}" y="${(cy + 3.5).toFixed(1)}">${esc(p.owner)}</text>`;
             });
             s += '</svg>';
             wrap.innerHTML = s;
@@ -1421,8 +1351,8 @@
         function showBuyingTip(e, c) {
             const tip = document.getElementById('ptip');
             tip.style.setProperty('--pc', c.dataset.cl);
-            tip.innerHTML = `<div class="tt-head"><span class="tt-name">${c.dataset.tm}</span></div>
-                <div class="tt-sub">${c.dataset.ow}</div>
+            tip.innerHTML = `<div class="tt-head"><span class="tt-name">${esc(c.dataset.tm)}</span></div>
+                <div class="tt-sub">${esc(c.dataset.ow)}</div>
                 <div class="bp-tt"><span>Budget left</span><b class="tnum">$${c.dataset.bu}</b></div>
                 <div class="bp-tt"><span>Spots left</span><b class="tnum">${c.dataset.sp}</b></div>
                 <div class="bp-tt"><span>Max single bid</span><b class="tnum gold">$${c.dataset.mb}</b></div>`;
@@ -1449,11 +1379,11 @@
             wrap.innerHTML = rows.map(({ t, picks, spent }) => {
                 const chips = picks.slice(0, 3).map(p => {
                     const tag = p.dump ? '<i class="tbuy-tag" title="Final-pick budget dump — leftover money, not a target">dump</i>' : '';
-                    return `<span class="tbuy-chip ${p.dump ? 'is-dump' : ''}" style="--pc:${POSCOLOR[p.pos]}" data-n="${p.fn} ${p.ln}" data-pos="${p.pos}" data-pr="${p.price}" data-tm="${t.team}" onmouseenter="showCtxTip(event,this)" onmousemove="moveTip(event)" onmouseleave="hideTip()"><span class="tbuy-cpos">${p.pos}</span><span class="tbuy-cnm">${p.ln}</span><span class="tbuy-cpr">$${p.price}</span>${tag}</span>`;
+                    return `<span class="tbuy-chip ${p.dump ? 'is-dump' : ''}" style="--pc:${POSCOLOR[p.pos]}" data-n="${esc(p.fn + ' ' + p.ln)}" data-pos="${p.pos}" data-pr="${p.price}" data-tm="${esc(t.team)}" onmouseenter="showCtxTip(event,this)" onmousemove="moveTip(event)" onmouseleave="hideTip()"><span class="tbuy-cpos">${p.pos}</span><span class="tbuy-cnm">${esc(p.ln)}</span><span class="tbuy-cpr">$${p.price}</span>${tag}</span>`;
                 }).join('');
                 const more = picks.length > 3 ? `<span class="tbuy-more">+${picks.length - 3} more</span>` : '';
                 return `<div class="tbuy-row ${t.owner_id === selOwner ? 'sel' : ''}">
-                    <span class="tbuy-team"><span class="tbuy-dot" style="background:${t.color}"></span><span class="nm">${t.team}</span></span>
+                    <span class="tbuy-team"><span class="tbuy-dot" style="background:${t.color}"></span><span class="nm">${esc(t.team)}</span></span>
                     <span class="tbuy-chips">${chips}${more}</span>
                     <span class="tbuy-spent tnum">$${spent}</span></div>`;
             }).join('');
