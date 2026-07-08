@@ -1,6 +1,6 @@
 """Pure draft-math helpers. No file I/O: callers pass loaded state/config in."""
 
-from src.models import Configuration, DraftState, Team
+from src.models import Configuration, DraftState, Player, Team
 
 
 def remaining_roster_spots(team: Team, config: Configuration) -> int:
@@ -25,6 +25,48 @@ def position_count(team: Team, position: str, player_positions: dict[int, str]) 
     via the supplied lookup (e.g. {p.id: p.position for p in players})."""
     return sum(
         1 for pick in team.picks if player_positions.get(pick.player_id) == position
+    )
+
+
+def check_position_limit(
+    team: Team | None,
+    player: Player,
+    players: list[Player],
+    config: Configuration,
+) -> str | None:
+    """Return an error message if *team* is at the position maximum for
+    *player*'s position, or ``None`` if the pick is allowed.
+
+    Returns ``None`` immediately when *team* is ``None`` (unknown team)
+    or the position has no configured cap.
+    """
+    if team is None:
+        return None
+    max_at_pos = config.position_maximums.get(player.position)
+    if max_at_pos is None:
+        return None
+    player_positions = {p.id: p.position for p in players}
+    if position_count(team, player.position, player_positions) >= max_at_pos:
+        return (
+            f"Team is already at the maximum of "
+            f"{max_at_pos} players at the "
+            f"{player.position} position"
+        )
+    return None
+
+
+def next_pick_id(state: DraftState) -> int:
+    """Return the next available pick ID across all teams.
+
+    Equals ``max(pick_id across all teams) + 1``, defaulting to 1 when
+    no picks exist yet.
+    """
+    return (
+        max(
+            (p.pick_id for t in state.teams for p in t.picks),
+            default=0,
+        )
+        + 1
     )
 
 
