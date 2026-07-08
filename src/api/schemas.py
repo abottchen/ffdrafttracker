@@ -38,6 +38,12 @@ class AdminDraftRequest(BaseModel):
     expected_version: int
 
 
+class TransferRequest(BaseModel):
+    pick_id: int
+    to_owner_id: int
+    expected_version: int
+
+
 class TeamUpdateRequest(BaseModel):
     manually_done: bool
     expected_version: int

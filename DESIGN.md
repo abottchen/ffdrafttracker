@@ -151,6 +151,7 @@ This allows frontend to handle errors appropriately:
 - Undo individual picks
 - Cancel nominations  
 - Direct player assignment (bypassing auction for keepers) — intentionally skips budget and position-max validation as the admin escape hatch
+- Atomic pick transfer (`POST /api/v1/admin/transfer`) — moves a drafted pick from one team to another in a single load-mutate-save cycle; enforces budget and position-limit validation on the destination team
 
 **Data Export:**
 - CSV export for external analysis and record keeping
@@ -356,6 +357,7 @@ Pydantic Models (Python) → FastAPI Endpoints → OpenAPI Schema
 - `POST /api/v1/nominate` rejected (HTTP 422) if the nominating team is already at the position maximum for the player's position
 - `POST /api/v1/bid` rejected (HTTP 422) if the bidding team is already at the position maximum for the nominated player's position
 - `POST /api/v1/admin/draft` is an unbounded override and does NOT enforce position limits
+- `POST /api/v1/admin/transfer` rejected (HTTP 422) if the destination team is at the position maximum for the transferred player's position
 - Positions with no entry in `config.position_maximums` are unlimited
 - Frontend also greys the per-team Bid button at the maximum (backstop)
 
@@ -367,7 +369,7 @@ Pydantic Models (Python) → FastAPI Endpoints → OpenAPI Schema
 **Nomination Order:**
 - Proceeds in numerical order by owner_id, cycling back to the lowest after the highest
 - `next_to_nominate` is authoritative and skips teams that are roster-full OR `manually_done`
-- Recomputed after `POST /api/v1/draft`, `POST /api/v1/admin/draft`, and `PATCH /api/v1/teams/{owner_id}`
+- Recomputed after `POST /api/v1/draft`, `POST /api/v1/admin/draft`, `POST /api/v1/admin/transfer`, and `PATCH /api/v1/teams/{owner_id}`
 
 **Mark Team Done:**
 - `PATCH /api/v1/teams/{owner_id}` body `{ "manually_done": bool, "expected_version": N }` sets/clears the flag (version-locked); repairs `next_to_nominate` if the current nominator was just marked done
