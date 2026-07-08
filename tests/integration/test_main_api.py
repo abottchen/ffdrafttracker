@@ -1066,3 +1066,259 @@ class TestMainApiIntegration:
         )
         assert second.status_code == 409
         assert "Draft state has changed" in second.json()["detail"]
+
+    def test_transfer_pick_success(self):
+        """Atomically transfer a pick from one team to another."""
+        # Admin-draft player 1 onto owner 1.
+        state = self.client.get("/api/v1/draft-state").json()
+        draft_resp = self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 1,
+                "player_id": 1,
+                "price": 30,
+                "expected_version": state["version"],
+            },
+        )
+        assert draft_resp.status_code == 200
+        pick_id = draft_resp.json()["pick"]["pick_id"]
+
+        state = self.client.get("/api/v1/draft-state").json()
+
+        # Transfer the pick to owner 2.
+        resp = self.client.post(
+            "/api/v1/admin/transfer",
+            json={
+                "pick_id": pick_id,
+                "to_owner_id": 2,
+                "expected_version": state["version"],
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is True
+        assert data["from_owner_id"] == 1
+        assert data["to_owner_id"] == 2
+        assert data["pick"]["player_id"] == 1
+        assert data["pick"]["price"] == 30
+
+        # Verify state: owner 1 budget restored, owner 2 budget deducted.
+        final = self.client.get("/api/v1/draft-state").json()
+        team1 = next(t for t in final["teams"] if t["owner_id"] == 1)
+        team2 = next(t for t in final["teams"] if t["owner_id"] == 2)
+        assert team1["budget_remaining"] == 200  # refunded
+        assert len(team1["picks"]) == 0
+        assert team2["budget_remaining"] == 170  # 200 - 30
+        assert len(team2["picks"]) == 1
+        assert team2["picks"][0]["player_id"] == 1
+        # Player should NOT be in available pool (still drafted).
+        assert 1 not in final["available_player_ids"]
+
+    def test_transfer_pick_not_found(self):
+        """Transfer with an invalid pick_id returns 404."""
+        state = self.client.get("/api/v1/draft-state").json()
+        resp = self.client.post(
+            "/api/v1/admin/transfer",
+            json={
+                "pick_id": 999,
+                "to_owner_id": 2,
+                "expected_version": state["version"],
+            },
+        )
+        assert resp.status_code == 404
+
+    def test_transfer_pick_version_conflict(self):
+        """Transfer with stale expected_version returns 409."""
+        state = self.client.get("/api/v1/draft-state").json()
+        self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 1,
+                "player_id": 1,
+                "price": 10,
+                "expected_version": state["version"],
+            },
+        )
+        # Use the stale version.
+        resp = self.client.post(
+            "/api/v1/admin/transfer",
+            json={
+                "pick_id": 1,
+                "to_owner_id": 2,
+                "expected_version": state["version"],
+            },
+        )
+        assert resp.status_code == 409
+
+    def test_transfer_pick_same_team_rejected(self):
+        """Transfer to the same team is rejected with 422."""
+        state = self.client.get("/api/v1/draft-state").json()
+        draft_resp = self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 1,
+                "player_id": 1,
+                "price": 10,
+                "expected_version": state["version"],
+            },
+        )
+        pick_id = draft_resp.json()["pick"]["pick_id"]
+        state = self.client.get("/api/v1/draft-state").json()
+        resp = self.client.post(
+            "/api/v1/admin/transfer",
+            json={
+                "pick_id": pick_id,
+                "to_owner_id": 1,
+                "expected_version": state["version"],
+            },
+        )
+        assert resp.status_code == 422
+        assert "same" in resp.json()["detail"].lower()
+
+    def test_transfer_pick_insufficient_budget(self):
+        """Transfer rejected when destination team cannot afford the pick."""
+        # Drain owner 2's budget almost completely.
+        state = self.client.get("/api/v1/draft-state").json()
+        self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 2,
+                "player_id": 2,
+                "price": 195,
+                "expected_version": state["version"],
+            },
+        )
+        # Draft a $10 player onto owner 1.
+        state = self.client.get("/api/v1/draft-state").json()
+        draft_resp = self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 1,
+                "player_id": 3,
+                "price": 10,
+                "expected_version": state["version"],
+            },
+        )
+        pick_id = draft_resp.json()["pick"]["pick_id"]
+        state = self.client.get("/api/v1/draft-state").json()
+        # Owner 2 has $5 left but the pick costs $10.
+        resp = self.client.post(
+            "/api/v1/admin/transfer",
+            json={
+                "pick_id": pick_id,
+                "to_owner_id": 2,
+                "expected_version": state["version"],
+            },
+        )
+        assert resp.status_code == 422
+        assert "budget" in resp.json()["detail"].lower()
+
+    def test_transfer_pick_position_limit(self):
+        """Transfer rejected when destination team is at position maximum."""
+        import json
+
+        config_data = {
+            "initial_budget": 200,
+            "min_bid": 1,
+            "position_maximums": {"QB": 1, "RB": 4, "WR": 6, "TE": 2, "K": 1},
+            "total_rounds": 19,
+        }
+        self.config_file.write_text(json.dumps(config_data))
+        players = json.loads(self.players_file.read_text())
+        players.append(
+            {
+                "id": 5,
+                "first_name": "Lamar",
+                "last_name": "Jackson",
+                "team": "BAL",
+                "position": "QB",
+            }
+        )
+        self.players_file.write_text(json.dumps(players))
+        ds = json.loads(self.draft_state_file.read_text())
+        ds["available_player_ids"].append(5)
+        self.draft_state_file.write_text(json.dumps(ds))
+
+        # Owner 2 admin-drafts QB player 1 -> at QB cap of 1.
+        state = self.client.get("/api/v1/draft-state").json()
+        self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 2,
+                "player_id": 1,
+                "price": 5,
+                "expected_version": state["version"],
+            },
+        )
+        # Owner 1 admin-drafts the other QB.
+        state = self.client.get("/api/v1/draft-state").json()
+        draft_resp = self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 1,
+                "player_id": 5,
+                "price": 5,
+                "expected_version": state["version"],
+            },
+        )
+        pick_id = draft_resp.json()["pick"]["pick_id"]
+        # Transfer the QB from owner 1 to owner 2 (already at QB max) -> 422.
+        state = self.client.get("/api/v1/draft-state").json()
+        resp = self.client.post(
+            "/api/v1/admin/transfer",
+            json={
+                "pick_id": pick_id,
+                "to_owner_id": 2,
+                "expected_version": state["version"],
+            },
+        )
+        assert resp.status_code == 422
+        assert "position" in resp.json()["detail"].lower()
+
+    def test_transfer_pick_dest_roster_full(self):
+        """Transfer rejected when destination team roster is full."""
+        import json
+
+        config_data = {
+            "initial_budget": 200,
+            "min_bid": 1,
+            "position_maximums": {"QB": 2, "RB": 4, "WR": 6, "TE": 2, "K": 1},
+            "total_rounds": 1,
+        }
+        self.config_file.write_text(json.dumps(config_data))
+
+        # Owner 2 admin-drafts a player -> roster full (1/1).
+        state = self.client.get("/api/v1/draft-state").json()
+        self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 2,
+                "player_id": 2,
+                "price": 5,
+                "expected_version": state["version"],
+            },
+        )
+        # Owner 1 drafts a player.
+        state = self.client.get("/api/v1/draft-state").json()
+        draft_resp = self.client.post(
+            "/api/v1/admin/draft",
+            json={
+                "owner_id": 1,
+                "player_id": 1,
+                "price": 5,
+                "expected_version": state["version"],
+            },
+        )
+        pick_id = draft_resp.json()["pick"]["pick_id"]
+        # Transfer to owner 2 (roster full) -> 422.
+        state = self.client.get("/api/v1/draft-state").json()
+        resp = self.client.post(
+            "/api/v1/admin/transfer",
+            json={
+                "pick_id": pick_id,
+                "to_owner_id": 2,
+                "expected_version": state["version"],
+            },
+        )
+        assert resp.status_code == 422
+        assert "full" in resp.json()["detail"].lower()

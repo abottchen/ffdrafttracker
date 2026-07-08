@@ -570,6 +570,43 @@
         }
       }
     },
+    "/api/v1/admin/transfer": {
+      "post": {
+        "summary": "Transfer Pick",
+        "description": "Atomically transfer a draft pick from one team to another.\n\nRemoves the pick from the source team (refunding budget) and adds it\nto the destination team (deducting budget) in a single load-mutate-save\ncycle.  Budget and position-limit validation is enforced for the\ndestination team (same rules as the normal draft flow).",
+        "operationId": "transfer_pick_api_v1_admin_transfer_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/draft/{pick_id}": {
       "delete": {
         "summary": "Remove Draft Pick",
@@ -910,37 +947,37 @@
       "KickingStats": {
         "properties": {
           "fgm": {
-            "type": "string",
+            "type": "integer",
             "title": "Fgm",
             "description": "Field goals made"
           },
           "fga": {
-            "type": "string",
+            "type": "integer",
             "title": "Fga",
             "description": "Field goals attempted"
           },
           "fg_pct": {
-            "type": "string",
+            "type": "number",
             "title": "Fg Pct",
             "description": "Field goal percentage"
           },
           "long": {
-            "type": "string",
+            "type": "integer",
             "title": "Long",
             "description": "Longest field goal"
           },
           "xpm": {
-            "type": "string",
+            "type": "integer",
             "title": "Xpm",
             "description": "Extra points made"
           },
           "xpa": {
-            "type": "string",
+            "type": "integer",
             "title": "Xpa",
             "description": "Extra points attempted"
           },
           "points": {
-            "type": "string",
+            "type": "integer",
             "title": "Points",
             "description": "Total points scored"
           }
@@ -1084,47 +1121,47 @@
       "PassingStats": {
         "properties": {
           "completions": {
-            "type": "string",
+            "type": "integer",
             "title": "Completions",
             "description": "Number of completions"
           },
           "attempts": {
-            "type": "string",
+            "type": "integer",
             "title": "Attempts",
             "description": "Number of passing attempts"
           },
           "pct": {
-            "type": "string",
+            "type": "number",
             "title": "Pct",
             "description": "Completion percentage"
           },
           "yards": {
-            "type": "string",
+            "type": "integer",
             "title": "Yards",
             "description": "Passing yards"
           },
           "avg": {
-            "type": "string",
+            "type": "number",
             "title": "Avg",
             "description": "Yards per attempt"
           },
           "tds": {
-            "type": "string",
+            "type": "integer",
             "title": "Tds",
             "description": "Passing touchdowns"
           },
           "ints": {
-            "type": "string",
+            "type": "integer",
             "title": "Ints",
             "description": "Interceptions thrown"
           },
           "sacks": {
-            "type": "string",
+            "type": "integer",
             "title": "Sacks",
             "description": "Times sacked"
           },
           "rating": {
-            "type": "string",
+            "type": "number",
             "title": "Rating",
             "description": "Passer rating"
           }
@@ -1287,37 +1324,37 @@
       "ReceivingStats": {
         "properties": {
           "receptions": {
-            "type": "string",
+            "type": "integer",
             "title": "Receptions",
             "description": "Number of receptions"
           },
           "targets": {
-            "type": "string",
+            "type": "integer",
             "title": "Targets",
             "description": "Number of targets"
           },
           "yards": {
-            "type": "string",
+            "type": "integer",
             "title": "Yards",
             "description": "Receiving yards"
           },
           "avg": {
-            "type": "string",
+            "type": "number",
             "title": "Avg",
             "description": "Yards per reception"
           },
           "tds": {
-            "type": "string",
+            "type": "integer",
             "title": "Tds",
             "description": "Receiving touchdowns"
           },
           "long": {
-            "type": "string",
+            "type": "integer",
             "title": "Long",
             "description": "Longest reception"
           },
           "fumbles": {
-            "type": "string",
+            "type": "integer",
             "title": "Fumbles",
             "description": "Fumbles"
           }
@@ -1360,32 +1397,32 @@
       "RushingStats": {
         "properties": {
           "carries": {
-            "type": "string",
+            "type": "integer",
             "title": "Carries",
             "description": "Number of rushing attempts"
           },
           "yards": {
-            "type": "string",
+            "type": "integer",
             "title": "Yards",
             "description": "Rushing yards"
           },
           "avg": {
-            "type": "string",
+            "type": "number",
             "title": "Avg",
             "description": "Yards per carry"
           },
           "tds": {
-            "type": "string",
+            "type": "integer",
             "title": "Tds",
             "description": "Rushing touchdowns"
           },
           "long": {
-            "type": "string",
+            "type": "integer",
             "title": "Long",
             "description": "Longest rush"
           },
           "fumbles": {
-            "type": "string",
+            "type": "integer",
             "title": "Fumbles",
             "description": "Fumbles"
           }
@@ -1460,6 +1497,29 @@
           "budget_remaining"
         ],
         "title": "TeamView"
+      },
+      "TransferRequest": {
+        "properties": {
+          "pick_id": {
+            "type": "integer",
+            "title": "Pick Id"
+          },
+          "to_owner_id": {
+            "type": "integer",
+            "title": "To Owner Id"
+          },
+          "expected_version": {
+            "type": "integer",
+            "title": "Expected Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pick_id",
+          "to_owner_id",
+          "expected_version"
+        ],
+        "title": "TransferRequest"
       },
       "ValidationError": {
         "properties": {

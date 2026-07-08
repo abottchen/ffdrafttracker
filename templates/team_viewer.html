@@ -218,6 +218,7 @@
         let TEAMS = [];                 // normalized model (mockup shape)
         let lastDraftState = null;
         let selected = 0;               // index into TEAMS
+        let initialized = false;        // one-time setup guard (F1)
         let curRoster = [], prevFrac = [0,0,0,0,0,0];
         let lastSeenMaxPickId = 0;      // for ledger new-pick flash
         let __recentSince = 0;          // watermark snapshot each poll for the ledger "new pick" flash
@@ -347,11 +348,27 @@
         function hideError(){ document.getElementById('vError').style.display = 'none'; }
 
         async function pollState() {
+            // Retry loadStatic until owners/players are loaded (F1 recovery).
+            if (!owners.length) {
+                try { await loadStatic(); } catch (e) { /* will retry next poll */ }
+            }
             try {
                 const ds = await (await fetch(`${API_BASE}/draft-state`)).json();
                 hideError();
                 lastDraftState = ds;
                 buildModel(ds);
+                // One-time setup deferred from init (F1): runs once after first
+                // successful load even if the original init() threw.
+                if (!initialized && owners.length) {
+                    const idx = TEAMS.findIndex(t => t.owner_id === INITIAL_TEAM_ID);
+                    selected = idx >= 0 ? idx : 0;
+                    lastSeenMaxPickId = maxPickId(ds);
+                    __recentSince = lastSeenMaxPickId;
+                    setupTargetBoard();
+                    setupStatusControls();
+                    setupBooth();
+                    initialized = true;
+                }
                 // Keep the selected team stable across polls (match by owner_id).
                 if (TEAMS.length) {
                     if (selected >= TEAMS.length) selected = 0;
@@ -375,22 +392,28 @@
         }
 
         async function init() {
-            await loadStatic();
-            await loadAvailable();
-            // first poll establishes TEAMS, then map the injected team id to an index
-            const ds = await (await fetch(`${API_BASE}/draft-state`)).json();
-            lastDraftState = ds; buildModel(ds);
-            const idx = TEAMS.findIndex(t => t.owner_id === INITIAL_TEAM_ID);
-            selected = idx >= 0 ? idx : 0;
-            lastSeenMaxPickId = maxPickId(ds);
-            __recentSince = lastSeenMaxPickId;
-            computeMarket();
-            renderChrome(); renderTeamsView();
-            setupTargetBoard();
-            setupStatusControls();
-            setupBooth();
-            boothPollLive();
+            // Register the poll unconditionally so recovery works even if
+            // the initial bootstrap below throws (F1).
             setInterval(pollState, 5000);
+            try {
+                await loadStatic();
+                await loadAvailable();
+                const ds = await (await fetch(`${API_BASE}/draft-state`)).json();
+                lastDraftState = ds; buildModel(ds);
+                const idx = TEAMS.findIndex(t => t.owner_id === INITIAL_TEAM_ID);
+                selected = idx >= 0 ? idx : 0;
+                lastSeenMaxPickId = maxPickId(ds);
+                __recentSince = lastSeenMaxPickId;
+                computeMarket();
+                renderChrome(); renderTeamsView();
+                setupTargetBoard();
+                setupStatusControls();
+                setupBooth();
+                boothPollLive();
+                initialized = true;
+            } catch (e) {
+                showError('Server unavailable — will keep retrying…');
+            }
         }
         function maxPickId(ds){ let m = 0; ds.teams.forEach(t => t.picks.forEach(p => { if (p.pick_id > m) m = p.pick_id; })); return m; }
 
@@ -450,6 +473,8 @@
         }
         document.addEventListener('keydown', e => {
             if (!document.getElementById('view-teams').classList.contains('active')) return;
+            const ae = document.activeElement;
+            if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'SELECT' || ae.tagName === 'TEXTAREA' || ae.isContentEditable)) return;
             if (e.key === 'ArrowLeft') navTeam(-1);
             if (e.key === 'ArrowRight') navTeam(1);
         });

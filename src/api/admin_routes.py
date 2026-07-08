@@ -15,6 +15,7 @@ from src.api.schemas import (
     NominateRequest,
     ResetRequest,
     TeamUpdateRequest,
+    TransferRequest,
 )
 from src.draft_rules import (
     check_position_limit,
@@ -611,6 +612,159 @@ async def admin_draft_player(request: AdminDraftRequest):
             "success": True,
             "pick": pick.model_dump(),
             "team": team.model_dump(),
+            "new_version": draft_state.version,
+        }
+
+
+@admin_router.post("/api/v1/admin/transfer")
+async def transfer_pick(request: TransferRequest):
+    """Atomically transfer a draft pick from one team to another.
+
+    Removes the pick from the source team (refunding budget) and adds it
+    to the destination team (deducting budget) in a single load-mutate-save
+    cycle.  Budget and position-limit validation is enforced for the
+    destination team (same rules as the normal draft flow).
+    """
+    async with _state_lock:
+        draft_state = load_draft_state()
+        config = load_configuration()
+
+        # Check version
+        check_version(draft_state.version, request.expected_version)
+
+        # Find the pick across all teams
+        source_team: Team | None = None
+        target_pick: DraftPick | None = None
+        for team in draft_state.teams:
+            for pick in team.picks:
+                if pick.pick_id == request.pick_id:
+                    source_team = team
+                    target_pick = pick
+                    break
+            if target_pick is not None:
+                break
+
+        if target_pick is None or source_team is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Pick with ID {request.pick_id} not found",
+            )
+
+        # Prevent no-op transfer to the same team
+        if source_team.owner_id == request.to_owner_id:
+            raise HTTPException(
+                status_code=422,
+                detail="Source and destination teams are the same",
+            )
+
+        # Find destination team
+        dest_team = next(
+            (t for t in draft_state.teams if t.owner_id == request.to_owner_id),
+            None,
+        )
+        if dest_team is None:
+            owners = load_owners()
+            if request.to_owner_id not in owners:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Owner {request.to_owner_id} not found",
+                )
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Team not found for owner {request.to_owner_id} in draft state"
+                ),
+            )
+
+        # Validate destination budget
+        price = target_pick.price
+        if price > dest_team.budget_remaining:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Insufficient budget. Need ${price} but "
+                    f"destination team only has "
+                    f"${dest_team.budget_remaining}"
+                ),
+            )
+
+        # Validate destination max-bid reserve rule
+        mb = max_bid(dest_team, config)
+        if mb is None:
+            raise HTTPException(
+                status_code=422,
+                detail="Destination team roster is full",
+            )
+        if price > mb:
+            spots = remaining_roster_spots(dest_team, config)
+            remaining_after = dest_team.budget_remaining - price
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Insufficient budget. After ${price} transfer, "
+                    f"destination would have ${remaining_after} left "
+                    f"but need at least ${spots - 1} to fill "
+                    f"remaining {spots - 1} roster spots"
+                ),
+            )
+
+        # Validate destination position limit
+        players = load_players()
+        player = next((p for p in players if p.id == target_pick.player_id), None)
+        if player is not None:
+            pos_err = check_position_limit(dest_team, player, players, config)
+            if pos_err is not None:
+                raise HTTPException(status_code=422, detail=pos_err)
+
+        # --- Atomic mutation: remove from source, add to dest ---
+
+        # Remove pick from source team and refund budget
+        source_team.picks.remove(target_pick)
+        source_team.budget_remaining += price
+
+        # Create a new pick for the destination team
+        new_pick = DraftPick(
+            pick_id=next_pick_id(draft_state),
+            player_id=target_pick.player_id,
+            owner_id=request.to_owner_id,
+            price=price,
+        )
+        dest_team.picks.append(new_pick)
+        dest_team.budget_remaining -= price
+
+        # Repair the nominator pointer
+        nxt = next_eligible_nominator(
+            draft_state,
+            config,
+            from_id=draft_state.next_to_nominate,
+            inclusive=True,
+        )
+        if nxt is not None:
+            draft_state.next_to_nominate = nxt
+
+        # Save state with version increment
+        draft_state.save_to_file(_persistence.DRAFT_STATE_FILE)
+
+        # Log with names
+        owners = load_owners()
+        player_name = (
+            f"{player.first_name} {player.last_name}"
+            if player
+            else f"ID:{target_pick.player_id}"
+        )
+        src_name = owners.get(source_team.owner_id, {}).get(
+            "owner_name", f"ID:{source_team.owner_id}"
+        )
+        dst_name = owners.get(request.to_owner_id, {}).get(
+            "owner_name", f"ID:{request.to_owner_id}"
+        )
+        logger.info(f"TRANSFER: {player_name} (${price}) from {src_name} to {dst_name}")
+
+        return {
+            "success": True,
+            "pick": new_pick.model_dump(),
+            "from_owner_id": source_team.owner_id,
+            "to_owner_id": request.to_owner_id,
             "new_version": draft_state.version,
         }
 

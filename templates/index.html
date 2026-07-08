@@ -608,9 +608,9 @@
                 return;
             }
             
-            // Show dropdown with matches
+            // Show dropdown with matches (cap at 15 — parity with drawer search)
             dropdown.innerHTML = '';
-            matchingPlayers.forEach((player, index) => {
+            matchingPlayers.slice(0, 15).forEach((player, index) => {
                 const option = document.createElement('div');
                 option.className = 'player-option';
                 option.dataset.playerId = player.id;
@@ -884,7 +884,29 @@
                 showMessage('Please enter a valid bid amount', 'error');
                 return;
             }
-            
+
+            // Client-side max-bid guard: reject bids above the nominator's
+            // legal maximum before hitting the server (parity with
+            // updateBidButtonState / canTeamBid for the bidding rail).
+            if (currentDraftState) {
+                const nominatorTeam = currentDraftState.teams.find(
+                    t => t.owner_id === currentDraftState.next_to_nominate
+                );
+                if (nominatorTeam) {
+                    const maxBid = (nominatorTeam.max_bid === null || nominatorTeam.max_bid === undefined)
+                        ? nominatorTeam.budget_remaining : nominatorTeam.max_bid;
+                    const teamName = (owners.find(o => o.id === nominatorTeam.owner_id) || {}).team_name || 'team';
+                    if (bid > nominatorTeam.budget_remaining) {
+                        showMessage(`Bid $${bid} exceeds ${teamName}'s budget of $${nominatorTeam.budget_remaining}`, 'error');
+                        return;
+                    }
+                    if (bid > maxBid) {
+                        showMessage(`Bid $${bid} exceeds ${teamName}'s max bid of $${maxBid}`, 'error');
+                        return;
+                    }
+                }
+            }
+
             try {
                 const response = await fetch('/api/v1/nominate', {
                     method: 'POST',
@@ -1083,7 +1105,11 @@
                     showMessage('No player nominated', 'error');
                     return;
                 }
-                
+                // Sync module-level state with the fresh fetch so the version
+                // we send matches the data we read (prevents spurious 409s).
+                currentVersion = draftState.version;
+                currentDraftState = draftState;
+
                 const response = await fetch('/api/v1/draft', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1091,7 +1117,7 @@
                         owner_id: draftState.nominated.current_bidder_id,
                         player_id: draftState.nominated.player_id,
                         final_price: draftState.nominated.current_bid,
-                        expected_version: currentVersion
+                        expected_version: draftState.version
                     })
                 });
                 
@@ -1263,27 +1289,22 @@
             } catch (err) { showMessage('Error removing: ' + err.message, 'error'); }
         }
 
-        // Transfer = delete from source, then admin-draft to target at the same price.
+        // Atomic pick transfer via single server-side endpoint.
         async function transferSelectedPick() {
             const sel = document.getElementById('remove-select');
             const opt = sel.options[sel.selectedIndex];
             const pickId = parseInt(sel.value);
             const targetOwnerId = parseInt(document.getElementById('transfer-select').value);
             if (!pickId || !targetOwnerId) { showMessage('Select a player and a target team', 'error'); return; }
-            const playerId = parseInt(opt.dataset.player);
-            const price = parseInt(opt.dataset.price) || 1;
+            const price = parseInt(opt.dataset.price);
+            if (isNaN(price)) { showMessage('Unable to parse pick price — aborting transfer', 'error'); return; }
             try {
-                const del = await fetch(`/api/v1/draft/${pickId}`, {
-                    method: 'DELETE', headers: { 'Content-Type': 'application/json', 'If-Match': `"${currentVersion}"` }
-                });
-                if (!del.ok) { const e = await del.json(); showMessage('Transfer (remove) failed: ' + e.detail, 'error'); return; }
-                currentVersion = (await del.json()).new_version;
-                const add = await fetch('/api/v1/admin/draft', {
+                const resp = await fetch('/api/v1/admin/transfer', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ owner_id: targetOwnerId, player_id: playerId, price: price, expected_version: currentVersion })
+                    body: JSON.stringify({ pick_id: pickId, to_owner_id: targetOwnerId, expected_version: currentVersion })
                 });
-                if (add.ok) { currentVersion = (await add.json()).new_version; showMessage('Player transferred', 'success'); await refreshData(); }
-                else { const e = await add.json(); showMessage('Transfer (add) failed: ' + e.detail, 'error'); await refreshData(); }
+                if (resp.ok) { currentVersion = (await resp.json()).new_version; showMessage('Player transferred', 'success'); await refreshData(); }
+                else { const e = await resp.json(); showMessage('Transfer failed: ' + e.detail, 'error'); }
             } catch (err) { showMessage('Error transferring: ' + err.message, 'error'); }
         }
 

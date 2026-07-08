@@ -214,6 +214,7 @@ For detailed architecture information, see [DESIGN.md](DESIGN.md).
 - **Reset Draft** - Start over completely
 - **Cancel Nomination** - Remove current nomination
 - **Remove Picks** - Undo individual draft selections
+- **Transfer Picks** - Atomically move a drafted player from one team to another (budget/position validated)
 - **Refresh Data** - Reload from files
 
 ## Data Files
