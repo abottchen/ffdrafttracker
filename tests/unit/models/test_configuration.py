@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch
 import pytest
 from pydantic import ValidationError
 
+from src.enums.team import NFLTeam
 from src.models import Configuration
 
 
@@ -131,6 +132,89 @@ class TestConfiguration:
                 position_maximums={"QB": 2},
                 total_rounds="not_an_int",
             )
+
+    def test_bye_weeks_defaults_to_empty_dict(self):
+        """bye_weeks is optional and defaults to an empty mapping."""
+        config = Configuration(
+            initial_budget=200,
+            min_bid=1,
+            position_maximums={"QB": 2},
+            total_rounds=17,
+        )
+
+        assert config.bye_weeks == {}
+
+    def test_bye_weeks_accepts_team_to_week_mapping(self):
+        """bye_weeks maps NFL team abbreviations to week numbers."""
+        config = Configuration(
+            initial_budget=200,
+            min_bid=1,
+            position_maximums={"QB": 2},
+            total_rounds=17,
+            bye_weeks={"KC": 10, "SF": 14},
+        )
+
+        assert config.bye_weeks[NFLTeam.KC] == 10
+        assert config.bye_weeks[NFLTeam.SF] == 14
+
+    def test_bye_weeks_rejects_unknown_team(self):
+        """bye_weeks keys must be valid NFL team abbreviations."""
+        with pytest.raises(ValidationError):
+            Configuration(
+                initial_budget=200,
+                min_bid=1,
+                position_maximums={"QB": 2},
+                total_rounds=17,
+                bye_weeks={"XYZ": 10},
+            )
+
+    def test_bye_weeks_rejects_out_of_range_week(self):
+        """bye_weeks values must be regular-season weeks (1-18)."""
+        for bad_week in (0, 19):
+            with pytest.raises(ValidationError):
+                Configuration(
+                    initial_budget=200,
+                    min_bid=1,
+                    position_maximums={"QB": 2},
+                    total_rounds=17,
+                    bye_weeks={"KC": bad_week},
+                )
+
+    def test_missing_bye_week_teams_reports_all_when_empty(self):
+        """With no bye_weeks configured, every NFL team is reported missing."""
+        config = Configuration(
+            initial_budget=200,
+            min_bid=1,
+            position_maximums={"QB": 2},
+            total_rounds=17,
+        )
+
+        assert config.missing_bye_week_teams() == sorted(NFLTeam)
+
+    def test_missing_bye_week_teams_reports_only_absent_teams(self):
+        """Teams with a configured bye week are not reported missing."""
+        all_but_two = {t: 7 for t in NFLTeam if t not in (NFLTeam.KC, NFLTeam.SF)}
+        config = Configuration(
+            initial_budget=200,
+            min_bid=1,
+            position_maximums={"QB": 2},
+            total_rounds=17,
+            bye_weeks=all_but_two,
+        )
+
+        assert config.missing_bye_week_teams() == [NFLTeam.KC, NFLTeam.SF]
+
+    def test_missing_bye_week_teams_empty_when_complete(self):
+        """A full 32-team bye_weeks mapping reports nothing missing."""
+        config = Configuration(
+            initial_budget=200,
+            min_bid=1,
+            position_maximums={"QB": 2},
+            total_rounds=17,
+            bye_weeks={t: 7 for t in NFLTeam},
+        )
+
+        assert config.missing_bye_week_teams() == []
 
     def test_invalid_data_directory_type_raises_validation_error(self):
         """Test that invalid data_directory type raises ValidationError."""

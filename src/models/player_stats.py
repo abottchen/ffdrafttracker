@@ -2,7 +2,7 @@
 Player statistics model for fantasy football draft tracker.
 
 This module defines the data models for player statistics including
-2024 season stats and 2025 bye weeks.
+prior-season stats and current-season bye weeks.
 
 Stat fields are typed as ``int`` or ``float`` with ``BeforeValidator``
 coercion so that raw JSON strings (including blanks, dashes, and

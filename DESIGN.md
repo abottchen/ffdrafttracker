@@ -59,7 +59,7 @@ A local fantasy football auction draft tracking tool with a web-based interface 
 **Key Features:**
 - Team selection dropdown (defaults to owner ID 1)
 - Complete roster display with player images, positions, teams, and prices
-- **Player statistics integration**: 2024 season stats and 2025 bye weeks displayed between team logo and price
+- **Player statistics integration**: prior-season stats and current-season bye weeks displayed between team logo and price
 - Team summary statistics (budget remaining, position counts vs maximums)
 - Dark theme with color differentiation for easy reading
 - Auto-refresh every 5 seconds for real-time updates
@@ -158,7 +158,7 @@ This allows frontend to handle errors appropriately:
 - Structured format compatible with spreadsheet applications
 
 **Player Statistics Integration:**
-- Optional enhanced player data with 2024 season statistics and 2025 bye weeks
+- Optional enhanced player data with prior-season statistics and current-season bye weeks
 - Graceful degradation: application functions fully without stats data
 - Stats fetched from `/api/v1/player/stats` endpoint with defensive error handling
 
@@ -328,9 +328,10 @@ Pydantic Models (Python) → FastAPI Endpoints → OpenAPI Schema
 - `total_rounds: int` - Total draft rounds (e.g., 19)
 - `data_directory: str` - Where to store data files
 - `draft_year: int` - Draft year shown in the UI (e.g., 2025); the viewer's prior-season stats column shows this minus 1. Optional, defaults to 2025.
+- `bye_weeks: Dict[NFLTeam, int]` - Per-team bye weeks (1-18) for the `draft_year` season, consumed by `utils/fetch_player_stats.py`; update alongside `draft_year`. Optional, defaults to empty.
 
 **PlayerStats** (`player_stats.py`): Enhanced player data (optional)
-- `bye_week: Optional[int]` - 2025 NFL bye week (1-18)
+- `bye_week: Optional[int]` - NFL bye week (1-18) for the `draft_year` season
 - `position: str` - Player position for validation
 - `team: str` - NFL team abbreviation
 - `passing: Optional[PassingStats]` - QB passing statistics

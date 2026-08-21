@@ -2,7 +2,9 @@
 """
 Fetch NFL player stats and bye weeks from ESPN and generate player_stats.json file.
 
-This script reads the existing players.json and fetches additional stats for each player.
+This script reads the existing players.json and fetches additional stats for each
+player. The stats season (draft_year - 1) and per-team bye weeks come from
+data/config.json — update draft_year and bye_weeks there for each new season.
 
 Usage:
     python fetch_player_stats.py          # Fetch stats for all players
@@ -12,12 +14,16 @@ Usage:
 import argparse
 import json
 import re
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
 
 import requests
 from bs4 import BeautifulSoup
+
+sys.path.append(str(Path(__file__).parent.parent))
+from src.models.configuration import Configuration
 
 
 def extract_player_id_from_url(url: str) -> int | None:
@@ -26,8 +32,10 @@ def extract_player_id_from_url(url: str) -> int | None:
     return int(match.group(1)) if match else None
 
 
-def fetch_player_stats(player_id: int, player_name: str, position: str) -> dict | None:
-    """Fetch stats for a single player from their ESPN page."""
+def fetch_player_stats(
+    player_id: int, player_name: str, position: str, stats_year: int
+) -> dict | None:
+    """Fetch a player's stats_year season stats from their ESPN page."""
     url = f"https://www.espn.com/nfl/player/stats/_/id/{player_id}"
 
     try:
@@ -59,18 +67,18 @@ def fetch_player_stats(player_id: int, player_name: str, position: str) -> dict 
         season_table = tables[0]  # Contains seasons/teams
         stats_table = tables[1]   # Contains actual stats
 
-        # Find 2024 row index from season table
+        # Find the stats_year row index from season table
         season_rows = season_table.find_all('tr')[1:]  # Skip header
         target_row_idx = None
 
         for idx, row in enumerate(season_rows):
             cells = row.find_all(['td', 'th'])
-            if cells and '2024' in cells[0].get_text().strip():
+            if cells and str(stats_year) in cells[0].get_text().strip():
                 target_row_idx = idx
                 break
 
         if target_row_idx is None:
-            continue  # No 2024 data in this section
+            continue  # No stats_year data in this section
 
         # Get headers from stats table
         stats_header_row = stats_table.find('tr')
@@ -79,7 +87,7 @@ def fetch_player_stats(player_id: int, player_name: str, position: str) -> dict 
 
         headers = [th.get_text().strip().upper() for th in stats_header_row.find_all(['th', 'td'])]
 
-        # Get 2024 stats from the corresponding row
+        # Get stats_year stats from the corresponding row
         stats_rows = stats_table.find_all('tr')[1:]  # Skip header
         if target_row_idx >= len(stats_rows):
             continue
@@ -210,52 +218,17 @@ def fetch_player_stats(player_id: int, player_name: str, position: str) -> dict 
     return stats_data if stats_data else None
 
 
-def fetch_team_bye_weeks() -> dict[str, int]:
-    """Fetch bye weeks for all NFL teams."""
-    current_year = datetime.now().year
-    if current_year != 2025:
+def load_bye_weeks(config: Configuration) -> dict[str, int]:
+    """Read per-team bye weeks from the configuration, requiring all 32 teams."""
+    missing = config.missing_bye_week_teams()
+    if missing:
         raise ValueError(
-            f"Bye weeks are hardcoded for 2025 but current year is {current_year}. "
-            "Please update the bye weeks data for the current NFL season."
+            "config.json bye_weeks is missing teams: "
+            f"{', '.join(t.value for t in missing)}. "
+            "Update data/config.json with the current season's bye weeks."
         )
-    
-    # 2025 NFL bye weeks
-    bye_weeks = {
-        "ARI": 8,   # Week 8
-        "ATL": 5,   # Week 5
-        "BAL": 7,   # Week 7
-        "BUF": 7,   # Week 7
-        "CAR": 14,  # Week 14
-        "CHI": 5,   # Week 5
-        "CIN": 10,  # Week 10
-        "CLE": 9,   # Week 9
-        "DAL": 10,  # Week 10
-        "DEN": 12,  # Week 12
-        "DET": 8,   # Week 8
-        "GB": 5,    # Week 5
-        "HOU": 6,   # Week 6
-        "IND": 11,  # Week 11
-        "JAX": 8,   # Week 8
-        "KC": 10,   # Week 10
-        "LAC": 12,  # Week 12
-        "LAR": 8,   # Week 8
-        "LV": 8,    # Week 8
-        "MIA": 12,  # Week 12
-        "MIN": 6,   # Week 6
-        "NE": 14,   # Week 14
-        "NO": 11,   # Week 11
-        "NYG": 14,  # Week 14
-        "NYJ": 9,   # Week 9
-        "PHI": 9,   # Week 9
-        "PIT": 5,   # Week 5
-        "SEA": 8,   # Week 8
-        "SF": 14,   # Week 14
-        "TB": 9,    # Week 9
-        "TEN": 10,  # Week 10
-        "WAS": 12   # Week 12
-    }
 
-    return bye_weeks
+    return {team.value: week for team, week in config.bye_weeks.items()}
 
 
 def main():
@@ -269,6 +242,21 @@ def main():
     )
     args = parser.parse_args()
 
+    # Load configuration: stats season and bye weeks are driven by config.json
+    config_path = Path(__file__).parent.parent / 'data' / 'config.json'
+    config = Configuration.load_from_file(config_path)
+
+    current_year = datetime.now().year
+    if config.draft_year != current_year:
+        raise ValueError(
+            f"config.json draft_year is {config.draft_year} but the current year "
+            f"is {current_year}. Update draft_year and bye_weeks in "
+            "data/config.json for the current season."
+        )
+
+    stats_year = config.draft_year - 1
+    print(f"Draft year {config.draft_year}: fetching {stats_year} season stats")
+
     # Load existing players
     players_path = Path(__file__).parent.parent / 'data' / 'players.json'
     if not players_path.exists():
@@ -281,8 +269,7 @@ def main():
     print(f"Loaded {len(players)} players from players.json")
 
     # Get bye weeks for all teams
-    print("\nFetching team bye weeks...")
-    bye_weeks = fetch_team_bye_weeks()
+    bye_weeks = load_bye_weeks(config)
     print(f"Got bye weeks for {len(bye_weeks)} teams")
 
     # Prepare stats data
@@ -313,7 +300,9 @@ def main():
 
         # Fetch individual stats if not skipped
         if not args.skip_stats:
-            player_page_stats = fetch_player_stats(player_id, player_name, position)
+            player_page_stats = fetch_player_stats(
+                player_id, player_name, position, stats_year
+            )
             if player_page_stats:
                 # Add all the detailed stats
                 if "passing" in player_page_stats:
@@ -328,12 +317,13 @@ def main():
                     stats_entry["stats_summary"] = player_page_stats["stats_summary"]
 
                 print(
-                    f"  Found 2024 stats: {player_page_stats.get('stats_summary', 'N/A')}"
+                    f"  Found {stats_year} stats: "
+                    f"{player_page_stats.get('stats_summary', 'N/A')}"
                 )
             else:
-                # No 2024 stats found - leave empty
+                # No stats found for the target season - leave empty
                 stats_entry["stats_summary"] = None
-                print("  No 2024 stats found")
+                print(f"  No {stats_year} stats found")
 
             # Be polite to ESPN servers
             if i < len(players):

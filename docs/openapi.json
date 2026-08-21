@@ -811,6 +811,18 @@
             "type": "integer",
             "title": "Draft Year",
             "default": 2025
+          },
+          "bye_weeks": {
+            "additionalProperties": {
+              "type": "integer",
+              "maximum": 18.0,
+              "minimum": 1.0
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/NFLTeam"
+            },
+            "type": "object",
+            "title": "Bye Weeks"
           }
         },
         "type": "object",
