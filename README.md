@@ -22,7 +22,7 @@ A live auction draft tracking tool for fantasy football leagues. Features a web-
 
 ### **Team Management**
 - Individual team rosters with player images
-- Enhanced player information with 2024 stats and 2025 bye weeks (when available)
+- Enhanced player information with prior-season stats and bye weeks (when available)
 - Budget tracking and remaining picks
 - Position breakdown vs league maximums
 - Complete draft history with undo capability
@@ -73,7 +73,8 @@ A live auction draft tracking tool for fantasy football leagues. Features a web-
 
 4. **Generate player statistics (optional)**
    ```bash
-   # Fetch 2024 season stats and 2025 bye weeks from ESPN
+   # Fetch prior-season stats from ESPN plus bye weeks from config.json
+   # (season and byes are driven by draft_year/bye_weeks in data/config.json)
    uv run python utils/fetch_player_stats.py
 
    # For testing with limited players:
@@ -106,9 +107,19 @@ A live auction draft tracking tool for fantasy football leagues. Features a web-
   },
   "total_rounds": 17,
   "data_directory": "data",
-  "draft_year": 2025
+  "draft_year": 2025,
+  "bye_weeks": {
+    "ARI": 8,
+    "ATL": 5,
+    "...": 0
+  }
 }
 ```
+
+`bye_weeks` maps every NFL team abbreviation to its bye week (1-18) for the
+`draft_year` season. `utils/fetch_player_stats.py` reads it (and fetches
+`draft_year - 1` season stats), so update `draft_year` and `bye_weeks`
+together each season.
 
 ### Team Owners (`data/owners.json`)
 ```json
