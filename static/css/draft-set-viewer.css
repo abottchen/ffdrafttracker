@@ -270,6 +270,7 @@ button.chip{font:inherit;color:inherit;text-align:left;-webkit-appearance:none;a
 #ptip .tt-pos.light{color:#fff;}
 #ptip .tt-name{font-family:'Saira Condensed';font-weight:800;font-size:21px;line-height:1;}
 #ptip .tt-sub{font-family:'Inter';font-size:11px;color:var(--slate);margin:6px 0 11px;}
+#ptip .tt-sub:last-child{margin-bottom:0;}
 #ptip .tt-stat{display:flex;align-items:center;gap:10px;margin-bottom:7px;}
 #ptip .tt-stat .l{font-family:'Saira Condensed';font-weight:700;font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--slate);width:54px;flex-shrink:0;}
 #ptip .tt-stat .bar{flex:1;height:6px;border-radius:3px;background:var(--deep2);overflow:hidden;}
@@ -292,7 +293,7 @@ button.chip{font:inherit;color:inherit;text-align:left;-webkit-appearance:none;a
    ============================================================ */
 #view-status{grid-template-rows:1fr;}
 .status-grid{height:100%;min-height:0;display:grid;
-  grid-template-columns:1.6fr clamp(248px,20vw,330px) clamp(238px,19vw,320px);
+  grid-template-columns:minmax(0,1fr) clamp(280px,26.5vw,430px) clamp(238px,19vw,320px);
   grid-template-rows:auto 1fr;
   grid-template-areas:"live live live" "ledger avail money";
   gap:clamp(8px,.9vw,14px);}
@@ -356,15 +357,32 @@ button.chip{font:inherit;color:inherit;text-align:left;-webkit-appearance:none;a
 .af-chip i{font-style:normal;color:var(--ice);margin-left:3px;}
 .af-chip:hover{border-color:var(--pc);color:var(--ice);}
 .af-chip.active{background:color-mix(in srgb,var(--pc) 20%,var(--deep));border-color:var(--pc);color:#fff;}
-.av-head{display:grid;grid-template-columns:26px minmax(0,1fr) 34px 28px 56px;gap:8px;padding:0 2px 6px;border-bottom:1px solid var(--line2);flex-shrink:0;margin-bottom:2px;}
+/* The card is its own size container, so the board reacts to the width it
+   actually has rather than to the viewport. Names are the thing you scan for,
+   so they keep a readable 15px+ and take every pixel the row can spare; when
+   the card gets tight the board drops its least load-bearing columns instead
+   of shaving the name. Hover restores anything a row can't show. */
+.avail-card{container-type:inline-size;}
+.av-head,.av-row{grid-template-columns:26px minmax(0,1fr) 32px 26px 54px;gap:8px;}
+.av-head{display:grid;padding:0 2px 6px;border-bottom:1px solid var(--line2);flex-shrink:0;margin-bottom:2px;}
 .avail-wrap{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line2) transparent;}
-.av-row{display:grid;grid-template-columns:26px minmax(0,1fr) 34px 28px 56px;align-items:center;gap:8px;padding:5px 2px;border-bottom:1px solid var(--line);transition:background .12s ease;}
+.av-row{display:grid;align-items:center;padding:5px 2px;border-bottom:1px solid var(--line);transition:background .12s ease;cursor:default;}
 .av-row:hover{background:rgba(255,255,255,.04);}
 .av-pos{font-family:'Saira Condensed';font-weight:800;font-size:11px;color:var(--midnight);border-radius:5px;padding:2px 0;text-align:center;}
-.av-nm{font-family:'Saira Condensed';font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.av-nm{font-family:'Saira Condensed';font-weight:700;font-size:clamp(15px,4.3cqw,16.5px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .av-team{font-family:'Inter';font-size:11px;color:var(--slate);white-space:nowrap;}
 .av-bye{font-family:'Saira Condensed';font-weight:700;font-size:12px;color:var(--slate);text-align:right;}
 .av-prod{font-family:'Saira Condensed';font-weight:700;font-size:11px;color:var(--electric);white-space:nowrap;text-align:right;}
+/* Last season's production goes first — it's context, not identity. */
+@container (max-width:336px){
+  .av-head,.av-row{grid-template-columns:26px minmax(0,1fr) 32px 26px;}
+  .av-prod,.av-head .th:nth-child(5){display:none;}
+}
+/* Then the bye week, leaving position · name · NFL team. */
+@container (max-width:250px){
+  .av-head,.av-row{grid-template-columns:26px minmax(0,1fr) 32px;}
+  .av-bye,.av-head .th:nth-child(4){display:none;}
+}
 
 /* ============================================================
    DRAFT ANALYSIS — market · matrix · insights · tempo

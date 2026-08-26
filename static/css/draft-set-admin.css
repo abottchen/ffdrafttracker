@@ -369,7 +369,10 @@ body.standby .hero.standby{display:flex;}
 .player-option .player-meta{font-size:11px;color:var(--slate);margin-top:2px;}
 
 /* ---------- TOAST (showMessage) ---------- */
-.toast{position:fixed;bottom:54px;left:50%;transform:translateX(-50%) translateY(20px);z-index:60;
+/* Drops in over the top bar, not the bottom band: the booth chyron and the
+   draft wire crawl both live down there and were being covered mid-sentence.
+   Briefly hiding the completion meter costs nothing by comparison. */
+.toast{position:fixed;top:10px;left:50%;transform:translateX(-50%) translateY(-18px);z-index:60;
   max-width:min(560px,90vw);font-family:'Inter';font-size:14px;font-weight:600;padding:11px 18px;border-radius:9px;
   opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;box-shadow:0 10px 30px rgba(0,0,0,.5);}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
