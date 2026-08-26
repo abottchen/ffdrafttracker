@@ -178,3 +178,25 @@ Nominated
 **Fantasy Football Domain**: Models reflect auction draft mechanics (nominations, bids, position limits)
 
 **Optimistic Locking**: All mutating API endpoints accept `expected_version` and reject stale reads with HTTP 409, preventing concurrent edit conflicts.
+
+## Live Draft Operating Rules (IMPORTANT)
+
+Where the user is looking depends on the phase. Get this right.
+
+**Keeper entry (`/keeper` batches) — asking is FINE.** The user is typing commands
+in this window, so they see prompts immediately. When a surname is genuinely
+ambiguous (`williams`, `brown`, `higgins`, `taylor`, `warren` all hit many
+players), **ask** via `AskUserQuestion`. A wrong keeper is annoying to unwind;
+one quick question is not. Only skip the question when price and position make
+it unambiguous (a `$44` "allen" is Josh Allen, not a backup QB) — and say which
+one you picked so it can be corrected.
+
+**Live auction — NEVER ask.** Once bidding starts the user is on the admin panel
+at `localhost:8175`, not this window. An `AskUserQuestion` here is invisible and
+halts everything, booth commentary included, until they happen to look back.
+Pick the sensible default, act, and state what you chose. Save any real question
+for a confirmed pause.
+
+**The booth must keep producing commentary continuously during the auction.**
+Silence is a failure mode. If something is blocking output, fix it and report
+afterwards rather than stopping to ask.
