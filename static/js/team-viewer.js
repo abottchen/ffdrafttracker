@@ -715,13 +715,15 @@
             const box = document.getElementById('availList');
             if (!list.length) { box.innerHTML = '<div class="av-empty">No players left here.</div>'; return; }
             box.innerHTML = list.slice(0, 300).map(p => {
-                const bye = byeOf(p);
-                return `<div class="av-row">
+                const bye = byeOf(p), prod = prodShort(p);
+                // Carried on the row so the hover card can rebuild what a narrow
+                // board truncated or dropped, without a second lookup.
+                return `<div class="av-row" data-n="${esc(p.fn + ' ' + p.ln)}" data-pos="${p.pos}" data-tm="${esc(p.nfl)}" data-bye="${bye || ''}" data-prod="${esc(prod)}">
                     <span class="av-pos" style="background:${POSCOLOR[p.pos]}${LIGHTPOS[p.pos] ? ';color:#fff' : ''}">${p.pos}</span>
                     <span class="av-nm">${esc(p.fn)} ${esc(p.ln)}</span>
                     <span class="av-team">${esc(p.nfl)}</span>
                     <span class="av-bye tnum">${bye || '—'}</span>
-                    <span class="av-prod tnum">${prodShort(p)}</span></div>`;
+                    <span class="av-prod tnum">${esc(prod)}</span></div>`;
             }).join('');
         }
         function renderBudgetCompact() {
@@ -737,9 +739,33 @@
                     <span class="mn-max tnum rt" title="Max bid this team can still place">${mb}</span></div>`;
             }).join('');
         }
+        function showAvailTip(e, row) {
+            const tip = document.getElementById('ptip'), pos = row.dataset.pos;
+            tip.style.setProperty('--pc', POSCOLOR[pos]);
+            const bits = [esc(row.dataset.tm)];
+            if (row.dataset.bye) bits.push('Bye ' + esc(row.dataset.bye));
+            if (row.dataset.prod) bits.push(`${STATS_YR} ${esc(row.dataset.prod)}`);
+            tip.innerHTML = `<div class="tt-head"><span class="tt-pos ${LIGHTPOS[pos] ? 'light' : ''}" style="background:${POSCOLOR[pos]}">${pos}</span><span class="tt-name">${esc(row.dataset.n)}</span></div>
+                <div class="tt-sub">${bits.join(' · ')}</div>`;
+            tip.style.display = 'block'; moveTip(e);
+        }
         function setupStatusControls() {
             const s = document.getElementById('ldSearch');
             if (s) s.addEventListener('input', () => { ledgerQuery = s.value; renderLedger(); });
+            // Delegated so the 300-row list stays cheap to re-render each poll.
+            const list = document.getElementById('availList'), wrap = document.querySelector('.avail-wrap');
+            if (list) {
+                let hot = null;
+                list.addEventListener('mouseover', e => {
+                    const row = e.target.closest('.av-row');
+                    if (!row) { if (hot) { hot = null; hideTip(); } return; }
+                    if (row !== hot) { hot = row; showAvailTip(e, row); } else moveTip(e);
+                });
+                list.addEventListener('mousemove', e => { if (hot) moveTip(e); });
+                list.addEventListener('mouseleave', () => { hot = null; hideTip(); });
+                // Scrolling slides a different player under a still cursor.
+                if (wrap) wrap.addEventListener('scroll', () => { hot = null; hideTip(); });
+            }
         }
 
         /* ── Target Board ── */
