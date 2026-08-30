@@ -9,14 +9,12 @@ a beautiful static HTML page with all team rosters, prices, and stats.
 import json
 import shutil
 import sys
-from datetime import datetime
 from pathlib import Path
 
 import requests
 from requests.exceptions import ConnectionError, RequestException
 
 API_BASE = "http://localhost:8175/api/v1"
-YEAR = datetime.now().year
 
 # NFL team abbreviation to ESPN CDN logo URL mapping
 NFL_TEAM_LOGO_URLS = {
@@ -87,7 +85,7 @@ def download_image(url: str, output_path: Path) -> bool:
         print(f"  Failed to download {url}: {e}")
         return False
 
-def download_all_team_logos(assets_dir: Path) -> dict[str, str]:
+def download_all_team_logos(assets_dir: Path, year: int) -> dict[str, str]:
     """Download all NFL team logos and return mapping to local paths."""
     logos_dir = assets_dir / "logos"
     logos_dir.mkdir(parents=True, exist_ok=True)
@@ -103,22 +101,22 @@ def download_all_team_logos(assets_dir: Path) -> dict[str, str]:
         local_path = logos_dir / filename
         if download_image(url, local_path):
             # Return relative path from the HTML file location
-            local_mappings[team_abbr] = f"{YEAR}/assets/logos/{filename}"
+            local_mappings[team_abbr] = f"{year}/assets/logos/{filename}"
 
     return local_mappings
 
 def get_position_color(position: str) -> str:
     """Get color for position badge - matches draft UI colors."""
     colors = {
-        'QB': '#7b6bb5',  # Bright purple
-        'RB': '#5fb572',  # Bright green
-        'WR': '#b5a55f',  # Bright gold
-        'TE': '#b5725f',  # Bright orange
-        'K': '#5f82b5',   # Bright blue
-        'DST': '#9f5f75', # Bright burgundy
-        'D/ST': '#9f5f75' # Bright burgundy (alternate format)
+        'QB': '#A995E8',  # Lavender
+        'RB': '#6FD08C',  # Turf green
+        'WR': '#E8CE6B',  # Straw gold
+        'TE': '#E8926F',  # Clay orange
+        'K': '#7FA8E8',   # Sky blue
+        'DST': '#D07A96', # Rose
+        'D/ST': '#D07A96' # Rose (alternate format)
     }
-    return colors.get(position, '#666')
+    return colors.get(position, '#9DA89B')
 
 def load_template(filename: str) -> str:
     """Load template file from templates directory."""
@@ -132,7 +130,8 @@ def generate_html(
     players: list[dict],
     config: dict,
     player_stats: dict,
-    logo_mappings: dict[str, str]
+    logo_mappings: dict[str, str],
+    year: int
 ) -> str:
     """Generate the HTML page with local assets."""
 
@@ -543,6 +542,35 @@ def generate_html(
 
     value_scatter_json = json.dumps(value_scatter_data)
 
+    # The Tape: every pick in true auction order (pick_id sequence)
+    tape_picks = sorted(
+        (pick for team in draft_state['teams'] for pick in team['picks']),
+        key=lambda pick: pick['pick_id']
+    )
+    tape_items = []
+    for lot_number, pick in enumerate(tape_picks, start=1):
+        player = players_by_id.get(pick['player_id'], {})
+        name = f"{player.get('first_name', '')} {player.get('last_name', '')}".strip()
+        position = player.get('position', '')
+        tape_items.append(
+            f'<span class="tape-item">'
+            f'<span class="tp-lot">{lot_number:03d}</span>'
+            f'<span class="tp-pos" style="color: {get_position_color(position)}">'
+            f'{position}</span>'
+            f'<span class="tp-name">{name}</span>'
+            f'<span class="tp-price">${pick["price"]}</span>'
+            f'</span>'
+        )
+    tape_content = '\n'.join(tape_items)
+
+    # Hero settlement line
+    total_budget = config.get('initial_budget', 0) * len(draft_state['teams'])
+    hero_line = (
+        f"<strong>${total_budget:,}</strong> in total budgets. "
+        f"<strong>${total_money:,}</strong> spent "
+        f"across {total_players} picks."
+    )
+
     def build_html_from_templates():
         """Build complete HTML using clean template system."""
         # Load templates
@@ -574,6 +602,7 @@ def generate_html(
 
         # Prepare JavaScript data using actual chart data
         js_content = js_template
+        js_content = js_content.replace("{YEAR}", str(year))
         js_content = js_content.replace("{TEAM_DATA}", team_data_json)
         js_content = js_content.replace("{POSITION_BUDGET_DATA}", position_budget_json)
         js_content = js_content.replace("{POSITION_RANGE_DATA}", position_ranges_json)
@@ -585,7 +614,9 @@ def generate_html(
 
         # Assemble final HTML
         return base_template.format(
-            YEAR=YEAR,
+            YEAR=year,
+            HERO_LINE=hero_line,
+            TAPE_CONTENT=tape_content,
             CSS_CONTENT=css_content,
             TEAMS_CONTENT=teams_content,
             SUMMARY_STATS_CONTENT=summary_stats_content,
@@ -617,12 +648,9 @@ def generate_html(
         position_badges = []
         for position, count in sorted_positions:
             color = get_position_color(position)
-            text_color = (
-                "white" if position in ['QB', 'K', 'D/ST', 'DST'] else "#2a2a2a"
-            )
             position_badge = position_badge_template.format(
                 BACKGROUND_COLOR=color,
-                TEXT_COLOR=text_color,
+                TEXT_COLOR="#12151C",
                 POSITION=position,
                 COUNT=count
             )
@@ -649,7 +677,9 @@ def generate_html(
             price = pick.get('price', 0)
 
             if nfl_team:
-                logo_url = f"2025/assets/logos/{nfl_team.lower()}.png"
+                logo_url = logo_mappings.get(
+                    nfl_team, f"{year}/assets/logos/{nfl_team.lower()}.png"
+                )
             else:
                 logo_url = (
                     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' "
@@ -657,18 +687,18 @@ def generate_html(
                 )
 
             position_color = get_position_color(position)
-            position_text_color = (
-                "white" if position in ['QB', 'K', 'D/ST', 'DST'] else "#2a2a2a"
-            )
 
+            stats_line = (player_data.get('stats') or '').replace('"', '')
+            stats_title = f' title="{stats_line}"' if stats_line else ''
             player_item = player_template.format(
                 LOGO_URL=logo_url,
                 NFL_TEAM=nfl_team,
                 PLAYER_NAME=player_name,
                 POSITION_COLOR=position_color,
-                POSITION_TEXT_COLOR=position_text_color,
+                POSITION_TEXT_COLOR="#12151C",
                 POSITION=position,
-                PRICE=price
+                PRICE=price,
+                STATS_TITLE=stats_title
             )
             player_items.append(player_item)
 
@@ -827,25 +857,30 @@ def generate_html(
 
 def main():
     """Main function to generate draft recap."""
-    print(f"Generating {YEAR} Draft Recap...")
-
-    # Create output directory and assets directory (relative to project root)
-    script_dir = Path(__file__).parent
-    project_root = script_dir.parent
-    output_dir = project_root / f"docs/{YEAR}"
-    output_dir.mkdir(parents=True, exist_ok=True)
-    assets_dir = output_dir / "assets"
-    assets_dir.mkdir(parents=True, exist_ok=True)
-
-    # Download team logos
-    logo_mappings = download_all_team_logos(assets_dir)
-
     # Fetch all data from API
     print("Fetching data from API...")
     draft_state = fetch_api_data("/draft-state")
     owners = fetch_api_data("/owners")
     players = fetch_api_data("/players")
     config = fetch_api_data("/config")
+
+    # The recap year comes from config.json (draft_year), not the clock
+    year = config.get("draft_year")
+    if not year:
+        print("\nERROR: config.json has no draft_year - set it before generating.")
+        sys.exit(1)
+    print(f"Generating {year} Draft Recap...")
+
+    # Create output directory and assets directory (relative to project root)
+    script_dir = Path(__file__).parent
+    project_root = script_dir.parent
+    output_dir = project_root / f"docs/{year}"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    assets_dir = output_dir / "assets"
+    assets_dir.mkdir(parents=True, exist_ok=True)
+
+    # Download team logos
+    logo_mappings = download_all_team_logos(assets_dir, year)
 
     print(f"  Loaded {len(players)} players from API")
     if players:
@@ -864,16 +899,19 @@ def main():
     # Generate HTML
     print("Generating HTML page...")
     html_content = generate_html(
-        draft_state, owners, players, config, player_stats, logo_mappings
+        draft_state, owners, players, config, player_stats, logo_mappings, year
     )
 
     # Save HTML file
-    output_file = project_root / f"docs/{YEAR}_draft_recap.html"
+    output_file = project_root / f"docs/{year}_draft_recap.html"
     output_file.write_text(html_content, encoding='utf-8')
 
     print("Draft recap generated successfully!")
     print(f"Output: {output_file}")
-    print(f"View at: https://[your-github-username].github.io/ffdrafttracker/{YEAR}_draft_recap.html")
+    print(
+        "View at: https://[your-github-username].github.io/ffdrafttracker/"
+        f"{year}_draft_recap.html"
+    )
 
 if __name__ == "__main__":
     main()

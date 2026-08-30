@@ -1,27 +1,59 @@
-        // Theme toggle functionality
-        const themeToggle = document.getElementById('themeToggle');
-        const html = document.documentElement;
+        // Draft crawl: auto-rolls, and can be grabbed and dragged to seek
+        (function () {
+            const viewport = document.querySelector('.tape-viewport');
+            const track = document.querySelector('.tape-track');
+            const reel = document.querySelector('.tape-reel');
+            if (!viewport || !track || !reel) return;
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-        // Check for saved theme preference or default to light
-        const currentTheme = localStorage.getItem('theme') || 'light';
-        html.setAttribute('data-theme', currentTheme);
-        updateToggleButton(currentTheme);
+            const canHover = window.matchMedia('(hover: hover)').matches;
+            let offset = 0;
+            let hovering = false;
+            let dragging = false;
+            let lastX = 0;
+            let lastTime = null;
 
-        // Toggle theme on button click
-        themeToggle.addEventListener('click', () => {
-            const theme = html.getAttribute('data-theme');
-            const newTheme = theme === 'light' ? 'dark' : 'light';
+            function frame(now) {
+                if (lastTime === null) lastTime = now;
+                const dt = (now - lastTime) / 1000;
+                lastTime = now;
 
-            html.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-            updateToggleButton(newTheme);
-        });
+                const reelWidth = reel.offsetWidth;
+                if (reelWidth > 0) {
+                    // one full loop every ~300s, matching a broadcast crawl pace
+                    const speed = Math.max(60, reelWidth / 300);
+                    if (!hovering && !dragging) offset += speed * dt;
+                    offset = ((offset % reelWidth) + reelWidth) % reelWidth;
+                    track.style.transform = 'translateX(' + (-offset) + 'px)';
+                }
+                requestAnimationFrame(frame);
+            }
+            requestAnimationFrame(frame);
 
-        function updateToggleButton(theme) {
-            themeToggle.textContent = theme === 'light' ? '🌙' : '☀️';
-            themeToggle.setAttribute('aria-label',
-                theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode');
-        }
+            viewport.addEventListener('pointerdown', (e) => {
+                dragging = true;
+                lastX = e.clientX;
+                viewport.setPointerCapture(e.pointerId);
+                viewport.classList.add('dragging');
+            });
+            viewport.addEventListener('pointermove', (e) => {
+                if (!dragging) return;
+                offset -= e.clientX - lastX;
+                lastX = e.clientX;
+            });
+            function endDrag() {
+                dragging = false;
+                viewport.classList.remove('dragging');
+            }
+            viewport.addEventListener('pointerup', endDrag);
+            viewport.addEventListener('pointercancel', endDrag);
+
+            // pause to read under a mouse; touch has drag instead
+            if (canHover) {
+                viewport.addEventListener('mouseenter', () => { hovering = true; });
+                viewport.addEventListener('mouseleave', () => { hovering = false; });
+            }
+        })();
 
         // Layout toggle functionality
         const layoutToggle = document.getElementById('layoutToggle');
@@ -96,7 +128,7 @@
         const nflStackingData = {NFL_STACKING_DATA};
         const valueScatterData = {VALUE_SCATTER_DATA};
 
-        function createBarChart(containerId, data, labelKey, valueKey, title) {
+        function createBarChart(containerId, data, labelKey, valueKey, money) {
             const container = document.getElementById(containerId);
             if (container.children.length > 0) return;
 
@@ -110,11 +142,12 @@
                 const barItem = document.createElement('div');
                 barItem.className = 'bar-item';
 
+                const display = money ? '$' + value.toLocaleString() : value;
                 const barHtml = '<div class="bar-label">' + label + '</div>' +
                     '<div class="bar-container">' +
-                    '<div class="bar-fill" style="width: 0%"></div>' +
+                    '<div class="bar-fill' + (money ? '' : ' count') + '" style="width: 0%"></div>' +
                     '</div>' +
-                    '<div class="bar-value">' + (typeof value === 'number' && value > 100 ? '$' + value.toLocaleString() : value) + '</div>';
+                    '<div class="bar-value' + (money ? '' : ' count') + '">' + display + '</div>';
 
                 barItem.innerHTML = barHtml;
                 container.appendChild(barItem);
@@ -126,9 +159,9 @@
         }
 
         function initializeMarketCharts() {
-            createBarChart('positionBudgetChart', positionBudgetData, 0, 1, 'Position Budget');
-            createBarChart('topPlayersChart', topPlayersData.map(p => [p.player_name, p.price]), 0, 1, 'Top Players');
-            createBarChart('teamChart', teamData, 0, 1, 'NFL Teams');
+            createBarChart('positionBudgetChart', positionBudgetData, 0, 1, true);
+            createBarChart('topPlayersChart', topPlayersData.map(p => [p.player_name, p.price]), 0, 1, true);
+            createBarChart('teamChart', teamData, 0, 1, false);
             initializePositionRangeChart();
         }
 
@@ -196,8 +229,8 @@
                 positions.forEach(pos => {
                     const spending = rosterMatrixData[team][pos] || 0;
                     const intensity = maxSpending > 0 ? spending / maxSpending : 0;
-                    const color = 'rgba(102, 126, 234, ' + intensity + ')';
-                    rowHtml += '<div class="heatmap-cell" style="background: ' + color + '; color: ' + (intensity > 0.5 ? 'white' : 'var(--text-primary)') + '">$' + spending + '</div>';
+                    const color = 'rgba(226, 184, 76, ' + (intensity * 0.9) + ')';
+                    rowHtml += '<div class="heatmap-cell" style="background: ' + color + '; color: ' + (intensity > 0.35 ? 'var(--ink-on-bright)' : 'var(--text-primary)') + '">$' + spending + '</div>';
                 });
 
                 row.innerHTML = rowHtml;
@@ -211,8 +244,8 @@
 
             const positions = ['QB', 'RB', 'WR', 'TE', 'K', 'D/ST'];
             const positionColors = {
-                'QB': '#7b6bb5', 'RB': '#5fb572', 'WR': '#b5a55f',
-                'TE': '#b5725f', 'K': '#5f82b5', 'D/ST': '#9f5f75'
+                'QB': '#A995E8', 'RB': '#6FD08C', 'WR': '#E8CE6B',
+                'TE': '#E8926F', 'K': '#7FA8E8', 'D/ST': '#D07A96'
             };
 
             // Create legend
@@ -282,179 +315,112 @@
             const container = document.getElementById('nflStackingChart');
             if (container.children.length > 0) return;
 
-            // Get all fantasy teams
+            // Fantasy team columns (alphabetical)
             const fantasyTeams = new Set();
             Object.values(nflStackingData).forEach(teams => {
                 Object.keys(teams).forEach(team => fantasyTeams.add(team));
             });
             const fantasyTeamsList = Array.from(fantasyTeams).sort();
-            
-            // Sort NFL teams by conference and division
-            const nflTeamOrder = [
-                // AFC East
-                'BUF', 'MIA', 'NE', 'NYJ',
-                // AFC North  
-                'BAL', 'CIN', 'CLE', 'PIT',
-                // AFC South
-                'HOU', 'IND', 'JAX', 'TEN',
-                // AFC West
-                'DEN', 'KC', 'LV', 'LAC',
-                // NFC East
-                'DAL', 'NYG', 'PHI', 'WAS',
-                // NFC North
-                'CHI', 'DET', 'GB', 'MIN',
-                // NFC South
-                'ATL', 'CAR', 'NO', 'TB',
-                // NFC West
-                'ARI', 'LAR', 'SF', 'SEA'
-            ];
-            
-            const nflTeamsList = Object.keys(nflStackingData).sort((a, b) => {
-                const indexA = nflTeamOrder.indexOf(a);
-                const indexB = nflTeamOrder.indexOf(b);
-                // If team not found in order, put at end
-                if (indexA === -1 && indexB === -1) return a.localeCompare(b);
-                if (indexA === -1) return 1;
-                if (indexB === -1) return -1;
-                return indexA - indexB;
-            });
 
-            // Find the maximum count for color scaling
             let maxCount = 0;
-            Object.values(nflStackingData).forEach(fantasyTeamCounts => {
-                Object.values(fantasyTeamCounts).forEach(count => {
-                    if (count > maxCount) maxCount = count;
-                });
+            Object.values(nflStackingData).forEach(counts => {
+                Object.values(counts).forEach(c => { if (c > maxCount) maxCount = c; });
             });
 
-            // Create the heatmap grid
-            const heatmap = document.createElement('div');
-            heatmap.className = 'nfl-stacking-heatmap';
-            heatmap.style.display = 'grid';
-            heatmap.style.gridTemplateColumns = `150px repeat(${fantasyTeamsList.length}, 1fr)`;
-            heatmap.style.gap = '2px';
-            heatmap.style.margin = '20px 0';
-            heatmap.style.borderRadius = '8px';
-            heatmap.style.overflow = 'hidden';
-
-            // Create header row
-            const headerRow = document.createElement('div');
-            headerRow.style.display = 'contents';
-            
-            // Empty corner cell
-            const cornerCell = document.createElement('div');
-            cornerCell.className = 'heatmap-cell heatmap-header';
-            cornerCell.textContent = 'NFL Team';
-            headerRow.appendChild(cornerCell);
-
-            // Fantasy team headers
-            fantasyTeamsList.forEach(team => {
-                const headerCell = document.createElement('div');
-                headerCell.className = 'heatmap-cell heatmap-header';
-                headerCell.textContent = team;
-                headerCell.style.fontSize = '0.75em';
-                headerRow.appendChild(headerCell);
-            });
-            heatmap.appendChild(headerRow);
-
-            // Create NFL team rows with division separators
-            const divisions = [
-                { name: 'AFC East', teams: ['BUF', 'MIA', 'NE', 'NYJ'] },
-                { name: 'AFC North', teams: ['BAL', 'CIN', 'CLE', 'PIT'] },
-                { name: 'AFC South', teams: ['HOU', 'IND', 'JAX', 'TEN'] },
-                { name: 'AFC West', teams: ['DEN', 'KC', 'LV', 'LAC'] },
-                { name: 'NFC East', teams: ['DAL', 'NYG', 'PHI', 'WSH'] },
-                { name: 'NFC North', teams: ['CHI', 'DET', 'GB', 'MIN'] },
-                { name: 'NFC South', teams: ['ATL', 'CAR', 'NO', 'TB'] },
-                { name: 'NFC West', teams: ['ARI', 'LAR', 'SF', 'SEA'] }
+            const conferences = [
+                { name: 'AFC', divisions: [
+                    { name: 'East', teams: ['BUF', 'MIA', 'NE', 'NYJ'] },
+                    { name: 'North', teams: ['BAL', 'CIN', 'CLE', 'PIT'] },
+                    { name: 'South', teams: ['HOU', 'IND', 'JAX', 'TEN'] },
+                    { name: 'West', teams: ['DEN', 'KC', 'LV', 'LAC'] }
+                ] },
+                { name: 'NFC', divisions: [
+                    { name: 'East', teams: ['DAL', 'NYG', 'PHI', 'WAS'] },
+                    { name: 'North', teams: ['CHI', 'DET', 'GB', 'MIN'] },
+                    { name: 'South', teams: ['ATL', 'CAR', 'NO', 'TB'] },
+                    { name: 'West', teams: ['ARI', 'LAR', 'SF', 'SEA'] }
+                ] }
             ];
 
-            divisions.forEach((division, divIndex) => {
-                // Add division header
-                const divisionHeader = document.createElement('div');
-                divisionHeader.style.display = 'contents';
-                
-                const divHeaderCell = document.createElement('div');
-                divHeaderCell.className = 'heatmap-cell';
-                divHeaderCell.style.background = 'var(--alt-bg)';
-                divHeaderCell.style.color = 'var(--text-secondary)';
-                divHeaderCell.style.fontWeight = 'bold';
-                divHeaderCell.style.fontSize = '0.8em';
-                divHeaderCell.style.borderTop = divIndex > 0 ? '2px solid var(--border-color)' : 'none';
-                divHeaderCell.textContent = division.name;
-                divisionHeader.appendChild(divHeaderCell);
-                
-                // Empty cells for fantasy teams
-                fantasyTeamsList.forEach(() => {
-                    const emptyCell = document.createElement('div');
-                    emptyCell.className = 'heatmap-cell';
-                    emptyCell.style.background = 'var(--alt-bg)';
-                    emptyCell.style.borderTop = divIndex > 0 ? '2px solid var(--border-color)' : 'none';
-                    divisionHeader.appendChild(emptyCell);
+            const wrap = document.createElement('div');
+            wrap.className = 'stacking-wrap';
+
+            conferences.forEach(conference => {
+                const conf = document.createElement('div');
+                conf.className = 'stacking-conf';
+
+                const title = document.createElement('div');
+                title.className = 'stacking-conf-title';
+                title.textContent = conference.name;
+                conf.appendChild(title);
+
+                const grid = document.createElement('div');
+                grid.className = 'stacking-grid';
+                grid.style.gridTemplateColumns =
+                    '86px repeat(' + fantasyTeamsList.length + ', 1fr)';
+
+                // Header: rotated fantasy team names
+                const corner = document.createElement('div');
+                grid.appendChild(corner);
+                fantasyTeamsList.forEach(team => {
+                    const head = document.createElement('div');
+                    head.className = 'stacking-colhead';
+                    head.textContent = team;
+                    head.title = team;
+                    grid.appendChild(head);
                 });
-                heatmap.appendChild(divisionHeader);
 
-                // Add team rows for this division
-                division.teams.forEach(nflTeam => {
-                    if (nflStackingData[nflTeam]) { // Only show teams that have data
-                        const row = document.createElement('div');
-                        row.style.display = 'contents';
+                conference.divisions.forEach(division => {
+                    const withData = division.teams.filter(t => nflStackingData[t]);
+                    if (withData.length === 0) return;
 
-                        // NFL team label with logo
-                        const labelCell = document.createElement('div');
-                        labelCell.className = 'heatmap-cell heatmap-label';
-                        labelCell.style.display = 'flex';
-                        labelCell.style.alignItems = 'center';
-                        labelCell.style.justifyContent = 'center';
-                        labelCell.style.gap = '8px';
-                        
-                        // Create logo image
-                        const logoImg = document.createElement('img');
-                        logoImg.src = '2025/assets/logos/' + nflTeam.toLowerCase() + '.png';
-                        logoImg.alt = nflTeam;
-                        logoImg.style.width = '24px';
-                        logoImg.style.height = '24px';
-                        logoImg.style.objectFit = 'contain';
-                        logoImg.onerror = function() {
-                            // Fallback to text if logo fails to load
-                            labelCell.textContent = nflTeam;
-                        };
-                        
-                        // Add both logo and text for better accessibility
-                        const textSpan = document.createElement('span');
-                        textSpan.textContent = nflTeam;
-                        textSpan.style.fontSize = '0.8em';
-                        
-                        labelCell.appendChild(logoImg);
-                        labelCell.appendChild(textSpan);
-                        row.appendChild(labelCell);
+                    // Slim division separator
+                    const divLabel = document.createElement('div');
+                    divLabel.className = 'stacking-div';
+                    divLabel.textContent = division.name;
+                    grid.appendChild(divLabel);
+                    fantasyTeamsList.forEach(() => {
+                        const spacer = document.createElement('div');
+                        spacer.className = 'stacking-div';
+                        grid.appendChild(spacer);
+                    });
 
-                        // Fantasy team cells
+                    withData.forEach(nflTeam => {
+                        const label = document.createElement('div');
+                        label.className = 'stacking-teamlabel';
+
+                        const logo = document.createElement('img');
+                        logo.src = '{YEAR}/assets/logos/' + nflTeam.toLowerCase() + '.png';
+                        logo.alt = '';
+                        logo.onerror = function () { this.remove(); };
+                        label.appendChild(logo);
+                        label.appendChild(document.createTextNode(nflTeam));
+                        grid.appendChild(label);
+
                         fantasyTeamsList.forEach(fantasyTeam => {
                             const count = nflStackingData[nflTeam][fantasyTeam] || 0;
                             const intensity = maxCount > 0 ? count / maxCount : 0;
-                            
                             const cell = document.createElement('div');
-                            cell.className = 'heatmap-cell';
-                            cell.style.background = intensity > 0 ? `rgba(102, 126, 234, ${0.2 + intensity * 0.8})` : 'transparent';
-                            cell.style.color = intensity > 0.4 ? 'white' : 'var(--text-primary)';
-                            cell.style.fontWeight = '600';
-                            cell.textContent = count > 0 ? count : '';
-                            
-                            // Add tooltip
+                            cell.className = 'stacking-cell';
                             if (count > 0) {
-                                cell.title = `${fantasyTeam} drafted ${count} ${nflTeam} player${count > 1 ? 's' : ''}`;
+                                cell.style.background =
+                                    'rgba(226, 184, 76, ' + (0.15 + intensity * 0.75) + ')';
+                                cell.style.color = intensity > 0.35
+                                    ? 'var(--ink-on-bright)' : 'var(--text-primary)';
+                                cell.textContent = count;
+                                cell.title = fantasyTeam + ' drafted ' + count + ' ' +
+                                    nflTeam + ' player' + (count > 1 ? 's' : '');
                             }
-                            
-                            row.appendChild(cell);
+                            grid.appendChild(cell);
                         });
-
-                        heatmap.appendChild(row);
-                    }
+                    });
                 });
+
+                conf.appendChild(grid);
+                wrap.appendChild(conf);
             });
 
-            container.appendChild(heatmap);
+            container.appendChild(wrap);
         }
 
         function initializeScatterPlot() {
@@ -483,17 +449,18 @@
 
             // Position colors
             const positionColors = {
-                'QB': '#7b6bb5', 'RB': '#5fb572', 'WR': '#b5a55f',
-                'TE': '#b5725f', 'K': '#5f82b5'
+                'QB': '#A995E8', 'RB': '#6FD08C', 'WR': '#E8CE6B',
+                'TE': '#E8926F', 'K': '#7FA8E8', 'D/ST': '#D07A96'
             };
 
             // Create tooltip element
             const tooltip = document.createElement('div');
             tooltip.style.position = 'absolute';
-            tooltip.style.background = 'rgba(0, 0, 0, 0.8)';
+            tooltip.style.background = 'rgba(10, 13, 20, 0.94)';
             tooltip.style.color = 'white';
             tooltip.style.padding = '8px 12px';
-            tooltip.style.borderRadius = '4px';
+            tooltip.style.borderRadius = '3px';
+            tooltip.style.border = '1px solid rgba(240, 242, 245, 0.2)';
             tooltip.style.fontSize = '12px';
             tooltip.style.pointerEvents = 'none';
             tooltip.style.opacity = '0';
@@ -503,7 +470,7 @@
 
             // Draw axes
             const axisGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            axisGroup.setAttribute('stroke', 'rgba(100, 100, 100, 0.3)');
+            axisGroup.setAttribute('stroke', 'rgba(240, 242, 245, 0.18)');
             axisGroup.setAttribute('stroke-width', '2');
 
             // Y axis
